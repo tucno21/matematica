@@ -6,6 +6,7 @@ import FraccionesView from '../views/FraccionesView'
 import DecimalesView from '../views/DecimalesView'
 import PorcentajesView from '../views/PorcentajesView'
 import RestaEnterosView from '../views/RestaEnterosView'
+import ProductoEnteroView from '../views/ProductoEnteroView'
 
 const router = createBrowserRouter([
     {
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
     {
         path: '/resta-enteros',
         element: <Layout><RestaEnterosView /></Layout>
+    },
+    {
+        path: '/producto-enteros',
+        element: <Layout><ProductoEnteroView /></Layout>
     },
     {
         path: '/fracciones',
