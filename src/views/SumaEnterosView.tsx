@@ -232,7 +232,7 @@ function ExplosionParticles({ color }: { color: ChipColor }) {
 }
 
 // ─── Main View ────────────────────────────────────────────────────────────────
-export default function SumaRestaEnterosView() {
+export default function SumaEnterosView() {
     const navigate = useNavigate();
 
     const [inputs, setInputs] = useState<InputConfig[]>([
@@ -259,7 +259,6 @@ export default function SumaRestaEnterosView() {
     const remainingChips = chips.filter((c) => !c.exploded);
     const resultBigColor = resultValue > 0 ? "text-blue-400" : resultValue < 0 ? "text-red-400" : "text-purple-400";
     const resultTextColor = resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-purple-300";
-    const { value: previewResult } = calcResult(inputs);
 
     // ── Setup ─────────────────────────────────────────────────────────────────
     const updateInput = (i: number, updated: InputConfig) =>
@@ -281,15 +280,21 @@ export default function SumaRestaEnterosView() {
         const active = chips.filter((c) => !c.exploded && !c.exploding);
         const b = active.filter((c) => c.color === "blue").length;
         const r = active.filter((c) => c.color === "red").length;
+        // Solo pasar a resultados cuando todas las fichas han explotado
         if (b + r === 0 && chips.every((c) => !c.exploding)) {
             const t = setTimeout(() => { setResultValue(0); setPhase("result"); }, 600);
             return () => clearTimeout(t);
         }
-        if (b + r > 0 && !(b > 0 && r > 0)) {
-            const t = setTimeout(() => { setResultValue(b - r); setPhase("result"); }, 600);
-            return () => clearTimeout(t);
-        }
     }, [chips, phase]);
+
+    // ── Show results ─────────────────────────────────────────────────────────────
+    const handleShowResult = () => {
+        const active = chips.filter((c) => !c.exploded && !c.exploding);
+        const b = active.filter((c) => c.color === "blue").length;
+        const r = active.filter((c) => c.color === "red").length;
+        setResultValue(b - r);
+        setPhase("result");
+    };
 
     // ── Drag ──────────────────────────────────────────────────────────────────
     const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
@@ -428,7 +433,7 @@ export default function SumaRestaEnterosView() {
 
                 <div className="min-w-0 flex-1">
                     <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">
-                        Suma y Resta de Enteros
+                        Suma de Enteros
                     </h1>
                     <p className="text-[10px] text-white/30 font-semibold">Cancelación de pares</p>
                 </div>
@@ -449,9 +454,9 @@ export default function SumaRestaEnterosView() {
                 </div>
             </header>
 
-            {/* ════════════════════════════════════════════════════════════════════
+            {/* ═══════════════════════════════════════════════════════════════════
           SETUP PHASE
-      ════════════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════════════ */}
             {phase === "setup" && (
                 <main className="flex-1 flex flex-col gap-4 px-4 pb-6 overflow-y-auto">
                     {/* Hero text */}
@@ -490,10 +495,6 @@ export default function SumaRestaEnterosView() {
                                             </span>
                                         </span>
                                     ))}
-                                    <span className="text-white/20 text-base">=</span>
-                                    <span className={`text-2xl ${previewResult > 0 ? "text-blue-300" : previewResult < 0 ? "text-red-300" : "text-purple-300"}`}>
-                                        {previewResult > 0 ? `+${previewResult}` : previewResult}
-                                    </span>
                                 </div>
                             </div>
                         );
@@ -516,9 +517,9 @@ export default function SumaRestaEnterosView() {
                 </main>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════════
+            {/* ═══════════════════════════════════════════════════════════════════
           PLAY PHASE
-      ════════════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════════════ */}
             {phase === "play" && (
                 <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
                     {/* Live counter bar */}
@@ -585,22 +586,25 @@ export default function SumaRestaEnterosView() {
                     </p>
 
                     <button
-                        disabled={!hasPairs || autoCancelling}
-                        onClick={handleAutoCancel}
+                        disabled={hasPairs ? autoCancelling : false}
+                        onClick={hasPairs ? handleAutoCancel : handleShowResult}
                         className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
               ${hasPairs && !autoCancelling
                                 ? "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.98]"
-                                : "bg-white/4 text-white/18 cursor-not-allowed"
+                                : "bg-linear-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-md shadow-indigo-500/20 hover:scale-[1.01] active:scale-[0.98]"
                             }`}
                     >
-                        {autoCancelling ? "⚡ Cancelando pares…" : "⚡ Cancelar todos los pares automáticamente"}
+                        {hasPairs
+                            ? (autoCancelling ? "⚡ Cancelando pares…" : "⚡ Cancelar todos los pares automáticamente")
+                            : "✅ Ver resultados"
+                        }
                     </button>
                 </main>
             )}
 
-            {/* ════════════════════════════════════════════════════════════════════
+            {/* ═══════════════════════════════════════════════════════════════════
           RESULT PHASE
-      ════════════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════════════ */}
             {phase === "result" && (
                 <main className="flex-1 flex flex-col items-center justify-center gap-5 px-4 py-6 overflow-y-auto">
                     {/* Floating remaining chips */}

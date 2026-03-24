@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Layout from '../components/Layout'
 import HomeView from '../views/HomeView'
-import SumaRestaEnterosView from '../views/SumaRestaEnterosView'
+import SumaEnterosView from '../views/SumaEnterosView'
 import FraccionesView from '../views/FraccionesView'
 import DecimalesView from '../views/DecimalesView'
 import PorcentajesView from '../views/PorcentajesView'
@@ -13,7 +13,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/suma-resta-enteros',
-        element: <Layout><SumaRestaEnterosView /></Layout>
+        element: <Layout><SumaEnterosView /></Layout>
     },
     {
         path: '/fracciones',
