@@ -1,11 +1,5 @@
+import AppRouter from './routes/AppRouter'
 
-
-const App = () => {
-  return (
-    <div className="flex flex-col justify-center items-center">
-      <h1 className="text-6xl font-bold">Matematic</h1>
-    </div>
-  )
+export default function App() {
+  return <AppRouter />
 }
-
-export default App
