@@ -7,8 +7,17 @@ export default function HomeView() {
     const topics: Topic[] = [
         {
             id: 'integers',
-            path: '/suma-resta-enteros',
-            title: 'Suma y Resta de Enteros',
+            path: '/suma-enteros',
+            title: 'Suma de Enteros',
+            description: 'Aprende a operar con números positivos y negativos',
+            icon: '➕',
+            color: 'blue',
+            available: true
+        },
+        {
+            id: 'integers',
+            path: '/resta-enteros',
+            title: 'Resta de Enteros',
             description: 'Aprende a operar con números positivos y negativos',
             icon: '➕',
             color: 'blue',
