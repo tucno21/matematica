@@ -309,7 +309,7 @@ export default function TermometroEnteros() {
                 }}
             >
                 {/* ════ THERMOMETER COLUMN ════ */}
-                <div className="flex flex-col items-center shrink-0">
+                <div className="flex flex-col items-center shrink-0 px-4">
 
                     {/* ▲ Up button */}
                     <button
@@ -332,14 +332,6 @@ export default function TermometroEnteros() {
                         ▲
                     </button>
 
-                    {/* ── Thermometer body ── */}
-                    {/*
-            Coordinate system (bottom=0):
-              0  …  BULB_D           → bulb circle area
-              BULB_D  …  THERMO_H    → stem tube (STEM_H tall)
-            Fill:   height = fillPct% of STEM_H, starts at bottom of stem
-            Handle: bottom = BULB_D + (fillPct/100)*STEM_H  → always at fill top
-          */}
                     <div
                         className="relative shrink-0"
                         style={{ width: 80, height: THERMO_H }}
@@ -432,38 +424,6 @@ export default function TermometroEnteros() {
                             />
                         </div>
 
-                        {/* Bulb */}
-                        <div
-                            className="bulb-pulse absolute"
-                            style={{
-                                bottom: 0,
-                                left: "50%",
-                                transform: "translateX(-50%)",
-                                width: BULB_D,
-                                height: BULB_D,
-                                borderRadius: "50%",
-                                background: `radial-gradient(circle at 35% 35%, ${colors.primary}, ${colors.secondary})`,
-                                boxShadow: `0 0 28px ${colors.glow}, 0 0 10px ${colors.glow}`,
-                                border: "2px solid rgba(255,255,255,0.2)",
-                                transition: "background 0.6s ease, box-shadow 0.6s ease",
-                                zIndex: 2,
-                            }}
-                        >
-                            {/* Bulb shine dot */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    top: 9,
-                                    left: 10,
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: "50%",
-                                    background: "rgba(255,255,255,0.4)",
-                                    pointerEvents: "none",
-                                }}
-                            />
-                        </div>
-
                         {/* Drag handle — always at the top of the liquid fill */}
                         <div
                             style={{
@@ -506,7 +466,7 @@ export default function TermometroEnteros() {
                         type="button"
                         onClick={() => setTemperature(t => Math.max(MIN_TEMP, t - 1))}
                         disabled={temperature <= MIN_TEMP}
-                        className="flex items-center justify-center rounded-full mt-2.5 transition-all active:scale-90"
+                        className="flex items-center justify-center rounded-full transition-all active:scale-90"
                         style={{
                             width: 40,
                             height: 40,
@@ -517,6 +477,7 @@ export default function TermometroEnteros() {
                             fontSize: 18,
                             fontWeight: 900,
                             opacity: temperature <= MIN_TEMP ? 0.25 : 1,
+                            marginTop: "-30px", // Pull button closer to thermometer bulb
                         }}
                     >
                         ▼
