@@ -478,6 +478,8 @@ export default function TermometroEnteros() {
                             fontWeight: 900,
                             opacity: temperature <= MIN_TEMP ? 0.25 : 1,
                             marginTop: "-30px", // Pull button closer to thermometer bulb
+                            position: "relative",
+                            zIndex: 15, // Ensure button is above drag track
                         }}
                     >
                         ▼
