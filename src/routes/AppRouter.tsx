@@ -8,6 +8,7 @@ import PorcentajesView from '../views/PorcentajesView'
 import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
 import IntroEnterosView from '../views/IntroEnterosView'
+import RectaNumericaView from '../views/RectaNumericaView'
 
 const router = createBrowserRouter([
     {
@@ -17,6 +18,10 @@ const router = createBrowserRouter([
     {
         path: '/intro-enteros',
         element: <Layout><IntroEnterosView /></Layout>
+    },
+    {
+        path: '/recta-numerica',
+        element: <Layout><RectaNumericaView /></Layout>
     },
     {
         path: '/suma-enteros',

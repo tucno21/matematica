@@ -15,6 +15,15 @@ export default function HomeView() {
             available: true
         },
         {
+            id: 'recta',
+            path: '/recta-numerica',
+            title: 'Recta Numérica',
+            description: 'Aprende qué son los números positivos y negativos',
+            icon: '🌡️',
+            color: 'blue',
+            available: true
+        },
+        {
             id: 'suma',
             path: '/suma-enteros',
             title: 'Suma de Enteros',
