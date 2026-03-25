@@ -3,7 +3,7 @@ export interface Topic {
     path: string
     title: string
     description: string
-    icon: string
-    color: string
+    icon?: string
+    color?: string
     available: boolean
 }
