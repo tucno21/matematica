@@ -6,6 +6,15 @@ export default function HomeView() {
 
     const topics: Topic[] = [
         {
+            id: 'intro',
+            path: '/intro-enteros',
+            title: 'Introducción a Enteros',
+            description: 'Aprende qué son los números positivos y negativos',
+            icon: '🌡️',
+            color: 'blue',
+            available: true
+        },
+        {
             id: 'suma',
             path: '/suma-enteros',
             title: 'Suma de Enteros',
@@ -19,7 +28,7 @@ export default function HomeView() {
             path: '/resta-enteros',
             title: 'Resta de Enteros',
             description: 'Aprende a operar con números positivos y negativos',
-            icon: '➕',
+            icon: '➖',
             color: 'blue',
             available: true
         },
@@ -28,7 +37,7 @@ export default function HomeView() {
             path: '/producto-enteros',
             title: 'Multiplicación de Enteros',
             description: 'Aprende a operar con números positivos y negativos',
-            icon: '➕',
+            icon: '✖️',
             color: 'blue',
             available: true
         },
@@ -69,9 +78,7 @@ export default function HomeView() {
     }
 
     const handleTopicClick = (topic: Topic) => {
-        if (topic.available) {
-            navigate(topic.path)
-        }
+        topic.available && navigate(topic.path)
     }
 
     return (

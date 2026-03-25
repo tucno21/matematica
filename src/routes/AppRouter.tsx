@@ -7,11 +7,16 @@ import DecimalesView from '../views/DecimalesView'
 import PorcentajesView from '../views/PorcentajesView'
 import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
+import IntroEnterosView from '../views/IntroEnterosView'
 
 const router = createBrowserRouter([
     {
         path: '/',
         element: <Layout><HomeView /></Layout>
+    },
+    {
+        path: '/intro-enteros',
+        element: <Layout><IntroEnterosView /></Layout>
     },
     {
         path: '/suma-enteros',
