@@ -774,21 +774,6 @@ export default function RectaNumerica() {
                                 />
                             )}
                         </div>
-
-                        {/* Instruction below line */}
-                        {gamePhase === "playing" && (
-                            <p className="text-center text-xs font-medium mt-0" style={{ color: "rgba(255,255,255,.22)" }}>
-                                {turnPhase === "drag" && !dragLocked
-                                    ? <>Arrastra la bolita al{" "}
-                                        <span style={{ color: curColor, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
-                                            {expectedPos > 0 ? `+${expectedPos}` : expectedPos}
-                                        </span>
-                                    </>
-                                    : turnPhase === "roll"
-                                        ? "Presiona el dado para lanzar"
-                                        : "···"}
-                            </p>
-                        )}
                     </div>
 
                     {/* ── Final results ── */}
