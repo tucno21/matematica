@@ -50,6 +50,7 @@ src/
     ├── ProductoEnteroView.tsx # Multiplicación como agrupación
     ├── TresJarrasView.tsx    # Juego de lógica con tres jarras de agua
     ├── TresPescadosView.tsx  # Juego de optimización de tiempo con tres pescados
+    ├── GranjeroRioView.tsx    # Juego de lógica del granjero cruzando el río
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -159,7 +160,21 @@ public/
 - Puntos de estado (dots) indicando caras cocinadas (marrón = frita, naranja = cruda)
 - Layout responsivo optimizado para tablets, móviles y pantallas grandes
 
-### 9-11. 🚧 Módulos Pendientes
+### 9. 🌾 El Granjero y el Río (`GranjeroRioView`)
+- **Juego de lógica matemática**: Problema clásico del granjero y el río
+- 3 personajes interactivos: Zorro, Gallina y Maíz
+- Bote animado con SVG que se mueve entre orillas
+- Sistema drag & drop completo para mover personajes
+- Soporte táctil completo para dispositivos móviles y tablets
+- Reglas de seguridad: Zorro + Gallina = 💀, Gallina + Maíz = 💀
+- Contador de viajes para optimizar la solución (óptimo: 7 viajes)
+- Registro automático de pasos con timeline en tiempo real
+- Panel de pistas disponible con solución paso a paso
+- Modal de victoria/derrota con feedback detallado
+- Animaciones suaves: olas en el río, bote flotando
+- Layout responsivo optimizado para tablets, móviles y pantallas grandes
+
+### 10-12. 🚧 Módulos Pendientes
 - **Fracciones** — Placeholder
 - **Decimales** — Placeholder
 - **Porcentajes** — Placeholder
@@ -190,11 +205,12 @@ public/
 | ProductoEnteroView | ✅ Completo | ~851 | Fichas, columnas, volteo, conteo |
 | TresJarrasView | ✅ Completo | ~640 | Drag & drop, jarras SVG, registro |
 | TresPescadosView | ✅ Completo | ~780 | Timer, drag & drop, pescados SVG |
+| GranjeroRioView | ✅ Completo | ~580 | Drag & drop, bote SVG, lógica |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
 
-**Total de líneas de código (vistas activas):** ~5,386
+**Total de líneas de código (vistas activas):** ~5,966
 
 ---
 
@@ -274,6 +290,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/producto-enteros` | `ProductoEnteroView` | Multiplicación por agrupación |
 | `/tres-jarras` | `TresJarrasView` | Juego de lógica con tres jarras |
 | `/tres-pescados` | `TresPescadosView` | Juego de optimización de tiempo con tres pescados |
+| `/granjero-rio` | `GranjeroRioView` | Juego de lógica del granjero y el río |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |

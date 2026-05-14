@@ -15,6 +15,7 @@ export default function HomeView() {
         { id: 'producto', path: '/producto-enteros', title: 'Multiplicación', description: 'Reglas de signos', available: true },
         { id: 'tres-jarras', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
         { id: 'tres-pescados', path: '/tres-pescados', title: 'Los Tres Pescados', description: 'Pensamiento lógico', available: true },
+        { id: 'granjero-rio', path: '/granjero-rio', title: 'El Granjero y el Río', description: 'Pensamiento lógico', available: true },
         { id: 'fractions', path: '/fracciones', title: 'Fracciones', description: 'Próximamente', available: false },
         { id: 'decimals', path: '/decimales', title: 'Decimales', description: 'Próximamente', available: false },
         { id: 'percentages', path: '/porcentajes', title: 'Porcentajes', description: 'Próximamente', available: false }

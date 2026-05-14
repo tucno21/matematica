@@ -11,6 +11,7 @@ import IntroEnterosView from '../views/IntroEnterosView'
 import RectaNumericaView from '../views/RectaNumericaView'
 import TresJarrasView from '../views/TresJarrasView'
 import TresPescadosView from '../views/TresPescadosView'
+import GranjeroRioView from '../views/GranjeroRioView'
 
 const router = createBrowserRouter([
     {
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
     {
         path: '/tres-pescados',
         element: <Layout><TresPescadosView /></Layout>
+    },
+    {
+        path: '/granjero-rio',
+        element: <Layout><GranjeroRioView /></Layout>
     },
     {
         path: '/fracciones',
