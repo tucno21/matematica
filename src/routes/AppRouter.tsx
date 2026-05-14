@@ -12,6 +12,7 @@ import RectaNumericaView from '../views/RectaNumericaView'
 import TresJarrasView from '../views/TresJarrasView'
 import TresPescadosView from '../views/TresPescadosView'
 import GranjeroRioView from '../views/GranjeroRioView'
+import MonedaFalsaView from '../views/MonedaFalsaView'
 
 const router = createBrowserRouter([
     {
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
     {
         path: '/granjero-rio',
         element: <Layout><GranjeroRioView /></Layout>
+    },
+    {
+        path: '/moneda-falsa',
+        element: <Layout><MonedaFalsaView /></Layout>
     },
     {
         path: '/fracciones',

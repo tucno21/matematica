@@ -51,6 +51,7 @@ src/
     ├── TresJarrasView.tsx    # Juego de lógica con tres jarras de agua
     ├── TresPescadosView.tsx  # Juego de optimización de tiempo con tres pescados
     ├── GranjeroRioView.tsx    # Juego de lógica del granjero cruzando el río
+    ├── MonedaFalsaView.tsx    # Juego de lógica con balanza y 9 monedas
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -174,7 +175,23 @@ public/
 - Animaciones suaves: olas en el río, bote flotando
 - Layout responsivo optimizado para tablets, móviles y pantallas grandes
 
-### 10-12. 🚧 Módulos Pendientes
+### 10. 🏺 La Moneda Falsa (`MonedaFalsaView`)
+- **Juego de lógica matemática**: Problema clásico de la balanza y 9 monedas
+- 9 monedas interactivas, una de ellas falsa (más ligera)
+- Balanza animada con 2 platillos que se inclinan según el peso
+- Sistema de clasificación de monedas: Mesa, Izquierda, Derecha, Seguras
+- Sistema de selección y movimiento de monedas entre zonas
+- Lógica pedagógica: Solo pesa distinto si es 3 vs 3 (enseña división por 3)
+- Máximo de 2 pesadas para encontrar la moneda falsa
+- Fases del juego: configuración → pesado → clasificación → resultado
+- Sistema de clasificación inteligente después de cada pesada
+- Toasts de feedback para errores y éxitos
+- Modal de victoria/derrota con estadísticas de pesadas
+- Animaciones CSS: flotación, pulso, entrada suave
+- Diseño con tema ámbar egipcio (según la historia del cuento)
+- Layout responsivo: área de balanza (izquierda) y mesa/seguros (derecha)
+
+### 11-13. 🚧 Módulos Pendientes
 - **Fracciones** — Placeholder
 - **Decimales** — Placeholder
 - **Porcentajes** — Placeholder
@@ -206,11 +223,12 @@ public/
 | TresJarrasView | ✅ Completo | ~640 | Drag & drop, jarras SVG, registro |
 | TresPescadosView | ✅ Completo | ~780 | Timer, drag & drop, pescados SVG |
 | GranjeroRioView | ✅ Completo | ~580 | Drag & drop, bote SVG, lógica |
+| MonedaFalsaView | ✅ Completo | ~330 | Balanza, clasificación de monedas, lógica |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
 
-**Total de líneas de código (vistas activas):** ~5,966
+**Total de líneas de código (vistas activas):** ~6,296
 
 ---
 
@@ -291,6 +309,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/tres-jarras` | `TresJarrasView` | Juego de lógica con tres jarras |
 | `/tres-pescados` | `TresPescadosView` | Juego de optimización de tiempo con tres pescados |
 | `/granjero-rio` | `GranjeroRioView` | Juego de lógica del granjero y el río |
+| `/moneda-falsa` | `MonedaFalsaView` | Juego de lógica con balanza y monedas |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |
