@@ -13,6 +13,7 @@ export default function HomeView() {
         { id: 'suma', path: '/suma-enteros', title: 'Suma de Enteros', description: 'Operaciones básicas', available: true },
         { id: 'resta', path: '/resta-enteros', title: 'Resta de Enteros', description: 'Operaciones básicas', available: true },
         { id: 'producto', path: '/producto-enteros', title: 'Multiplicación', description: 'Reglas de signos', available: true },
+        { id: 'tres-jarras', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
         { id: 'fractions', path: '/fracciones', title: 'Fracciones', description: 'Próximamente', available: false },
         { id: 'decimals', path: '/decimales', title: 'Decimales', description: 'Próximamente', available: false },
         { id: 'percentages', path: '/porcentajes', title: 'Porcentajes', description: 'Próximamente', available: false }

@@ -9,6 +9,7 @@ import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
 import IntroEnterosView from '../views/IntroEnterosView'
 import RectaNumericaView from '../views/RectaNumericaView'
+import TresJarrasView from '../views/TresJarrasView'
 
 const router = createBrowserRouter([
     {
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
     {
         path: '/producto-enteros',
         element: <Layout><ProductoEnteroView /></Layout>
+    },
+    {
+        path: '/tres-jarras',
+        element: <Layout><TresJarrasView /></Layout>
     },
     {
         path: '/fracciones',
