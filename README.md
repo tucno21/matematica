@@ -48,6 +48,7 @@ src/
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
     ├── RestaEnterosView.tsx   # Resta como "sumar el opuesto"
     ├── ProductoEnteroView.tsx # Multiplicación como agrupación
+    ├── TresJarrasView.tsx    # Juego de lógica con tres jarras de agua
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -125,7 +126,22 @@ public/
 - Si el primer factor es negativo, las fichas se invierten de color
 - Regla de signos: iguales → positivo, diferentes → negativo
 
-### 7-9. 🚧 Módulos Pendientes
+### 7. 🫙 Las Tres Jarras (`TresJarrasView`)
+- **Juego de lógica matemática**: Problema clásico de trasvase de agua
+- 3 jarras interactivas con SVG animados: 8L (llena), 5L y 3L (vacías)
+- Sistema drag & drop completo para trasvasar agua entre jarras
+- Soporte táctil completo para dispositivos móviles y tablets
+- Registro automático de pasos con tabla en tiempo real
+- Contador de movimientos para optimizar la solución
+- Solución paso a paso disponible como referencia
+- Validaciones: jarra vacía, jarra llena
+- Mensaje de éxito al lograr el objetivo (4L en Jarra A y Jarra B)
+- Layout responsivo optimizado: 60% juego / 40% registro (pantalla grande)
+- Animaciones suaves de agua con transiciones CSS
+- Efectos visuales de arrastre: escala, brillo, sombra
+- Jarras 20% más grandes para mejor visibilidad
+
+### 8-10. 🚧 Módulos Pendientes
 - **Fracciones** — Placeholder
 - **Decimales** — Placeholder
 - **Porcentajes** — Placeholder
@@ -154,11 +170,12 @@ public/
 | SumaEnterosView | ✅ Completo | ~673 | Fichas arrastrables, cancelación |
 | RestaEnterosView | ✅ Completo | ~839 | Fichas, volteo, cancelación |
 | ProductoEnteroView | ✅ Completo | ~851 | Fichas, columnas, volteo, conteo |
+| TresJarrasView | ✅ Completo | ~640 | Drag & drop, jarras SVG, registro |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
 
-**Total de líneas de código (vistas activas):** ~3,966
+**Total de líneas de código (vistas activas):** ~4,606
 
 ---
 
@@ -236,6 +253,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |
 | `/resta-enteros` | `RestaEnterosView` | Resta como suma del opuesto |
 | `/producto-enteros` | `ProductoEnteroView` | Multiplicación por agrupación |
+| `/tres-jarras` | `TresJarrasView` | Juego de lógica con tres jarras |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |
