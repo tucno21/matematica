@@ -49,6 +49,7 @@ src/
     ├── RestaEnterosView.tsx   # Resta como "sumar el opuesto"
     ├── ProductoEnteroView.tsx # Multiplicación como agrupación
     ├── TresJarrasView.tsx    # Juego de lógica con tres jarras de agua
+    ├── TresPescadosView.tsx  # Juego de optimización de tiempo con tres pescados
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -141,7 +142,24 @@ public/
 - Efectos visuales de arrastre: escala, brillo, sombra
 - Jarras 20% más grandes para mejor visibilidad
 
-### 8-10. 🚧 Módulos Pendientes
+### 8. 🐟 Los Tres Pescados (`TresPescadosView`)
+- **Juego de optimización de tiempo**: Fríe 3 pescados en el menor tiempo posible
+- 3 pescados con SVG animados, cada uno con 2 caras (A y B)
+- Sistema drag & drop completo para mover pescados entre platos y sartén
+- Soporte táctil completo para dispositivos móviles y tablets
+- Timer en tiempo real con conteo de minutos y segundos
+- Límite de 2 pescados en la sartén simultáneamente
+- Tiempo mínimo requerido: 1 minuto por cara (3 minutos óptimo)
+- Doble clic para voltear pescados en la sartén
+- Auto-cocción de caras después de 1 minuto
+- Barra de progreso mostrando caras fritas (0/6)
+- Validaciones: espacio ocupado, pescado sin cocinar completamente
+- Mensaje de victoria con tiempo y verificación de óptimo
+- Animaciones de vapor cuando el juego está en curso
+- Puntos de estado (dots) indicando caras cocinadas (marrón = frita, naranja = cruda)
+- Layout responsivo optimizado para tablets, móviles y pantallas grandes
+
+### 9-11. 🚧 Módulos Pendientes
 - **Fracciones** — Placeholder
 - **Decimales** — Placeholder
 - **Porcentajes** — Placeholder
@@ -171,11 +189,12 @@ public/
 | RestaEnterosView | ✅ Completo | ~839 | Fichas, volteo, cancelación |
 | ProductoEnteroView | ✅ Completo | ~851 | Fichas, columnas, volteo, conteo |
 | TresJarrasView | ✅ Completo | ~640 | Drag & drop, jarras SVG, registro |
+| TresPescadosView | ✅ Completo | ~780 | Timer, drag & drop, pescados SVG |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
 
-**Total de líneas de código (vistas activas):** ~4,606
+**Total de líneas de código (vistas activas):** ~5,386
 
 ---
 
@@ -254,6 +273,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/resta-enteros` | `RestaEnterosView` | Resta como suma del opuesto |
 | `/producto-enteros` | `ProductoEnteroView` | Multiplicación por agrupación |
 | `/tres-jarras` | `TresJarrasView` | Juego de lógica con tres jarras |
+| `/tres-pescados` | `TresPescadosView` | Juego de optimización de tiempo con tres pescados |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |

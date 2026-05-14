@@ -10,6 +10,7 @@ import ProductoEnteroView from '../views/ProductoEnteroView'
 import IntroEnterosView from '../views/IntroEnterosView'
 import RectaNumericaView from '../views/RectaNumericaView'
 import TresJarrasView from '../views/TresJarrasView'
+import TresPescadosView from '../views/TresPescadosView'
 
 const router = createBrowserRouter([
     {
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
     {
         path: '/tres-jarras',
         element: <Layout><TresJarrasView /></Layout>
+    },
+    {
+        path: '/tres-pescados',
+        element: <Layout><TresPescadosView /></Layout>
     },
     {
         path: '/fracciones',
