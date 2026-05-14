@@ -9,6 +9,7 @@
     "orientation": "any",
     "scope": "/",
     "lang": "es",
+    "offline_enabled": true,
     "categories": [
         "education",
         "utilities"

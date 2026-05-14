@@ -1,18 +1,23 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'matematica-v1';
+const CACHE_NAME = 'matematica-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/favicon.svg',
     '/manifest.json',
+    '/sw.js',
 ];
 
 // Install: cache static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
+            console.log('[SW] Cacheando activos estáticos...');
+            return cache.addAll(STATIC_ASSETS).catch((error) => {
+                console.error('[SW] Error al cachear activos:', error);
+                // Continuar aunque falle algún recurso
+            });
         })
     );
     self.skipWaiting();
@@ -25,14 +30,17 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames
                     .filter((name) => name !== CACHE_NAME)
-                    .map((name) => caches.delete(name))
+                    .map((name) => {
+                        console.log('[SW] Eliminando cache antiguo:', name);
+                        return caches.delete(name);
+                    })
             );
         })
     );
     self.clients.claim();
 });
 
-// Fetch: network-first strategy for pages, cache-first for static assets
+// Fetch: cache-first strategy for all requests (offline-first)
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -43,12 +51,95 @@ self.addEventListener('fetch', (event) => {
     // Skip Chrome extension requests
     if (url.protocol === 'chrome-extension:') return;
 
-    // For navigation requests (HTML pages): network-first
+    // Skip other protocols
+    if (!url.protocol.startsWith('http')) return;
+
+    // Cache-first strategy for navigation requests
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
+            caches.match(request).then((cached) => {
+                if (cached) {
+                    console.log('[SW] Sirviendo desde cache:', url.pathname);
+                    return cached;
+                }
+
+                return fetch(request)
+                    .then((response) => {
+                        // Solo cachear respuestas exitosas
+                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
+                        }
+
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseClone);
+                        });
+                        return response;
+                    })
+                    .catch(() => {
+                        // Si falla la red, servir index.html como fallback
+                        console.log('[SW] Sin conexión, sirviendo index.html desde cache');
+                        return caches.match('/index.html');
+                    });
+            })
+        );
+        return;
+    }
+
+    // Cache-first strategy for static assets (JS, CSS, images, fonts)
+    if (
+        url.pathname.startsWith('/assets/') ||
+        url.pathname.startsWith('/src/') ||
+        url.pathname.endsWith('.js') ||
+        url.pathname.endsWith('.css') ||
+        url.pathname.endsWith('.svg') ||
+        url.pathname.endsWith('.png') ||
+        url.pathname.endsWith('.jpg') ||
+        url.pathname.endsWith('.jpeg') ||
+        url.pathname.endsWith('.webp') ||
+        url.pathname.endsWith('.woff2') ||
+        url.pathname.endsWith('.woff') ||
+        url.pathname.endsWith('.ttf') ||
+        url.pathname.endsWith('.eot')
+    ) {
+        event.respondWith(
+            caches.match(request).then((cached) => {
+                if (cached) {
+                    console.log('[SW] Sirviendo activo estático desde cache:', url.pathname);
+                    return cached;
+                }
+
+                return fetch(request)
+                    .then((response) => {
+                        if (!response || response.status !== 200) {
+                            return response;
+                        }
+
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseClone);
+                        });
+                        return response;
+                    })
+                    .catch(() => {
+                        console.log('[SW] No se pudo cargar activo estático:', url.pathname);
+                        // Retornar una respuesta vacía o un placeholder
+                        return new Response('Not Found', { status: 404 });
+                    });
+            })
+        );
+        return;
+    }
+
+    // Network-first for everything else (API calls, etc.)
+    event.respondWith(
+        caches.match(request).then((cached) => {
+            return fetch(request)
                 .then((response) => {
-                    // Cache the successful response
+                    if (!response || response.status !== 200) {
+                        return response;
+                    }
+
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(request, responseClone);
@@ -56,52 +147,13 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 })
                 .catch(() => {
-                    // Fallback to cache if network fails
-                    return caches.match(request).then((cached) => {
-                        return cached || caches.match('/index.html');
-                    });
-                })
-        );
-        return;
-    }
-
-    // For static assets (JS, CSS, images): cache-first with network fallback
-    if (
-        url.pathname.startsWith('/assets/') ||
-        url.pathname.endsWith('.js') ||
-        url.pathname.endsWith('.css') ||
-        url.pathname.endsWith('.svg') ||
-        url.pathname.endsWith('.png') ||
-        url.pathname.endsWith('.woff2') ||
-        url.pathname.endsWith('.woff')
-    ) {
-        event.respondWith(
-            caches.match(request).then((cached) => {
-                if (cached) return cached;
-                return fetch(request).then((response) => {
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                    return response;
+                    if (cached) {
+                        console.log('[SW] Usando cache como fallback:', url.pathname);
+                        return cached;
+                    }
+                    console.log('[SW] Sin conexión y sin cache para:', url.pathname);
+                    return new Response('Offline', { status: 503 });
                 });
-            })
-        );
-        return;
-    }
-
-    // Default: network-first
-    event.respondWith(
-        fetch(request)
-            .then((response) => {
-                const responseClone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(request, responseClone);
-                });
-                return response;
-            })
-            .catch(() => {
-                return caches.match(request);
-            })
+        })
     );
 });
