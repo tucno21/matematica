@@ -280,7 +280,6 @@ function useElementSize(ref: React.RefObject<HTMLElement | null>): ContainerSize
 const FractionBar = React.memo(function FractionBar({
     fraction,
     displayMode,
-    containerWidth,
     onDragStart,
     onDrag,
     onDragStop,
@@ -620,23 +619,6 @@ const RegletaFraciones = (): React.ReactElement => {
      */
     const [snapTargetMap, setSnapTargetMap] = useState<Record<string, SnapTarget | null>>({});
 
-    // ── Snap computation ─────────────────────────────────────────────────────
-
-    /**
-     * Recomputes the snap target for the currently dragged fraction.
-     * Called on every onDrag event.
-     */
-    const recomputeSnap = useCallback((id: string, pos: Position, containerWidth: number) => {
-        setFractions((prev) => {
-            const dragged = prev.find((f) => f.id === id);
-            if (!dragged) return prev;
-            const virtual = { ...dragged, ...pos };
-            const snap = computeSnapTarget(virtual, prev, containerWidth);
-            setSnapTargetMap((m) => ({ ...m, [id]: snap }));
-            return prev; // no mutation here
-        });
-    }, [setFractions]);
-
     // ── Actions ──────────────────────────────────────────────────────────────
 
     const addFraction = useCallback(() => {
@@ -674,14 +656,6 @@ const RegletaFraciones = (): React.ReactElement => {
     const resetFractions = useCallback(() => {
         setFractions(INITIAL_FRACTIONS);
         setSnapTargetMap({});
-    }, [setFractions]);
-
-    const reorderFractions = useCallback(() => {
-        // kept for internal use if needed, no longer exposed in toolbar
-        setFractions((prev) => {
-            const sorted = [...prev].sort((a, b) => a.denominator - b.denominator);
-            return sorted.map((f, i) => ({ ...f, x: 0, y: i * ROW_HEIGHT }));
-        });
     }, [setFractions]);
 
     const handleDragStart = useCallback((id: string) => {
