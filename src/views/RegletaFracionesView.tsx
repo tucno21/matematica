@@ -38,6 +38,7 @@ interface FractionBarProps {
     onDrag: (pos: Position) => void;
     onDragStop: (pos: Position) => void;
     onDuplicate: () => void;
+    onLongPressDelete: () => void;
     snapTarget: SnapTarget | null;
     isSnapping: boolean;
 }
@@ -64,6 +65,7 @@ interface RegletaFracionesCanvasProps {
     onDrag: (id: string, pos: Position) => void;
     onDragStop: (id: string, pos: Position) => void;
     onDuplicate: (fraction: Fraction, containerWidth: number) => void;
+    onDeleteById: (id: string) => void;
     draggingId: string | null;
     snapTargetMap: Record<string, SnapTarget | null>;
 }
@@ -283,11 +285,23 @@ const FractionBar = React.memo(function FractionBar({
     onDrag,
     onDragStop,
     onDuplicate,
+    onLongPressDelete,
     snapTarget,
     isSnapping,
 }: FractionBarProps) {
     const nodeRef = useRef<HTMLDivElement>(null);
     const handleDoubleTouch = useDoubleTouch(onDuplicate);
+
+    // ── Long press delete (hold 5s without moving) ──
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pressStartPosRef = useRef<Position>({ x: 0, y: 0 });
+    const [isLongPressing, setIsLongPressing] = useState(false);
+
+    useEffect(() => {
+        return () => {
+            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        };
+    }, []);
 
     const widthPct = fraction.denominator === 1
         ? WHOLE_WIDTH_PERCENT
@@ -318,21 +332,50 @@ const FractionBar = React.memo(function FractionBar({
             nodeRef={nodeRef}
             bounds="parent"
             position={{ x: fraction.x, y: fraction.y }}
-            onStart={() => onDragStart()}
-            onDrag={(_e, data) => onDrag({ x: data.x, y: data.y })}
-            onStop={(_e, data) => onDragStop({ x: data.x, y: data.y })}
+            onStart={() => {
+                onDragStart();
+                pressStartPosRef.current = { x: fraction.x, y: fraction.y };
+                setIsLongPressing(true);
+                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = setTimeout(() => {
+                    setIsLongPressing(false);
+                    longPressTimerRef.current = null;
+                    onLongPressDelete();
+                }, 3000);
+            }}
+            onDrag={(_e, data) => {
+                const dx = data.x - pressStartPosRef.current.x;
+                const dy = data.y - pressStartPosRef.current.y;
+                if (Math.sqrt(dx * dx + dy * dy) > 5) {
+                    if (longPressTimerRef.current) {
+                        clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = null;
+                    }
+                    setIsLongPressing(false);
+                }
+                onDrag({ x: data.x, y: data.y });
+            }}
+            onStop={(_e, data) => {
+                if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
+                }
+                setIsLongPressing(false);
+                onDragStop({ x: data.x, y: data.y });
+            }}
         >
             <div
                 ref={nodeRef}
-                title="Doble clic / toque doble para duplicar"
+                title="Doble clic para duplicar · Mantén 3s para eliminar"
                 className={`
           absolute cursor-grab active:cursor-grabbing
           ${fraction.color}
           flex items-center justify-center
-          border-2 ${hasSnapTarget ? 'border-white border-dashed' : 'border-gray-700'}
+          border-2 ${isLongPressing ? 'border-red-500 border-solid' : hasSnapTarget ? 'border-white border-dashed' : 'border-gray-700'}
           select-none touch-none
           fraction-bar
           ${isSnapping ? 'snapping' : ''}
+          ${isLongPressing ? 'long-pressing' : ''}
         `}
                 style={{
                     width: `${widthPct}%`,
@@ -349,6 +392,11 @@ const FractionBar = React.memo(function FractionBar({
                 {renderValue()}
                 {hasSnapTarget && (
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full border border-blue-400 animate-pulse" />
+                )}
+                {isLongPressing && (
+                    <div className="absolute inset-0 bg-red-500/25 rounded-sm flex items-center justify-center pointer-events-none">
+                        <span className="text-[10px] font-bold text-red-800 bg-white/90 px-1.5 py-0.5 rounded-md shadow">No soltar para eliminar</span>
+                    </div>
                 )}
             </div>
         </Draggable>
@@ -494,6 +542,7 @@ function RegletaFracionesCanvas({
     onDrag,
     onDragStop,
     onDuplicate,
+    onDeleteById,
     draggingId,
     snapTargetMap,
 }: RegletaFracionesCanvasProps) {
@@ -537,6 +586,7 @@ function RegletaFracionesCanvas({
                         onDrag={(pos) => onDrag(fraction.id, pos)}
                         onDragStop={(pos) => onDragStop(fraction.id, pos)}
                         onDuplicate={() => onDuplicate(fraction, cW)}
+                        onLongPressDelete={() => onDeleteById(fraction.id)}
                         snapTarget={snap}
                         isSnapping={isActive && !!snap}
                     />
@@ -607,6 +657,19 @@ const RegletaFraciones = (): React.ReactElement => {
         if (fractions.length <= 1) return;
         setFractions((prev) => prev.slice(0, -1));
     }, [fractions.length, setFractions]);
+
+    const handleDeleteById = useCallback((id: string) => {
+        setFractions((prev) => {
+            if (prev.length <= 1) return prev;
+            return prev.filter((f) => f.id !== id);
+        });
+        setDraggingId((prev) => prev === id ? null : prev);
+        setSnapTargetMap((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+        });
+    }, [setFractions]);
 
     const resetFractions = useCallback(() => {
         setFractions(INITIAL_FRACTIONS);
@@ -724,6 +787,13 @@ const RegletaFraciones = (): React.ReactElement => {
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .pop-in { animation: popIn 0.28s ease-out both; }
+        .long-pressing {
+          animation: longPressPulse 0.8s ease-in-out infinite;
+        }
+        @keyframes longPressPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+          50% { box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.6); }
+        }
       `}</style>
 
             {/* ── Header ── */}
@@ -742,7 +812,7 @@ const RegletaFraciones = (): React.ReactElement => {
                         Regleta de Fracciones
                     </h1>
                     <p className="text-gray-400 text-xs">
-                        Doble clic o toque doble para duplicar · Arrastra cerca para acoplar
+                        Doble clic para duplicar · Mantén 3s para eliminar · Arrastra para acoplar
                     </p>
                 </div>
             </div>
@@ -768,6 +838,7 @@ const RegletaFraciones = (): React.ReactElement => {
                     onDrag={handleDrag}
                     onDragStop={handleDragStop}
                     onDuplicate={handleDuplicate}
+                    onDeleteById={handleDeleteById}
                     draggingId={draggingId}
                     snapTargetMap={snapTargetMap}
                 />
