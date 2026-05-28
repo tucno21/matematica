@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 import type { Topic } from '../types'
 
 export default function HomeView() {
@@ -28,14 +28,52 @@ export default function HomeView() {
         t.description.toLowerCase().includes(search.toLowerCase())
     )
 
+    const [showUpdateModal, setShowUpdateModal] = useState(false)
+    const [isUpdating, setIsUpdating] = useState(false)
+
     const handleTopicClick = (topic: Topic) => {
         if (topic.available) navigate(topic.path)
+    }
+
+    const handleUpdateClick = () => {
+        if (!navigator.onLine) {
+            alert('No hay conexión a internet. Conéctate para actualizar.')
+            return
+        }
+        setShowUpdateModal(true)
+    }
+
+    const confirmUpdate = async () => {
+        setIsUpdating(true)
+        try {
+            // Delete all caches
+            const cacheNames = await caches.keys()
+            await Promise.all(cacheNames.map((name) => caches.delete(name)))
+            // Unregister service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations()
+                await Promise.all(registrations.map((reg) => reg.unregister()))
+            }
+            // Reload to get fresh files
+            window.location.reload()
+        } catch {
+            setIsUpdating(false)
+            setShowUpdateModal(false)
+            alert('Error al actualizar. Intenta de nuevo.')
+        }
     }
 
     return (
         <div className="min-h-dvh bg-[#080c18] text-white px-4 py-8" style={{ fontFamily: "'Nunito', sans-serif" }}>
             {/* Header */}
-            <header className="text-center mb-8">
+            <header className="text-center mb-8 relative">
+                <button
+                    onClick={handleUpdateClick}
+                    className="absolute right-0 top-0 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
+                    title="Actualizar aplicación"
+                >
+                    <RefreshCw size={18} className="text-white/50" />
+                </button>
                 <h1 className="text-4xl font-black tracking-tight">Matemáticas</h1>
                 <p className="text-white/40 mt-1 text-sm">Aprende de forma interactiva</p>
             </header>
@@ -87,6 +125,39 @@ export default function HomeView() {
             {filteredTopics.length === 0 && (
                 <div className="text-center mt-10 text-white/30">
                     No se encontraron resultados
+                </div>
+            )}
+
+            {/* Update modal */}
+            {showUpdateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+                    <div className="bg-[#0f1629] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2.5 rounded-xl bg-amber-500/10">
+                                <RefreshCw size={22} className={`text-amber-400 ${isUpdating ? 'animate-spin' : ''}`} />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Actualizar aplicación</h3>
+                        </div>
+                        <p className="text-white/50 text-sm mb-6 leading-relaxed">
+                            Se eliminarán los archivos descargados y se recargarán desde internet con la última versión disponible.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowUpdateModal(false); setIsUpdating(false); }}
+                                disabled={isUpdating}
+                                className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition-all disabled:opacity-40"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmUpdate}
+                                disabled={isUpdating}
+                                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 active:scale-95 transition-all disabled:opacity-60"
+                            >
+                                {isUpdating ? 'Actualizando...' : 'Actualizar'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
