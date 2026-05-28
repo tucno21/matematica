@@ -13,6 +13,7 @@ import TresJarrasView from '../views/TresJarrasView'
 import TresPescadosView from '../views/TresPescadosView'
 import GranjeroRioView from '../views/GranjeroRioView'
 import MonedaFalsaView from '../views/MonedaFalsaView'
+import RegletaFracionesView from '../views/RegletaFracionesView'
 
 const router = createBrowserRouter([
     {
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
     {
         path: '/moneda-falsa',
         element: <Layout><MonedaFalsaView /></Layout>
+    },
+    {
+        path: '/regleta-fracciones',
+        element: <RegletaFracionesView />
     },
     {
         path: '/fracciones',

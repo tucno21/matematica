@@ -52,9 +52,12 @@ src/
     ├── TresPescadosView.tsx  # Juego de optimización de tiempo con tres pescados
     ├── GranjeroRioView.tsx    # Juego de lógica del granjero cruzando el río
     ├── MonedaFalsaView.tsx    # Juego de lógica con balanza y 9 monedas
+    ├── RegletaFracionesView.tsx # Regleta de fracciones interactiva
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
+
+AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
 scripts/
 └── generate-pwa-icons.mjs     # Script para generar iconos PWA (Sharp)
@@ -224,6 +227,7 @@ public/
 | TresPescadosView | ✅ Completo | ~780 | Timer, drag & drop, pescados SVG |
 | GranjeroRioView | ✅ Completo | ~580 | Drag & drop, bote SVG, lógica |
 | MonedaFalsaView | ✅ Completo | ~330 | Balanza, clasificación de monedas, lógica |
+| RegletaFracionesView | ✅ Completo | ~700 | Drag & drop, snap magnético, fracciones interactivas |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
@@ -279,13 +283,7 @@ npm run preview  # Previsualización del build de producción
 ## 📚 Documentación Técnica
 
 ### Archivos de Documentación
-- **`DICE_LOGIC.md`**: Documentación detallada (316 líneas) sobre la lógica aleatoria de los dados
-  - Explicación del componente `DiceFace`
-  - Algoritmo de generación de números aleatorios con `Math.random()`
-  - Distribución de probabilidad para 1 y 2 dados
-  - Flujo completo de animación (14 ticks × 80ms = 1.12 segundos)
-  - Visualización de mensajes de feedback
-  - Tabla comparativa de funcionalidades
+- **`AddView.md`**: Guía paso a paso para agregar una nueva vista al proyecto (para IAs y desarrolladores). Incluye plantilla base con botón Volver, registro de rutas, tarjeta en Home y actualización de README.
 
 ### Archivos de Configuración
 - **`vercel.json`**: Configuración de despliegue en Vercel con SPA routing
@@ -310,6 +308,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/tres-pescados` | `TresPescadosView` | Juego de optimización de tiempo con tres pescados |
 | `/granjero-rio` | `GranjeroRioView` | Juego de lógica del granjero y el río |
 | `/moneda-falsa` | `MonedaFalsaView` | Juego de lógica con balanza y monedas |
+| `/regleta-fracciones` | `RegletaFracionesView` | Regleta de fracciones interactiva |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |
