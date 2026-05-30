@@ -6,10 +6,8 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="mx-auto">
-                {children}
-            </div>
+        <div className="min-h-dvh">
+            {children}
         </div>
     )
 }
