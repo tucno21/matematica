@@ -20,6 +20,7 @@ export default function HomeView() {
         { id: 'regleta-fracciones', path: '/regleta-fracciones', title: 'Regleta de Fracciones', description: 'Fracciones interactivas', available: true },
         { id: 'suma-resta-fracciones', path: '/suma-resta-fracciones', title: 'Suma y Resta de Fracciones', description: 'Operaciones con fracciones', available: true },
         { id: 'recta-numerica-fracciones', path: '/recta-numerica-fracciones', title: 'Fracciones en la Recta', description: 'Ubica fracciones en la recta numérica', available: true },
+        { id: 'multiplicar-fracciones', path: '/multiplicar-fracciones', title: 'Multiplicar Fracciones', description: 'Multiplicación visual de fracciones', available: true },
         { id: 'fractions', path: '/fracciones', title: 'Fracciones', description: 'Próximamente', available: false },
         { id: 'decimals', path: '/decimales', title: 'Decimales', description: 'Próximamente', available: false },
         { id: 'percentages', path: '/porcentajes', title: 'Porcentajes', description: 'Próximamente', available: false }

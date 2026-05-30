@@ -16,6 +16,7 @@ import MonedaFalsaView from '../views/MonedaFalsaView'
 import RegletaFracionesView from '../views/RegletaFracionesView'
 import SumaRestaFraccionesView from '../views/SumaRestaFraccionesView'
 import RectaNumericaFraccionesView from '../views/RectaNumericaFraccionesView'
+import MultiplicarFraccionesView from '../views/MultiplicarFraccionesView'
 
 const router = createBrowserRouter([
     {
@@ -69,6 +70,10 @@ const router = createBrowserRouter([
     {
         path: '/recta-numerica-fracciones',
         element: <Layout><RectaNumericaFraccionesView /></Layout>
+    },
+    {
+        path: '/multiplicar-fracciones',
+        element: <Layout><MultiplicarFraccionesView /></Layout>
     },
     {
         path: '/fracciones',
