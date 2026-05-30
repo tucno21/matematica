@@ -22,6 +22,7 @@ export default function HomeView() {
         { id: 'recta-numerica-fracciones', path: '/recta-numerica-fracciones', title: 'Fracciones en la Recta', description: 'Ubica fracciones en la recta numérica', available: true },
         { id: 'multiplicar-fracciones', path: '/multiplicar-fracciones', title: 'Multiplicar Fracciones', description: 'Multiplicación visual de fracciones', available: true },
         { id: 'division-fracciones', path: '/division-fracciones', title: 'Dividir Fracciones', description: 'División visual de fracciones', available: true },
+        { id: 'concepto-fraccion', path: '/concepto-fraccion', title: '¿Qué es una Fracción?', description: 'Explora fracciones libremente', available: true },
         { id: 'fractions', path: '/fracciones', title: 'Fracciones', description: 'Próximamente', available: false },
         { id: 'decimals', path: '/decimales', title: 'Decimales', description: 'Próximamente', available: false },
         { id: 'percentages', path: '/porcentajes', title: 'Porcentajes', description: 'Próximamente', available: false }

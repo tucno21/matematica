@@ -18,6 +18,7 @@ import SumaRestaFraccionesView from '../views/SumaRestaFraccionesView'
 import RectaNumericaFraccionesView from '../views/RectaNumericaFraccionesView'
 import MultiplicarFraccionesView from '../views/MultiplicarFraccionesView'
 import DivisionFraccionesView from '../views/DivisionFraccionesView'
+import ConceptoFraccionView from '../views/ConceptoFraccionView'
 
 const router = createBrowserRouter([
     {
@@ -79,6 +80,10 @@ const router = createBrowserRouter([
     {
         path: '/division-fracciones',
         element: <Layout><DivisionFraccionesView /></Layout>
+    },
+    {
+        path: '/concepto-fraccion',
+        element: <Layout><ConceptoFraccionView /></Layout>
     },
     {
         path: '/fracciones',
