@@ -15,6 +15,7 @@ import GranjeroRioView from '../views/GranjeroRioView'
 import MonedaFalsaView from '../views/MonedaFalsaView'
 import RegletaFracionesView from '../views/RegletaFracionesView'
 import SumaRestaFraccionesView from '../views/SumaRestaFraccionesView'
+import RectaNumericaFraccionesView from '../views/RectaNumericaFraccionesView'
 
 const router = createBrowserRouter([
     {
@@ -64,6 +65,10 @@ const router = createBrowserRouter([
     {
         path: '/suma-resta-fracciones',
         element: <Layout><SumaRestaFraccionesView /></Layout>
+    },
+    {
+        path: '/recta-numerica-fracciones',
+        element: <Layout><RectaNumericaFraccionesView /></Layout>
     },
     {
         path: '/fracciones',
