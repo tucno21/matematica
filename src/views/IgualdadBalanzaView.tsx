@@ -14,12 +14,12 @@ interface HistEntry {
 }
 
 const DEFS: Record<ObjType, { name: string; w: number; color: string }> = {
-  apple:      { name: 'Manzana',  w: 1,  color: '#ef4444' },
-  orange:     { name: 'Naranja',  w: 2,  color: '#f97316' },
-  lemon:      { name: 'Limón',    w: 3,  color: '#eab308' },
-  pear:       { name: 'Pera',     w: 4,  color: '#22c55e' },
-  watermelon: { name: 'Sandía',   w: 5,  color: '#16a34a' },
-  box:        { name: 'Caja',     w: 10, color: '#92400e' },
+  apple: { name: 'Manzana', w: 1, color: '#ef4444' },
+  orange: { name: 'Naranja', w: 2, color: '#f97316' },
+  lemon: { name: 'Limón', w: 3, color: '#eab308' },
+  pear: { name: 'Pera', w: 4, color: '#22c55e' },
+  watermelon: { name: 'Sandía', w: 5, color: '#16a34a' },
+  box: { name: 'Caja', w: 10, color: '#92400e' },
 }
 
 
@@ -262,6 +262,7 @@ export default function IgualdadBalanzaView() {
   const [showHist, setShowHist] = useState(false)
   const [phase, setPhase] = useState(0)
   const [complete, setComplete] = useState(false)
+  const [completeLevel, setCompleteLevel] = useState(0)
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null)
   const [ghostType, setGhostType] = useState<ObjType | null>(null)
   const [swapped, setSwapped] = useState(false)
@@ -282,7 +283,7 @@ export default function IgualdadBalanzaView() {
   const balanced = leftW === rightW && (leftW > 0 || rightW > 0)
 
   const targetAngle = useMemo(() => {
-    const diff = rightW - leftW
+    const diff = leftW - rightW
     const ref = Math.max(leftW + rightW, 10)
     return Math.max(-15, Math.min(15, (diff / ref) * 20))
   }, [leftW, rightW])
@@ -316,6 +317,7 @@ export default function IgualdadBalanzaView() {
     setHistory([])
     setPhase(0)
     setComplete(false)
+    setCompleteLevel(0)
     setSwapped(false)
     setAddedObj(null)
     setShowDivByZero(false)
@@ -473,19 +475,19 @@ export default function IgualdadBalanzaView() {
   }, [addToPlate])
 
   useEffect(() => {
-    if (complete) return
+    if (complete || completeLevel === level) return
     const m = cfg.mode
 
     if (m === 'reflexive') {
       if (rightPlate.length > 0 && sameComp(leftPlate, rightPlate)) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
         addHistory('✓ Propiedad Reflexiva: a = a')
       }
     }
 
     if (m === 'symmetric') {
       if (swapped && balanced) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
         addHistory('✓ Propiedad Simétrica: A = B → B = A')
       }
     }
@@ -499,7 +501,7 @@ export default function IgualdadBalanzaView() {
         if (rightPlate.length > 0 && balanced && !sameComp(initLeft, rightPlate)) {
           setPhase(2)
           addHistory('Balanza 2 equilibrada — ¡cadena descubierta!')
-          setComplete(true)
+          setComplete(true); setCompleteLevel(level)
         }
       }
     }
@@ -515,30 +517,34 @@ export default function IgualdadBalanzaView() {
           setPhase(1)
           addHistory('Desequilibrio creado — ahora equilibra agregando al otro lado')
         }
+        if (balanced && leftW > wOf(initLeft) && rightW > wOf(initRight)) {
+          setComplete(true); setCompleteLevel(level)
+          addHistory('✓ Monotonía de la Adición: A + C = B + C')
+        }
       }
       if (phase === 1 && balanced && leftW > wOf(initLeft)) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
         addHistory('✓ Monotonía de la Adición: A + C = B + C')
       }
     }
 
     if (m === 'multiply') {
       if (leftPlate.length > initLeft.length && balanced) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
         addHistory('✓ Monotonía de la Multiplicación: A × C = B × C')
       }
     }
 
     if (m === 'divide') {
       if (leftPlate.length < initLeft.length && balanced) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
         addHistory('✓ Monotonía de la División: A ÷ C = B ÷ C')
       }
     }
 
     if (m === 'free') {
       if (balanced && leftPlate.length > 0) {
-        setComplete(true)
+        setComplete(true); setCompleteLevel(level)
       }
     }
   }, [leftPlate, rightPlate, balanced, cfg.mode, phase, complete, swapped, initLeft, initRight, leftW, rightW, addHistory])
@@ -575,7 +581,7 @@ export default function IgualdadBalanzaView() {
   }, [cfg.mode, phase, complete])
 
   return (
-    <div className="min-h-dvh bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif", touchAction: 'none' }}>
+    <div className="min-h-dvh bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
       <div className="max-w-2xl mx-auto px-3 py-4 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -597,10 +603,19 @@ export default function IgualdadBalanzaView() {
           {promptText}
         </div>
 
+        <div className="h-[56px] overflow-hidden">
+          {complete && (
+            <div className="bg-green-500/20 border border-green-400/30 rounded-xl px-4 py-2 text-center animate-[popIn_0.4s_ease-out]">
+              <div className="text-green-300 font-bold text-sm">¡Equilibrio!</div>
+              <div className="text-green-400/60 text-[10px]">{cfg.prop}: {cfg.sub}</div>
+            </div>
+          )}
+        </div>
+
         {/* Balance Scale */}
         <div
           ref={containerRef}
-          className={`relative ${shakeScale ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
+          className={`relative -mt-14 ${shakeScale ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
           style={{ touchAction: 'none' }}
         >
           <ScaleSVG angle={displayAngle} balanced={balanced} />
@@ -847,11 +862,10 @@ export default function IgualdadBalanzaView() {
               <button
                 key={i}
                 onClick={() => setLevel(i + 1)}
-                className={`w-7 h-7 rounded-full text-xs font-bold transition-all ${
-                  i + 1 === level
-                    ? 'bg-teal-500 text-white scale-110'
-                    : 'bg-white/10 text-white/40 hover:bg-white/20'
-                }`}
+                className={`w-7 h-7 rounded-full text-xs font-bold transition-all ${i + 1 === level
+                  ? 'bg-teal-500 text-white scale-110'
+                  : 'bg-white/10 text-white/40 hover:bg-white/20'
+                  }`}
               >
                 {i + 1}
               </button>
@@ -865,17 +879,6 @@ export default function IgualdadBalanzaView() {
             Siguiente →
           </button>
         </div>
-
-        {/* Complete celebration */}
-        {complete && (
-          <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40">
-            <div className="bg-green-500/20 border border-green-400/30 rounded-2xl px-8 py-4 text-center animate-[popIn_0.4s_ease-out]">
-              <div className="text-2xl mb-1">⚖️</div>
-              <div className="text-green-300 font-bold">¡Equilibrio!</div>
-              <div className="text-green-400/60 text-xs">{cfg.prop}: {cfg.sub}</div>
-            </div>
-          </div>
-        )}
 
         {/* Drag ghost */}
         {ghostPos && ghostType && (
