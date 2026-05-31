@@ -21,6 +21,7 @@ import DivisionFraccionesView from '../views/DivisionFraccionesView'
 import ConceptoFraccionView from '../views/ConceptoFraccionView'
 import FraccionConjuntoView from '../views/FraccionConjuntoView'
 import IgualdadBalanzaView from '../views/IgualdadBalanzaView'
+import BalanzaEcuacionView from '../views/BalanzaEcuacionView'
 
 const router = createBrowserRouter([
     {
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
     {
         path: '/igualdad-balanza',
         element: <Layout><IgualdadBalanzaView /></Layout>
+    },
+    {
+        path: '/balanza-ecuacion',
+        element: <Layout><BalanzaEcuacionView /></Layout>
     },
     {
         path: '/fracciones',

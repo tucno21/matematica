@@ -37,3 +37,16 @@
     60% { transform: translateX(-3px); }
     80% { transform: translateX(3px); }
 }
+
+@keyframes cancelBurst {
+    0% { opacity: 1; }
+    20% { opacity: 1; filter: brightness(3) drop-shadow(0 0 6px #fff); }
+    40% { opacity: 0.8; filter: brightness(2.5) drop-shadow(0 0 8px #fbbf24); }
+    100% { opacity: 0; filter: brightness(2); }
+}
+
+@keyframes consolidatePulse {
+    0% { filter: brightness(1); }
+    40% { filter: brightness(1.8) drop-shadow(0 0 4px rgba(45,212,191,0.6)); }
+    100% { filter: brightness(1); }
+}

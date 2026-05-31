@@ -24,7 +24,8 @@ export default function HomeView() {
         { id: 'multiplicar-fracciones', path: '/multiplicar-fracciones', title: 'Multiplicar Fracciones', description: 'Multiplicación visual de fracciones', available: true },
         { id: 'division-fracciones', path: '/division-fracciones', title: 'Dividir Fracciones', description: 'División visual de fracciones', available: true },
         { id: 'fraccion-conjunto', path: '/fraccion-conjunto', title: 'Fracción de un Conjunto', description: 'Parte de un grupo de objetos', available: true },
-        { id: 'igualdad-balanza', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true }
+        { id: 'igualdad-balanza', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true },
+        { id: 'balanza-ecuacion', path: '/balanza-ecuacion', title: 'Balanza de Ecuaciones', description: 'Resuelve ecuaciones de primer grado', available: true }
     ]
 
     const filteredTopics = topics.filter(t =>
