@@ -796,7 +796,7 @@ export default function IgualdadBalanzaView() {
 
         {/* Object Tray */}
         {(trayTypes.length > 0 && !showMultiply && !showDivide) && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-3">
+          <div className="bg-white/5 rounded-2xl border border-white/10 p-3" style={{ touchAction: 'none' }}>
             <div className="text-xs text-white/30 mb-2 text-center">Cajón de objetos</div>
             <div className="flex flex-wrap justify-center gap-3">
               {trayTypes.map(t => (
