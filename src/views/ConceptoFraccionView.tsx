@@ -1,5 +1,6 @@
 import { useState, useCallback, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ModalHelp from '../components/ModalHelp'
 
 type FigureType = 'bar' | 'circle' | 'hexagon' | 'square'
 
@@ -252,6 +253,7 @@ export default function ConceptoFraccionView() {
     const [num, setNum] = useState(1)
     const [den, setDen] = useState(1)
     const [uid] = useState(() => Math.random().toString(36).slice(2))
+    const [showHelp, setShowHelp] = useState(false)
 
     const canDecDen = den > 1 && (den - 1) >= num
     const canIncDen = den < 20
@@ -316,7 +318,15 @@ export default function ConceptoFraccionView() {
                 >
                     ← Volver
                 </button>
-                <h1 className="text-lg font-bold">¿Qué es una Fracción?</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-bold">¿Qué es una Fracción?</h1>
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-7 h-7 rounded-full bg-white/10 border border-white/20 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                    >
+                        ?
+                    </button>
+                </div>
             </div>
 
             {isSmall && (
@@ -421,6 +431,34 @@ export default function ConceptoFraccionView() {
                     </div>
                 </div>
             </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo graficar fracciones?"
+                buttonColor="bg-teal-500 hover:bg-teal-400"
+            >
+                <ol className="space-y-3 text-white/80 text-sm leading-relaxed list-decimal list-inside">
+                    <li>
+                        <strong className="text-white">Elige una figura</strong> usando los botones de la derecha (o abajo en móvil): barra, círculo, hexágono o cuadrado.
+                    </li>
+                    <li>
+                        Aumenta o disminuye el <strong className="text-teal-400">numerador</strong> (partes coloreadas) con los botones <strong>+</strong> y <strong>−</strong>.
+                    </li>
+                    <li>
+                        Aumenta o disminuye el <strong className="text-amber-400">denominador</strong> (partes totales) con los botones <strong>+</strong> y <strong>−</strong>.
+                    </li>
+                    <li>
+                        Observa cómo la figura se divide y colorea según la fracción que armaste.
+                    </li>
+                    <li>
+                        Si el numerador es mayor que el denominador, verás <strong className="text-white">varias figuras</strong> representando la fracción mixta.
+                    </li>
+                    <li>
+                        Usa el botón de <strong className="text-amber-400">reiniciar</strong> para volver a 1/1.
+                    </li>
+                </ol>
+            </ModalHelp>
         </div>
     )
 }
