@@ -702,7 +702,7 @@ export default function RectaNumericaFraccionesView() {
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
-                title="¿Cómo jugar?"
+                title="¿Cómo ubicar fracciones en la recta?"
             >
                 <ol className="space-y-3 text-white/80 text-sm leading-relaxed list-decimal list-inside">
                     <li>
