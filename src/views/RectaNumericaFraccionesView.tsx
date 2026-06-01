@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -247,6 +248,7 @@ export default function RectaNumericaFraccionesView() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [incorrectIds, setIncorrectIds] = useState<Set<number>>(new Set());
     const [cursorLineX, setCursorLineX] = useState<number | null>(null);
+    const [showHelp, setShowHelp] = useState(false);
 
     // ── Measure line width ──
     useEffect(() => {
@@ -436,6 +438,12 @@ export default function RectaNumericaFraccionesView() {
                     ← Volver
                 </button>
                 <h1 className="text-lg font-bold">Fracciones en la Recta</h1>
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute right-4 w-9 h-9 rounded-full bg-white/10 border border-white/20 text-white/70 text-lg font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                >
+                    ?
+                </button>
             </div>
 
             {/* ── Fraction Cards ── */}
@@ -542,7 +550,7 @@ export default function RectaNumericaFraccionesView() {
                                 <div
                                     key={`t-${n}`}
                                     className="absolute bg-white/80 rounded"
-                                    style={{ left: x, transform: "translateX(-50%)", width: 2, height: 22 }}
+                                    style={{ left: x, transform: "translateX(-50%)", width: 3, height: 22 }}
                                 />
                             );
                         })}
@@ -558,8 +566,8 @@ export default function RectaNumericaFraccionesView() {
                                 ticks.push(
                                     <div
                                         key={`sub-${base}-${d}`}
-                                        className="absolute bg-white/70 rounded"
-                                        style={{ left: x, transform: "translateX(-50%)", width: 2, height: 14, top: 60 }}
+                                        className="absolute rounded"
+                                        style={{ left: x, transform: "translateX(-50%)", width: 2, height: 14, top: 60, backgroundColor: "#facc15" }}
                                     />
                                 );
                             }
@@ -581,7 +589,7 @@ export default function RectaNumericaFraccionesView() {
                             return (
                                 <span
                                     key={n}
-                                    className="absolute text-sm font-mono font-bold text-white/70"
+                                    className="absolute text-base font-mono font-extrabold text-white/70"
                                     style={{ left: x, transform: "translateX(-50%)" }}
                                 >
                                     {n}
@@ -689,6 +697,37 @@ export default function RectaNumericaFraccionesView() {
                     </div>
                 </div>
             )}
+
+            {/* ── Help Modal ── */}
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo jugar?"
+            >
+                <ol className="space-y-3 text-white/80 text-sm leading-relaxed list-decimal list-inside">
+                    <li>
+                        <strong className="text-white">Observa</strong> las tarjetas de fracciones que aparecen en la parte superior.
+                    </li>
+                    <li>
+                        <strong className="text-white">Arrastra</strong> cada tarjeta hacia la recta numérica y suéltala en la posición que consideras correcta.
+                    </li>
+                    <li>
+                        Usa los botones <strong className="text-yellow-400">−</strong> y <strong className="text-yellow-400">+</strong> para dividir cada entero en más partes y ubicar las fracciones con mayor precisión.
+                    </li>
+                    <li>
+                        Puedes <strong className="text-white">volver a arrastrar</strong> una fracción ya colocada para corregir su posición.
+                    </li>
+                    <li>
+                        Cuando las 4 fracciones estén colocadas, pulsa <strong className="text-emerald-400">Comprobar</strong> para verificar tus respuestas.
+                    </li>
+                    <li>
+                        Si todas son correctas, ¡celebra! Si no, intenta corregir las que están mal.
+                    </li>
+                    <li>
+                        Usa <strong className="text-white">Reiniciar</strong> para quitar todas las fracciones de la recta, o 🎲 para generar nuevas fracciones.
+                    </li>
+                </ol>
+            </ModalHelp>
         </div>
     );
 }
