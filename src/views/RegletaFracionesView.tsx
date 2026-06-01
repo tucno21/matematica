@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Draggable from 'react-draggable';
 import { useNavigate } from 'react-router-dom';
+import ModalHelp from '../components/ModalHelp';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -724,6 +725,7 @@ const RegletaFraciones = (): React.ReactElement => {
     }, [setFractions]);
 
     const navigate = useNavigate();
+    const [showHelp, setShowHelp] = useState(false);
 
     // ── Render ───────────────────────────────────────────────────────────────
 
@@ -789,6 +791,12 @@ const RegletaFraciones = (): React.ReactElement => {
                         Doble clic para duplicar · Mantén 3s para eliminar · Arrastra para acoplar
                     </p>
                 </div>
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute right-2 w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-600 text-sm font-bold flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
+                >
+                    ?
+                </button>
             </div>
 
             {/* ── Toolbar ── */}
@@ -822,6 +830,39 @@ const RegletaFraciones = (): React.ReactElement => {
             <div className="text-center text-gray-400 text-xs pb-1.5 shrink-0">
                 {fractions.length} barra{fractions.length !== 1 ? 's' : ''} en la regleta
             </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo usar la regleta de fracciones?"
+                bgColor="#f9fafb"
+                titleColor="#1f2937"
+                buttonColor="bg-purple-500 hover:bg-purple-400"
+            >
+                <ol className="space-y-3 text-gray-600 text-sm leading-relaxed list-decimal list-inside">
+                    <li>
+                        <strong className="text-gray-800">Arrastra</strong> las barras de fracción para moverlas libremente dentro del lienzo.
+                    </li>
+                    <li>
+                        Las barras se <strong className="text-blue-500">acoplan magnéticamente</strong> cuando las acercas a otra barra.
+                    </li>
+                    <li>
+                        Haz <strong className="text-gray-800">doble clic</strong> (o doble toque) en una barra para <strong>duplicarla</strong>.
+                    </li>
+                    <li>
+                        <strong className="text-red-500">Mantén presionado 3 segundos</strong> sin mover para eliminar una barra.
+                    </li>
+                    <li>
+                        Usa los botones <strong className="text-purple-500">＋</strong> y <strong className="text-red-500">－</strong> para agregar o quitar fracciones.
+                    </li>
+                    <li>
+                        Cambia la vista entre <strong className="text-blue-500">fracción</strong>, <strong className="text-emerald-500">decimal</strong> y <strong className="text-yellow-500">porcentaje</strong> con los botones del modo.
+                    </li>
+                    <li>
+                        Compara visualmente el tamaño de las fracciones acomodándolas una debajo de otra.
+                    </li>
+                </ol>
+            </ModalHelp>
         </div>
     );
 };

@@ -5,6 +5,7 @@ interface ModalHelpProps {
     onClose: () => void;
     title: string;
     bgColor?: string;
+    titleColor?: string;
     buttonColor?: string;
     maxWidth?: string;
     children: ReactNode;
@@ -15,6 +16,7 @@ export default function ModalHelp({
     onClose,
     title,
     bgColor = "#111827",
+    titleColor = "#ffffff",
     buttonColor = "bg-indigo-500 hover:bg-indigo-400",
     maxWidth = "max-w-2xl",
     children,
@@ -32,7 +34,7 @@ export default function ModalHelp({
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-white">{title}</h2>
+                    <h2 className="text-lg font-bold" style={{ color: titleColor }}>{title}</h2>
                     <button
                         onClick={onClose}
                         className="w-8 h-8 rounded-full bg-white/10 text-white/70 flex items-center justify-center hover:bg-white/20 transition-all"
