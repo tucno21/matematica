@@ -2,9 +2,6 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Layout from '../components/Layout'
 import HomeView from '../views/HomeView'
 import SumaEnterosView from '../views/SumaEnterosView'
-import FraccionesView from '../views/FraccionesView'
-import DecimalesView from '../views/DecimalesView'
-import PorcentajesView from '../views/PorcentajesView'
 import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
 import IntroEnterosView from '../views/IntroEnterosView'
@@ -99,18 +96,6 @@ const router = createBrowserRouter([
     {
         path: '/balanza-ecuacion',
         element: <Layout><BalanzaEcuacionView /></Layout>
-    },
-    {
-        path: '/fracciones',
-        element: <Layout><FraccionesView /></Layout>
-    },
-    {
-        path: '/decimales',
-        element: <Layout><DecimalesView /></Layout>
-    },
-    {
-        path: '/porcentajes',
-        element: <Layout><PorcentajesView /></Layout>
     }
 ])
 
