@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN = -30;
@@ -188,6 +189,8 @@ export default function RectaNumerica() {
     const [dragLocked, setDragLocked] = useState<boolean>(false);
 
     const [feedback, setFeedback] = useState<{ correct: boolean; msg: string } | null>(null);
+    const [showHelp, setShowHelp] = useState(false);
+    const [showRules, setShowRules] = useState(false);
 
     const lineRef = useRef<HTMLDivElement>(null);
 
@@ -405,36 +408,50 @@ export default function RectaNumerica() {
         ::-webkit-scrollbar { display:none; }
       `}</style>
 
-            {/* ── Back ── */}
+            {/* ── Header ── */}
             <div className="px-4 pt-4 pb-1 shrink-0">
-                <button
-                    type="button"
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="hidden sm:inline">Volver</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 shrink-0"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span className="hidden sm:inline">Volver</span>
+                    </button>
+
+                    <div className="flex-1 text-center">
+                        <p className="text-[10px] font-bold tracking-widest uppercase mb-0.5" style={{ color: "rgba(255,255,255,.28)" }}>Recta Numérica</p>
+                        <h1 className="text-base sm:text-lg font-black text-white leading-tight">
+                            El Juego de{" "}
+                            <span style={{ color: advColor }}>Avanzar</span>{" "}&{" "}
+                            <span style={{ color: retColor }}>Retroceder</span>
+                        </h1>
+                    </div>
+
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-95"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                    >
+                        ?
+                    </button>
+                </div>
             </div>
 
             {/* ══════════ IDLE ══════════ */}
             {gamePhase === "idle" && (
                 <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
-                    <div className="text-center anim-fadeup">
-                        <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,.28)" }}>Recta Numérica</p>
-                        <h1 className="text-3xl font-black text-white leading-tight">El Juego de<br />
-                            <span style={{ color: advColor }}>Avanzar</span>{" "}&{" "}
-                            <span style={{ color: retColor }}>Retroceder</span>
-                        </h1>
-                        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,.38)" }}>
-                            2 jugadores · {turnsPerRound} turnos cada uno · El dado decide cuánto mueves
-                        </p>
-                    </div>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,.38)" }}>
+                        2 jugadores · {turnsPerRound} turnos cada uno · El dado decide cuánto mueves
+                    </p>
 
                     {/* Configuration Panel */}
                     <div
@@ -488,25 +505,14 @@ export default function RectaNumerica() {
                         </div>
                     </div>
 
-                    {/* Rules */}
-                    <div
-                        className="w-full max-w-sm rounded-2xl p-5 anim-fadeup"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", animationDelay: ".07s" }}
+                    <button
+                        type="button"
+                        onClick={() => setShowRules(true)}
+                        className="w-full max-w-sm py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,.5)", cursor: "pointer" }}
                     >
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,.28)" }}>Reglas</p>
-                        {[
-                            ["🎲", `Lanza${numberOfDice === 2 ? " los" : " el"} dado${numberOfDice === 2 ? "s" : ""} para conocer tu movimiento`],
-                            ["👆", "Arrastra la bolita al número correcto en la recta"],
-                            ["🔵", "Jugador AVANZAR: suma el dado (+)"],
-                            ["🔴", "Jugador RETROCEDER: resta el dado (−)"],
-                            ["🔄", "Se alternan; siempre empieza Avanzar"],
-                        ].map(([icon, text]) => (
-                            <div key={text} className="flex items-start gap-2.5 mb-2 last:mb-0">
-                                <span className="text-base shrink-0">{icon}</span>
-                                <span className="text-xs leading-relaxed font-medium" style={{ color: "rgba(255,255,255,.52)" }}>{text}</span>
-                            </div>
-                        ))}
-                    </div>
+                        <span>📋</span> Lee reglas
+                    </button>
 
                     <button
                         type="button"
@@ -838,6 +844,88 @@ export default function RectaNumerica() {
                     )}
                 </>
             )}
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo jugar en la Recta Numérica?"
+                bgColor="#080c18"
+                buttonColor="bg-blue-500 hover:bg-blue-400"
+            >
+                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Configuración</p>
+                        <ol className="space-y-2 list-decimal list-inside">
+                            <li>Elige los <strong className="text-white">turnos por ronda</strong> (3, 4 o 5) y el <strong className="text-white">número de dados</strong> (1 o 2).</li>
+                            <li>Presiona <strong className="text-white">¡Comenzar!</strong> para iniciar la partida.</li>
+                        </ol>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Durante el juego</p>
+                        <ol className="space-y-2 list-decimal list-inside" start={3}>
+                            <li>Siempre empieza <strong style={{ color: advColor }}>Avanzar</strong>. Los turnos se alternan.</li>
+                            <li>Pulsa el <strong className="text-white">dado</strong> para lanzarlo. El número indica cuántos lugares mover.</li>
+                            <li><strong style={{ color: advColor }}>Avanzar</strong> mueve la bolita a la <strong className="text-white">derecha (+)</strong> sumando el dado.</li>
+                            <li><strong style={{ color: retColor }}>Retroceder</strong> mueve la bolita a la <strong className="text-white">izquierda (−)</strong> restando el dado.</li>
+                            <li><strong className="text-white">Arrastra la bolita</strong> hasta la posición correcta en la recta numérica.</li>
+                            <li>Si aciertas suma un <span className="text-emerald-400 font-bold">✓</span>, si fallas un <span className="text-red-400 font-bold">✗</span>. En ambos casos la bolita se acomoda en el lugar correcto.</li>
+                        </ol>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Fin del juego</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Al terminar todos los turnos se muestran los <strong className="text-white">resultados</strong> con aciertos, errores y precisión de cada jugador.</li>
+                            <li>Presiona <strong className="text-white">🔄 Jugar de nuevo</strong> para iniciar una nueva partida.</li>
+                        </ul>
+                    </div>
+
+                    <div className="rounded-xl p-3" style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)" }}>
+                        <p className="text-xs font-bold mb-1" style={{ color: advColor }}>💡 Recuerda</p>
+                        <p className="text-xs text-white/60">Los números a la derecha del cero son <strong style={{ color: advColor }}>positivos (+)</strong> y los de la izquierda son <strong style={{ color: retColor }}>negativos (−)</strong>. El cero es el punto de partida.</p>
+                    </div>
+                </div>
+            </ModalHelp>
+
+            <ModalHelp
+                open={showRules}
+                onClose={() => setShowRules(false)}
+                title="Reglas del Juego"
+                bgColor="#080c18"
+                buttonColor="bg-blue-500 hover:bg-blue-400"
+            >
+                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🎲</span>
+                        <p>Lanza{numberOfDice === 2 ? " los" : " el"} dado{numberOfDice === 2 ? "s" : ""} para conocer cuántos lugares debes mover la bolita.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">👆</span>
+                        <p>Arrastra la bolita al número correcto en la recta numérica según el resultado del dado.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🔵</span>
+                        <p><strong style={{ color: advColor }}>Jugador Avanzar</strong>: suma el dado (+) y mueve la bolita hacia la <strong className="text-white">derecha</strong>.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🔴</span>
+                        <p><strong style={{ color: retColor }}>Jugador Retroceder</strong>: resta el dado (−) y mueve la bolita hacia la <strong className="text-white">izquierda</strong>.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🔄</span>
+                        <p>Los turnos se alternan. Siempre empieza <strong style={{ color: advColor }}>Avanzar</strong>.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">✓✗</span>
+                        <p>Cada acierto suma un <span className="text-emerald-400 font-bold">✓</span> y cada error un <span className="text-red-400 font-bold">✗</span>. Al final gana el jugador con más aciertos.</p>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
