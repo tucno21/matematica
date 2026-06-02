@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1189,6 +1190,7 @@ export default function DivisionFraccionesView() {
     // Shared
     const [showMath, setShowMath] = useState(false);
     const [celebration, setCelebration] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     const isComplete =
         exercise.caseType === "int-int" ? intIntConfirmed :
@@ -1243,6 +1245,12 @@ export default function DivisionFraccionesView() {
                     ← Volver
                 </button>
                 <h1 className="text-lg font-bold">Dividir Fracciones</h1>
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute right-4 w-8 h-8 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                >
+                    ?
+                </button>
             </div>
 
             <div className="flex items-center justify-center gap-2 px-4 py-1 flex-wrap">
@@ -1356,6 +1364,67 @@ export default function DivisionFraccionesView() {
                     Reiniciar
                 </button>
             </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo dividir fracciones visualmente?"
+                bgColor="#0f172a"
+                titleColor="#e2e8f0"
+            >
+                <div className="text-white/80 text-sm space-y-4">
+                    <p>Resuelve divisiones paso a paso con barras y rectas. Hay <strong className="text-white">4 tipos</strong> de ejercicio según el nivel:</p>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-teal-400">Entero ÷ Entero (niveles 1-2)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Observa cuántas <strong className="text-teal-400">barras</strong> tienes y en cuántos <strong className="text-amber-400">grupos</strong> debes repartirlas.</li>
+                            <li>Define la <strong className="text-white">cantidad de grupos</strong> con los botones <strong>−</strong> y <strong>+</strong>.</li>
+                            <li>Las barras se cortan automáticamente en partes. <strong className="text-white">Toca cada grupo</strong> para enviarle una porción de forma equitativa.</li>
+                            <li>Cuando todo esté repartido, pulsa <strong className="text-emerald-400">Comprobar resultado</strong>. Cada grupo debe tener la misma cantidad.</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-amber-400">Fracción ÷ Entero (niveles 3-4)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Tienes una barra con <strong className="text-teal-400">partes coloreadas</strong> que debes repartir en varios grupos.</li>
+                            <li>Define la cantidad de <strong className="text-white">Grupos</strong> y usa <strong className="text-white">Subdividir</strong> si necesitas más partes para que la repartición sea exacta.</li>
+                            <li><strong className="text-white">Toca cada grupo</strong> para enviarle porciones. Las partes repartidas se transparentan.</li>
+                            <li>Verifica que la repartición sea <strong className="text-white">equitativa</strong> y pulsa <strong className="text-emerald-400">Comprobar resultado</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-emerald-400">Entero ÷ Fracción (niveles 5-6)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Se muestra una <strong className="text-white">recta numérica</strong> con una marca de <strong className="text-amber-400">meta</strong>.</li>
+                            <li><strong className="text-white">Arrastra</strong> la tarjeta de fracción y suéltala sobre la recta para colocar un segmento.</li>
+                            <li>Cada segmento mide la fracción indicada. Sigue colocando hasta llegar a la meta.</li>
+                            <li>Indica <strong className="text-white">cuántas veces contaste</strong> con los botones <strong>−</strong>/<strong>+</strong> y pulsa <strong className="text-emerald-400">Comprobar</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-violet-400">Fracción ÷ Fracción (niveles 7-8)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Tienes una barra con <strong className="text-teal-400">partes coloreadas</strong> y una tarjeta de fracción que debes colocar dentro.</li>
+                            <li>Usa <strong className="text-white">Subdividir</strong> hasta alcanzar el <strong className="text-white">denominador común</strong> que indica la app.</li>
+                            <li>Pulsa <strong className="text-amber-400">Colocar tarjeta</strong> para marcar cuántas veces cabe la fracción dentro de las partes coloreadas.</li>
+                            <li>Indica <strong className="text-white">cuántas veces cabe</strong> y pulsa <strong className="text-emerald-400">Comprobar</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
+                        <p className="font-bold text-white text-xs uppercase tracking-wide">Consejos generales</p>
+                        <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
+                            <li>El nivel <strong className="text-white/80">9</strong> mezcla todos los tipos aleatoriamente.</li>
+                            <li>Usa <strong className="text-white/80">Nuevo ejercicio</strong> para cambiar el problema y <strong className="text-white/80">Reiniciar</strong> para empezar de cero.</li>
+                            <li>Al completar, pulsa <strong className="text-rose-400">Ver la matemática</strong> para ver la demostración formal de la operación.</li>
+                        </ul>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
