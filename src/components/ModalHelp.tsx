@@ -29,11 +29,11 @@ export default function ModalHelp({
             onClick={onClose}
         >
             <div
-                className={`border border-white/20 rounded-2xl ${maxWidth} w-[90%] p-6 shadow-2xl`}
-                style={{ backgroundColor: bgColor }}
+                className={`border border-white/20 rounded-2xl ${maxWidth} w-[90%] shadow-2xl flex flex-col`}
+                style={{ backgroundColor: bgColor, maxHeight: "85vh" }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between p-6 pb-4 shrink-0">
                     <h2 className="text-lg font-bold" style={{ color: titleColor }}>{title}</h2>
                     <button
                         onClick={onClose}
@@ -43,14 +43,18 @@ export default function ModalHelp({
                     </button>
                 </div>
 
-                {children}
+                <div className="overflow-y-auto px-6 flex-1" style={{ WebkitOverflowScrolling: "touch" }}>
+                    {children}
+                </div>
 
-                <button
-                    onClick={onClose}
-                    className={`mt-5 w-full py-2.5 rounded-xl text-white font-bold text-sm active:scale-95 transition-all ${buttonColor}`}
-                >
-                    Entendido
-                </button>
+                <div className="p-6 pt-4 shrink-0">
+                    <button
+                        onClick={onClose}
+                        className={`w-full py-2.5 rounded-xl text-white font-bold text-sm active:scale-95 transition-all ${buttonColor}`}
+                    >
+                        Entendido
+                    </button>
+                </div>
             </div>
         </div>
     );
