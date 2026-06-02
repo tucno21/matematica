@@ -240,14 +240,13 @@ export default function TermometroEnteros() {
             {/* ── Header: back button + title ── */}
             <div
                 className="w-full z-10"
-                style={{ maxWidth: 640, marginBottom: 32, textAlign: "center" }}
+                style={{ maxWidth: 640, marginBottom: 32 }}
             >
-                {/* Back button */}
-                <div className="flex items-center mb-4">
+                <div className="flex items-center gap-3">
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 shrink-0"
                         style={{
                             background: "rgba(255,255,255,0.07)",
                             border: "1px solid rgba(255,255,255,0.12)",
@@ -273,24 +272,27 @@ export default function TermometroEnteros() {
                         </svg>
                         <span className="hidden sm:inline">Volver</span>
                     </button>
-                </div>
 
-                <p
-                    className="text-xs font-bold tracking-widest uppercase mb-1.5"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
-                >
-                    Números Enteros
-                </p>
-                <h1
-                    className="font-black m-0 leading-tight"
-                    style={{ color: "#fff", fontSize: "clamp(22px,4vw,32px)" }}
-                >
-                    El Termómetro de los{" "}
-                    <br />
-                    <span style={{ color: colors.primary, transition: "color 0.5s ease" }}>
-                        Enteros
-                    </span>
-                </h1>
+                    <div className="flex-1 text-center">
+                        <p
+                            className="text-xs font-bold tracking-widest uppercase mb-0.5"
+                            style={{ color: "rgba(255,255,255,0.3)" }}
+                        >
+                            Números Enteros
+                        </p>
+                        <h1
+                            className="font-black m-0 leading-tight"
+                            style={{ color: "#fff", fontSize: "clamp(16px,3vw,24px)" }}
+                        >
+                            El Termómetro de los{" "}
+                            <span style={{ color: colors.primary, transition: "color 0.5s ease" }}>
+                                Enteros
+                            </span>
+                        </h1>
+                    </div>
+
+                    <div className="shrink-0" style={{ width: 56 }} />
+                </div>
             </div>
 
             {/* ── Main card ── */}
