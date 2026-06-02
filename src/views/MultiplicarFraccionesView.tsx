@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,8 +168,37 @@ function CaseFracInt({
                                             style={{ minHeight: 48 }}
                                         />
                                     ))}
-                                </div>
-                            </div>
+            </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo funciona?"
+                bgColor="#0f172a"
+                titleColor="#e2e8f0"
+            >
+                <div className="text-white/80 text-sm space-y-3">
+                    <p>Resuelve multiplicaciones de fracciones de forma visual. Hay 3 tipos de ejercicio:</p>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-teal-400">Fracción × Entero</p>
+                        <p>Crea tantos grupos como indica el número entero. Cada grupo contiene la fracción. Luego junta todo para ver el resultado.</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-amber-400">Entero × Fracción (fracción de un conjunto)</p>
+                        <p>Divide las fichas en tantos grupos como indica el denominador, luego selecciona tantos grupos como indica el numerador.</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-emerald-400">Fracción × Fracción</p>
+                        <p>Configura las columnas (denominador 1) y filas (denominador 2). Colorea las partes que indica cada numerador. La intersección es el resultado.</p>
+                    </div>
+
+                    <p className="text-white/50 text-xs">Selecciona el nivel (1-7) para cambiar la dificultad.</p>
+                </div>
+            </ModalHelp>
+        </div>
                         ))}
                     </div>
 
@@ -594,6 +624,7 @@ export default function MultiplicarFraccionesView() {
     // Shared
     const [showMath, setShowMath] = useState(false);
     const [celebration, setCelebration] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     const isComplete =
         exercise.caseType === "frac-int" ? joined :
@@ -649,6 +680,12 @@ export default function MultiplicarFraccionesView() {
                     ← Volver
                 </button>
                 <h1 className="text-lg font-bold">Multiplicar Fracciones</h1>
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute right-4 w-8 h-8 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                >
+                    ?
+                </button>
             </div>
 
             {/* ── Level selector ── */}
@@ -751,6 +788,35 @@ export default function MultiplicarFraccionesView() {
                     Reiniciar
                 </button>
             </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo funciona?"
+                bgColor="#0f172a"
+                titleColor="#e2e8f0"
+            >
+                <div className="text-white/80 text-sm space-y-3">
+                    <p>Resuelve multiplicaciones de fracciones de forma visual. Hay 3 tipos de ejercicio:</p>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-teal-400">Fracción × Entero</p>
+                        <p>Crea tantos grupos como indica el número entero. Cada grupo contiene la fracción. Luego junta todo para ver el resultado.</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-amber-400">Entero × Fracción (fracción de un conjunto)</p>
+                        <p>Divide las fichas en tantos grupos como indica el denominador, luego selecciona tantos grupos como indica el numerador.</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-emerald-400">Fracción × Fracción</p>
+                        <p>Configura las columnas (denominador 1) y filas (denominador 2). Colorea las partes que indica cada numerador. La intersección es el resultado.</p>
+                    </div>
+
+                    <p className="text-white/50 text-xs">Selecciona el nivel (1-7) para cambiar la dificultad.</p>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
