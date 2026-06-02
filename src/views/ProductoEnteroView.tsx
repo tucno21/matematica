@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "setup" | "build" | "flip" | "count" | "result";
@@ -223,6 +224,7 @@ export default function ProductoEnteroView() {
     const [flippingIds, setFlippingIds] = useState<Set<string>>(new Set());
     const [counting, setCounting] = useState(false);
     const [resultValue, setResultValue] = useState(0);
+    const [showHelp, setShowHelp] = useState(false);
 
     // Dragging state
     const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -470,77 +472,80 @@ export default function ProductoEnteroView() {
                     <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">Producto de Enteros</h1>
                     <p className="text-[10px] text-white/30 font-semibold">a veces b = agrupación y conteo</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                     {phaseList.map((p, i) => (
                         <div key={p} className={`h-1.5 rounded-full transition-all duration-300
               ${phase === p ? "w-5 bg-teal-400" : phaseList.indexOf(phase) > i ? "w-2.5 bg-white/25" : "w-2.5 bg-white/8"}`} />
                     ))}
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                    >
+                        ?
+                    </button>
                 </div>
             </header>
 
             {/* ══════════════════ SETUP ══════════════════ */}
             {phase === "setup" && (
-                <main className="flex-1 flex flex-col gap-4 px-4 pb-6 overflow-y-auto">
-                    <div className="text-center anim-up pt-1">
-                        <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Multiplicación de enteros</p>
-                        <p className="text-white/45 text-sm leading-relaxed max-w-xs mx-auto">
-                            a × b se lee como <span className="text-teal-400 font-bold">"a veces el b"</span>.<br />
-                            Ejemplo: 3 × 5 = "3 veces el 5"
-                        </p>
-                    </div>
-
-                    <div className="anim-up" style={{ animationDelay: "0.05s" }}>
-                        <NumberInputCard
-                            label="a (grupos)" sublabel="Número de grupos"
-                            sign={aSign} count={aValue}
-                            onSignChange={setASign} onCountChange={setAValue}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-3 px-2 anim-up" style={{ animationDelay: "0.1s" }}>
-                        <div className="flex-1 h-px bg-white/8" />
-                        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-                            <span className="text-white/50 text-lg font-black">×</span>
+                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto">
+                    <div className="flex-1 flex flex-col gap-4">
+                        <div className="text-center anim-up pt-1">
+                            <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Multiplicación de enteros</p>
+                            <p className="text-white/45 text-sm whitespace-nowrap">
+                                a × b se lee como <span className="text-teal-400 font-bold">"a veces el b"</span> · Ejemplo: 3 × 5 = "3 veces el 5"
+                            </p>
                         </div>
-                        <div className="flex-1 h-px bg-white/8" />
-                    </div>
 
-                    <div className="anim-up" style={{ animationDelay: "0.14s" }}>
-                        <NumberInputCard
-                            label="b (cantidad)" sublabel="Fichas en cada grupo"
-                            sign={bSign} count={bValue}
-                            onSignChange={setBSign} onCountChange={setBValue}
-                        />
-                    </div>
-
-                    {canGenerate && (
-                        <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
-                            <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">Interpretación</p>
-
-                            <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
-                                <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                                <span className="text-white/30">×</span>
-                                <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
+                        <div className="flex flex-col sm:flex-row items-stretch gap-2 anim-up" style={{ animationDelay: "0.05s" }}>
+                            <div className="flex-1">
+                                <NumberInputCard
+                                    label="a (grupos)" sublabel="Número de grupos"
+                                    sign={aSign} count={aValue}
+                                    onSignChange={setASign} onCountChange={setAValue}
+                                />
                             </div>
 
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="flex-1 h-px bg-white/8" />
-                                <span className="text-teal-400 text-xs font-black uppercase">=</span>
-                                <span className="text-teal-300 text-sm font-black">"{Math.abs(aActual)} veces el {Math.abs(bActual)}"</span>
-                                <div className="flex-1 h-px bg-white/8" />
+                            <div className="flex items-center justify-center shrink-0 sm:w-8 py-1">
+                                <span className="text-white/30 text-3xl font-black">×</span>
+                            </div>
+
+                            <div className="flex-1">
+                                <NumberInputCard
+                                    label="b (cantidad)" sublabel="Fichas en cada grupo"
+                                    sign={bSign} count={bValue}
+                                    onSignChange={setBSign} onCountChange={setBValue}
+                                />
                             </div>
                         </div>
-                    )}
 
-                    <div className="anim-up" style={{ animationDelay: "0.24s" }}>
+                        {canGenerate && (
+                            <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
+                                <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">Interpretación</p>
+                                <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
+                                    <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
+                                    <span className="text-white/30">×</span>
+                                    <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex-1 h-px bg-white/8" />
+                                    <span className="text-teal-400 text-xs font-black uppercase">=</span>
+                                    <span className="text-teal-300 text-sm font-black">"{Math.abs(aActual)} veces el {Math.abs(bActual)}"</span>
+                                    <div className="flex-1 h-px bg-white/8" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="anim-up pt-4" style={{ animationDelay: "0.24s" }}>
                         <button
                             disabled={!canGenerate}
                             onClick={handleGenerate}
                             className={`w-full py-4 rounded-2xl text-base font-black transition-all duration-200
                 ${canGenerate
-                                    ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
-                                    : "bg-white/6 text-white/20 cursor-not-allowed"
-                                }`}>
+                                ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
+                                : "bg-white/6 text-white/20 cursor-not-allowed"
+                            }`}>
                             Generar Grupos ✨
                         </button>
                     </div>
@@ -846,6 +851,61 @@ export default function ProductoEnteroView() {
                     </button>
                 </main>
             )}
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo multiplicar enteros con fichas?"
+                bgColor="#080c18"
+                buttonColor="bg-teal-500 hover:bg-teal-400"
+            >
+                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Configura</p>
+                        <ol className="space-y-2 list-decimal list-inside">
+                            <li>En <strong className="text-white">a (grupos)</strong> elige el signo y cuántos grupos formar.</li>
+                            <li>En <strong className="text-white">b (cantidad)</strong> elige el signo y cuántas fichas van en cada grupo.</li>
+                            <li>Presiona <strong className="text-white">Generar Grupos ✨</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Forma los grupos</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li><strong className="text-white">Arrastra</strong> las fichas a las columnas para crear los grupos.</li>
+                            <li>Cada columna debe tener exactamente <strong className="text-teal-400">|b|</strong> fichas.</li>
+                            <li>Cuando todos los grupos estén correctos, pulsa <strong className="text-teal-400">✅ ¡Listo! Siguiente paso →</strong>.</li>
+                        </ul>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Voltear (si a es negativo)</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Si <strong className="text-white">a</strong> es negativo, todas las fichas cambian de color: <span className="text-blue-400 font-bold">+1</span> → <span className="text-red-400 font-bold">−1</span> y viceversa.</li>
+                            <li>Si <strong className="text-white">a</strong> es positivo, se salta este paso.</li>
+                        </ul>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 4 — Contar y resultado</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Presiona <strong className="text-teal-400">✅ Contar fichas y ver resultado</strong>.</li>
+                            <li>Se cuentan todas las fichas y se muestra el <strong className="text-white">valor final</strong>.</li>
+                        </ul>
+                    </div>
+
+                    <div className="rounded-xl p-3" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)" }}>
+                        <p className="text-xs font-bold mb-1 text-teal-400">💡 Idea clave</p>
+                        <p className="text-xs text-white/60">Multiplicar es hacer <strong className="text-teal-400">grupos iguales</strong>. Signos iguales → resultado <span className="text-blue-400 font-bold">positivo</span>. Signos diferentes → resultado <span className="text-red-400 font-bold">negativo</span>.</p>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
