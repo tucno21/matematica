@@ -69,6 +69,8 @@ interface RegletaFracionesCanvasProps {
     onDeleteById: (id: string) => void;
     draggingId: string | null;
     snapTargetMap: Record<string, SnapTarget | null>;
+    onContainerWidth: (w: number) => void;
+    scrollWrapperRef: React.RefObject<HTMLDivElement | null>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -95,14 +97,24 @@ const COLORS: string[] = [
 /** Height in px of each fraction bar row */
 const ROW_HEIGHT = 56;
 
+/** Gap between bar and row boundary (top/bottom padding) */
+const BAR_GAP = 4;
+
+/** Actual bar height = ROW_HEIGHT - BAR_GAP (1 gap, bar sits flush top) */
+const BAR_HEIGHT = ROW_HEIGHT - BAR_GAP;
+
 /**
  * Width of fraction 1/1 as a percentage of container.
  * Reduced so users can move it horizontally.
  */
-const WHOLE_WIDTH_PERCENT = 40;
+const WHOLE_WIDTH_PERCENT = 52;
 
-/** Distance in px to trigger magnetic snap */
-const SNAP_THRESHOLD = 28;
+/**
+ * Snap thresholds — separate for each axis so diagonal drags
+ * don't accidentally trigger snapping on the wrong axis.
+ */
+const SNAP_THRESHOLD_MAIN = 24;   // along the joining axis
+const SNAP_THRESHOLD_CROSS = 20;  // perpendicular alignment tolerance
 
 const INITIAL_FRACTIONS: Fraction[] = [
     { id: 'f1', numerator: 1, denominator: 1, color: 'bg-fuchsia-500', x: 0, y: 0 },
@@ -124,11 +136,17 @@ const INITIAL_FRACTIONS: Fraction[] = [
  */
 function barPixelWidth(denominator: number, containerWidth: number): number {
     const pct = denominator === 1 ? WHOLE_WIDTH_PERCENT : WHOLE_WIDTH_PERCENT / denominator;
-    return (containerWidth * pct) / 100;
+    return Math.round((containerWidth * pct) / 100);
 }
 
 /**
- * Given the dragged fraction and all other fractions, compute the nearest snap target.
+ * Improved snap: uses separate thresholds for the main axis (joining edge)
+ * and cross axis (alignment). This prevents false positives on diagonal drags
+ * and works consistently regardless of screen size because all distances are
+ * computed in the same pixel space as the bars themselves.
+ *
+ * For horizontal snaps (left/right): main axis = X gap, cross axis = Y alignment.
+ * For vertical snaps (top/bottom):   main axis = Y gap, cross axis = X alignment.
  */
 function computeSnapTarget(
     dragged: Fraction,
@@ -136,40 +154,55 @@ function computeSnapTarget(
     containerWidth: number,
 ): SnapTarget | null {
     const dW = barPixelWidth(dragged.denominator, containerWidth);
-    const dH = ROW_HEIGHT - 4;
-    const dCX = dragged.x + dW / 2;
-    const dCY = dragged.y + dH / 2;
 
     let best: SnapTarget | null = null;
-    let bestDist = SNAP_THRESHOLD;
+    let bestScore = Infinity;
 
     for (const other of others) {
         if (other.id === dragged.id) continue;
         const oW = barPixelWidth(other.denominator, containerWidth);
-        const oH = ROW_HEIGHT - 4;
-        const oCX = other.x + oW / 2;
-        const oCY = other.y + oH / 2;
 
-        // Right edge of other → left edge of dragged
-        const distLeft = Math.abs((other.x + oW) - dragged.x) + Math.abs(oCY - dCY);
-        // Left edge of other → right edge of dragged
-        const distRight = Math.abs(other.x - (dragged.x + dW)) + Math.abs(oCY - dCY);
-        // Bottom edge of other → top edge of dragged
-        const distTop = Math.abs((other.y + oH) - dragged.y) + Math.abs(oCX - dCX);
-        // Top edge of other → bottom edge of dragged
-        const distBottom = Math.abs(other.y - (dragged.y + dH)) + Math.abs(oCX - dCX);
+        // ── Horizontal candidates ────────────────────────────────────────────
+        // Main axis: gap between edges on X
+        // Cross axis: Y alignment (top edges aligned)
 
-        const candidates: Array<{ dist: number; side: 'left' | 'right' | 'top' | 'bottom' }> = [
-            { dist: distLeft, side: 'left' },
-            { dist: distRight, side: 'right' },
-            { dist: distTop, side: 'top' },
-            { dist: distBottom, side: 'bottom' },
-        ];
+        const yDiff = Math.abs(dragged.y - other.y);   // cross axis for horizontal snap
 
-        for (const c of candidates) {
-            if (c.dist < bestDist) {
-                bestDist = c.dist;
-                best = { id: other.id, side: c.side };
+        if (yDiff <= SNAP_THRESHOLD_CROSS) {
+            // dragged snaps to right of other (dragged.x ≈ other.x + oW)
+            const gapRight = Math.abs(dragged.x - (other.x + oW));
+            if (gapRight <= SNAP_THRESHOLD_MAIN) {
+                const score = gapRight + yDiff * 0.5;
+                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'left' }; }
+            }
+
+            // dragged snaps to left of other (dragged.x + dW ≈ other.x)
+            const gapLeft = Math.abs((dragged.x + dW) - other.x);
+            if (gapLeft <= SNAP_THRESHOLD_MAIN) {
+                const score = gapLeft + yDiff * 0.5;
+                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'right' }; }
+            }
+        }
+
+        // ── Vertical candidates ──────────────────────────────────────────────
+        // Main axis: gap between edges on Y
+        // Cross axis: X alignment (left edges aligned)
+
+        const xDiff = Math.abs(dragged.x - other.x);   // cross axis for vertical snap
+
+        if (xDiff <= SNAP_THRESHOLD_CROSS) {
+            // dragged snaps below other (dragged.y ≈ other.y + BAR_HEIGHT + BAR_GAP)
+            const gapBelow = Math.abs(dragged.y - (other.y + BAR_HEIGHT + BAR_GAP));
+            if (gapBelow <= SNAP_THRESHOLD_MAIN) {
+                const score = gapBelow + xDiff * 0.5;
+                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'top' }; }
+            }
+
+            // dragged snaps above other (dragged.y + BAR_HEIGHT + BAR_GAP ≈ other.y)
+            const gapAbove = Math.abs((dragged.y + BAR_HEIGHT + BAR_GAP) - other.y);
+            if (gapAbove <= SNAP_THRESHOLD_MAIN) {
+                const score = gapAbove + xDiff * 0.5;
+                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'bottom' }; }
             }
         }
     }
@@ -177,7 +210,8 @@ function computeSnapTarget(
 }
 
 /**
- * Computes snapped position given a snap target.
+ * Computes exact snapped position — zero gap for horizontal, BAR_GAP for vertical
+ * so bars sit flush against each other without visible gaps.
  */
 function snapPosition(
     dragged: Fraction,
@@ -186,19 +220,21 @@ function snapPosition(
     containerWidth: number,
 ): Position {
     const dW = barPixelWidth(dragged.denominator, containerWidth);
-    const dH = ROW_HEIGHT - 4;
     const tW = barPixelWidth(target.denominator, containerWidth);
-    const tH = ROW_HEIGHT - 4;
 
     switch (side) {
         case 'left':
+            // Place dragged immediately to the right of target — no gap
             return { x: target.x + tW, y: target.y };
         case 'right':
+            // Place dragged immediately to the left of target — no gap
             return { x: target.x - dW, y: target.y };
         case 'top':
-            return { x: target.x, y: target.y + tH + 4 };
+            // Place dragged below target: target.y + BAR_HEIGHT + BAR_GAP
+            return { x: target.x, y: target.y + BAR_HEIGHT + BAR_GAP };
         case 'bottom':
-            return { x: target.x, y: target.y - dH - 4 };
+            // Place dragged above target
+            return { x: target.x, y: target.y - BAR_HEIGHT - BAR_GAP };
         default:
             return { x: dragged.x, y: dragged.y };
     }
@@ -256,18 +292,21 @@ function useLocalStorage<T>(
 
 /**
  * Observes an element's size via ResizeObserver.
+ * Returns stable size object, only updates when dimensions actually change.
  */
 function useElementSize(ref: React.RefObject<HTMLElement | null>): ContainerSize {
-    const [size, setSize] = useState<ContainerSize>({ width: 800, height: 600 });
+    const [size, setSize] = useState<ContainerSize>({ width: 0, height: 0 });
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
+        const update = (w: number, h: number) => {
+            setSize(prev => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+        };
         const obs = new ResizeObserver(([entry]) => {
-            setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+            update(entry.contentRect.width, entry.contentRect.height);
         });
         obs.observe(el);
-        // initial measure
-        setSize({ width: el.clientWidth, height: el.clientHeight });
+        update(el.clientWidth, el.clientHeight);
         return () => obs.disconnect();
     }, [ref]);
     return size;
@@ -292,7 +331,6 @@ const FractionBar = React.memo(function FractionBar({
     const nodeRef = useRef<HTMLDivElement>(null);
     const handleDoubleTouch = useDoubleTouch(onDuplicate);
 
-    // ── Long press delete (hold 5s without moving) ──
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pressStartPosRef = useRef<Position>({ x: 0, y: 0 });
     const [isLongPressing, setIsLongPressing] = useState(false);
@@ -379,7 +417,7 @@ const FractionBar = React.memo(function FractionBar({
         `}
                 style={{
                     width: `${widthPct}%`,
-                    height: `${ROW_HEIGHT - 4}px`,
+                    height: `${BAR_HEIGHT}px`,
                     minWidth: 28,
                     zIndex: isSnapping || hasSnapTarget ? 40 : 1,
                     transition: isSnapping
@@ -407,7 +445,7 @@ const FractionBar = React.memo(function FractionBar({
  * Guide rule overlay shown while dragging.
  */
 function GuideLines({ containerHeight, containerWidth, show }: GuideLinesProps) {
-    if (!show) return null;
+    if (!show || containerWidth === 0) return null;
     const hLines: React.ReactNode[] = [];
     const vLines: React.ReactNode[] = [];
     const rows = Math.ceil(containerHeight / ROW_HEIGHT);
@@ -503,7 +541,7 @@ function Toolbar({ displayMode, onDisplayMode, onAdd, onDelete, onReset, fractio
         ];
 
     return (
-        <div className="flex gap-1 w-full mb-1">
+        <div className="flex gap-3 w-full mb-1">
             {buttons.map(({ key, label, cls, action, disabled, isMode, active }) => (
                 <button
                     key={key}
@@ -519,7 +557,7 @@ function Toolbar({ displayMode, onDisplayMode, onAdd, onDelete, onReset, fractio
                                             'Reiniciar'
                     }
                     className={`
-            flex-1 py-2.5 rounded-xl text-white font-bold text-sm
+            flex-1 py-1.5 rounded-xl text-white font-bold text-sm
             transition-all duration-150 ${cls}
             ${active ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-100 shadow-md scale-[1.05]' : 'opacity-80'}
             ${disabled ? 'opacity-30 cursor-not-allowed' : 'active:scale-95'}
@@ -534,6 +572,12 @@ function Toolbar({ displayMode, onDisplayMode, onAdd, onDelete, onReset, fractio
 
 /**
  * Canvas containing all fraction bars.
+ *
+ * Height strategy:
+ *  - The canvas always fills the available wrapper height (height: 100%).
+ *  - minHeight is set to the tallest bar position + padding, so when bars
+ *    exceed the visible area the wrapper can scroll to reach them.
+ *  - On large screens the canvas simply fills all the space with no scroll.
  */
 function RegletaFracionesCanvas({
     fractions,
@@ -545,31 +589,99 @@ function RegletaFracionesCanvas({
     onDeleteById,
     draggingId,
     snapTargetMap,
+    onContainerWidth,
+    scrollWrapperRef,
 }: RegletaFracionesCanvasProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cW, height: cH } = useElementSize(containerRef);
 
+    // Report live container width upward so snap math stays accurate
+    useEffect(() => {
+        if (cW > 0) onContainerWidth(cW);
+    }, [cW, onContainerWidth]);
+
+    // ── Three-finger scroll ──────────────────────────────────────────────────
+    // Attach to the canvas itself so the gesture works anywhere inside it.
+    // When 3 fingers are detected we forward scroll to the wrapper and
+    // suppress the default behaviour so draggable doesn't also fire.
+    const threeFingerRef = useRef<{ startY: number; scrollStart: number } | null>(null);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 3) {
+                const wrapper = scrollWrapperRef.current;
+                threeFingerRef.current = {
+                    startY: (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3,
+                    scrollStart: wrapper ? wrapper.scrollTop : 0,
+                };
+            } else {
+                threeFingerRef.current = null;
+            }
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            if (e.touches.length !== 3 || !threeFingerRef.current) return;
+            e.preventDefault(); // block drag
+            const currentY = (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3;
+            const delta = threeFingerRef.current.startY - currentY;
+            const wrapper = scrollWrapperRef.current;
+            if (wrapper) {
+                wrapper.scrollTop = threeFingerRef.current.scrollStart + delta;
+            }
+        };
+
+        const onTouchEnd = (e: TouchEvent) => {
+            if (e.touches.length < 3) threeFingerRef.current = null;
+        };
+
+        el.addEventListener('touchstart', onTouchStart, { passive: true });
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
+        el.addEventListener('touchend', onTouchEnd, { passive: true });
+        return () => {
+            el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchmove', onTouchMove);
+            el.removeEventListener('touchend', onTouchEnd);
+        };
+    }, [scrollWrapperRef]);
+    // ────────────────────────────────────────────────────────────────────────
+
     const isDragging = draggingId !== null;
+
+    // Canvas must be at least as tall as the lowest bar so it's always reachable
+    const minCanvasHeight = fractions.reduce(
+        (max, f) => Math.max(max, f.y + ROW_HEIGHT + 24),
+        INITIAL_FRACTIONS.length * ROW_HEIGHT + 32,
+    );
 
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-gray-200"
-            style={{ touchAction: 'none' }}
+            className="relative w-full rounded-2xl overflow-hidden bg-white border-2 border-gray-200"
+            style={{
+                touchAction: 'none',
+                // Fill the wrapper on large screens; grow for extra bars on small screens
+                height: '100%',
+                minHeight: minCanvasHeight,
+            }}
         >
             {/* Graph paper background */}
-            <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-                <defs>
-                    <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
-                    </pattern>
-                    <pattern id="grid" width={cW / 10} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
-                        <rect width={cW / 10} height={ROW_HEIGHT} fill="url(#smallGrid)" />
-                        <path d={`M ${cW / 10} 0 L 0 0 0 ${ROW_HEIGHT}`} fill="none" stroke="#d1d5db" strokeWidth="1" />
-                    </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
+            {cW > 0 && (
+                <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                    <defs>
+                        <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
+                        </pattern>
+                        <pattern id="grid" width={cW / 10} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
+                            <rect width={cW / 10} height={ROW_HEIGHT} fill="url(#smallGrid)" />
+                            <path d={`M ${cW / 10} 0 L 0 0 0 ${ROW_HEIGHT}`} fill="none" stroke="#d1d5db" strokeWidth="1" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+            )}
 
             <GuideLines containerHeight={cH} containerWidth={cW} show={isDragging} />
 
@@ -600,20 +712,27 @@ function RegletaFracionesCanvas({
 
 const RegletaFraciones = (): React.ReactElement => {
     const [fractions, setFractions] = useLocalStorage<Fraction[]>(
-        'regletaFraciones_v2_fractions',
+        'regletaFraciones_v3_fractions',
         INITIAL_FRACTIONS,
     );
     const [displayMode, setDisplayMode] = useLocalStorage<DisplayMode>(
-        'regletaFraciones_v2_mode',
+        'regletaFraciones_v3_mode',
         'fractions',
     );
 
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
     /**
-     * Live position of the bar being dragged (for snap computation).
+     * Live container width, updated whenever the canvas resizes.
+     * Stored in a ref so drag handlers always read the current value
+     * without needing to re-create callbacks.
      */
-    const dragPosRef = useRef<Position>({ x: 0, y: 0 });
+    const containerWidthRef = useRef<number>(0);
+    const scrollWrapperRef = useRef<HTMLDivElement>(null);
+
+    const handleContainerWidth = useCallback((w: number) => {
+        containerWidthRef.current = w;
+    }, []);
 
     /**
      * Map of fractionId → current snap target while dragging.
@@ -663,23 +782,21 @@ const RegletaFraciones = (): React.ReactElement => {
         setDraggingId(id);
     }, []);
 
-    /**
-     * Called every frame during drag — update live pos and snap.
-     * We need containerWidth here; we pass it from canvas via closure stored in ref.
-     */
-    const containerWidthRef = useRef<number>(800);
-
     const handleDrag = useCallback((id: string, pos: Position) => {
-        dragPosRef.current = pos;
-        // Update the fraction's live position for snap computation
+        // Use functional update to get latest fractions without stale closure
         setFractions((prev) => {
-            const snap = computeSnapTarget(
-                { ...prev.find((f) => f.id === id), ...pos } as Fraction,
-                prev,
-                containerWidthRef.current,
-            );
-            setSnapTargetMap((m) => ({ ...m, [id]: snap }));
-            return prev;
+            const dragged = prev.find((f) => f.id === id);
+            if (!dragged) return prev;
+            const cW = containerWidthRef.current;
+            if (cW === 0) return prev;
+            const snap = computeSnapTarget({ ...dragged, ...pos }, prev, cW);
+            setSnapTargetMap((m) => {
+                // Avoid re-render if snap target hasn't changed
+                const existing = m[id];
+                if (existing?.id === snap?.id && existing?.side === snap?.side) return m;
+                return { ...m, [id]: snap };
+            });
+            return prev; // don't update positions during drag — Draggable handles it
         });
     }, [setFractions]);
 
@@ -688,12 +805,13 @@ const RegletaFraciones = (): React.ReactElement => {
         setFractions((prev) => {
             const dragged = prev.find((f) => f.id === id);
             if (!dragged) return prev;
-            const snap = computeSnapTarget({ ...dragged, ...pos }, prev, containerWidthRef.current);
+            const cW = containerWidthRef.current;
+            const snap = cW > 0 ? computeSnapTarget({ ...dragged, ...pos }, prev, cW) : null;
             let finalPos: Position = pos;
             if (snap) {
                 const target = prev.find((f) => f.id === snap.id);
                 if (target) {
-                    finalPos = snapPosition(dragged, target, snap.side, containerWidthRef.current);
+                    finalPos = snapPosition(dragged, target, snap.side, cW);
                 }
             }
             setSnapTargetMap((m) => ({ ...m, [id]: null }));
@@ -701,17 +819,10 @@ const RegletaFraciones = (): React.ReactElement => {
         });
     }, [setFractions]);
 
-    /**
-     * Duplicates a fraction, clamping position to stay inside the current canvas.
-     * The canvas never grows — if no room to the right, places below but clamps
-     * to the canvas height so the bar stays visible and scrollable within bounds.
-     */
     const handleDuplicate = useCallback((fraction: Fraction, containerWidth: number) => {
-        containerWidthRef.current = containerWidth;
         const pW = barPixelWidth(fraction.denominator, containerWidth);
         const maxX = containerWidth - pW;
         const candidateX = fraction.x + pW;
-        // If it fits to the right, place there on same row; otherwise go below
         const newX = candidateX <= maxX ? candidateX : 0;
         const newY = candidateX <= maxX ? fraction.y : fraction.y + ROW_HEIGHT;
 
@@ -774,7 +885,6 @@ const RegletaFraciones = (): React.ReactElement => {
 
             {/* ── Header ── */}
             <div className="relative flex items-center justify-center px-2 pt-2 pb-0.5 bg-gray-50 shrink-0">
-                {/* Back button — top-left */}
                 <button
                     onClick={() => navigate(-1)}
                     className="absolute left-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-600 text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
@@ -788,7 +898,7 @@ const RegletaFraciones = (): React.ReactElement => {
                         Regleta de Fracciones
                     </h1>
                     <p className="text-gray-400 text-xs">
-                        Doble clic para duplicar · Mantén 3s para eliminar · Arrastra para acoplar
+                        Doble clic para duplicar · Mantén 3s para eliminar · 3 dedos para hacer scroll
                     </p>
                 </div>
                 <button
@@ -811,8 +921,17 @@ const RegletaFraciones = (): React.ReactElement => {
                 />
             </div>
 
-            {/* ── Canvas — flex-1 with min-h-0 fills all remaining height, never grows ── */}
-            <div className="flex-1 min-h-0 px-2 pb-2">
+            {/* ── Canvas wrapper ─────────────────────────────────────────────────────
+                flex-1 + min-h-0 makes it fill all remaining vertical space.
+                overflow-y: auto  → no scroll on large screens (canvas fills 100%);
+                                    scroll appears only when minHeight > wrapper height.
+                The canvas receives the ref so three-finger touch can scroll it.
+            ── */}
+            <div
+                ref={scrollWrapperRef}
+                className="flex-1 min-h-0 px-2 pb-2"
+                style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+            >
                 <RegletaFracionesCanvas
                     fractions={fractions}
                     displayMode={displayMode}
@@ -823,6 +942,8 @@ const RegletaFraciones = (): React.ReactElement => {
                     onDeleteById={handleDeleteById}
                     draggingId={draggingId}
                     snapTargetMap={snapTargetMap}
+                    onContainerWidth={handleContainerWidth}
+                    scrollWrapperRef={scrollWrapperRef}
                 />
             </div>
 
@@ -860,6 +981,9 @@ const RegletaFraciones = (): React.ReactElement => {
                     </li>
                     <li>
                         Compara visualmente el tamaño de las fracciones acomodándolas una debajo de otra.
+                    </li>
+                    <li>
+                        En pantallas táctiles, usa <strong className="text-gray-800">3 dedos</strong> para hacer scroll vertical dentro del lienzo sin mover las barras.
                     </li>
                 </ol>
             </ModalHelp>
