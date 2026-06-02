@@ -168,37 +168,8 @@ function CaseFracInt({
                                             style={{ minHeight: 48 }}
                                         />
                                     ))}
-            </div>
-
-            <ModalHelp
-                open={showHelp}
-                onClose={() => setShowHelp(false)}
-                title="¿Cómo funciona?"
-                bgColor="#0f172a"
-                titleColor="#e2e8f0"
-            >
-                <div className="text-white/80 text-sm space-y-3">
-                    <p>Resuelve multiplicaciones de fracciones de forma visual. Hay 3 tipos de ejercicio:</p>
-
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-teal-400">Fracción × Entero</p>
-                        <p>Crea tantos grupos como indica el número entero. Cada grupo contiene la fracción. Luego junta todo para ver el resultado.</p>
-                    </div>
-
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-amber-400">Entero × Fracción (fracción de un conjunto)</p>
-                        <p>Divide las fichas en tantos grupos como indica el denominador, luego selecciona tantos grupos como indica el numerador.</p>
-                    </div>
-
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-emerald-400">Fracción × Fracción</p>
-                        <p>Configura las columnas (denominador 1) y filas (denominador 2). Colorea las partes que indica cada numerador. La intersección es el resultado.</p>
-                    </div>
-
-                    <p className="text-white/50 text-xs">Selecciona el nivel (1-7) para cambiar la dificultad.</p>
-                </div>
-            </ModalHelp>
-        </div>
+                                </div>
+                            </div>
                         ))}
                     </div>
 
@@ -798,22 +769,18 @@ export default function MultiplicarFraccionesView() {
             >
                 <div className="text-white/80 text-sm space-y-3">
                     <p>Resuelve multiplicaciones de fracciones de forma visual. Hay 3 tipos de ejercicio:</p>
-
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
                         <p className="font-bold text-teal-400">Fracción × Entero</p>
                         <p>Crea tantos grupos como indica el número entero. Cada grupo contiene la fracción. Luego junta todo para ver el resultado.</p>
                     </div>
-
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
                         <p className="font-bold text-amber-400">Entero × Fracción (fracción de un conjunto)</p>
                         <p>Divide las fichas en tantos grupos como indica el denominador, luego selecciona tantos grupos como indica el numerador.</p>
                     </div>
-
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
                         <p className="font-bold text-emerald-400">Fracción × Fracción</p>
                         <p>Configura las columnas (denominador 1) y filas (denominador 2). Colorea las partes que indica cada numerador. La intersección es el resultado.</p>
                     </div>
-
                     <p className="text-white/50 text-xs">Selecciona el nivel (1-7) para cambiar la dificultad.</p>
                 </div>
             </ModalHelp>
