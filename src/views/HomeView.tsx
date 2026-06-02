@@ -9,7 +9,7 @@ export default function HomeView() {
 
     const topics: Topic[] = [
         { id: 'intro', path: '/intro-enteros', title: 'Introducción a Enteros', description: 'Números positivos y negativos', available: true },
-        { id: 'recta', path: '/recta-numerica', title: 'Recta Numérica', description: 'Ubicación en la recta', available: true },
+        { id: 'recta', path: '/recta-numerica', title: 'Recta Numérica Enteros', description: 'Ubicación en la recta', available: true },
         { id: 'suma', path: '/suma-enteros', title: 'Suma de Enteros', description: 'Operaciones básicas enteros', available: true },
         { id: 'resta', path: '/resta-enteros', title: 'Resta de Enteros', description: 'Operaciones básicas enteros', available: true },
         { id: 'producto', path: '/producto-enteros', title: 'Multiplicación de Enteros', description: 'Operaciones básicas enteros', available: true },
