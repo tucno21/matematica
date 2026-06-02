@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView'
 import SumaEnterosView from '../views/SumaEnterosView'
 import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
+import DivisionEnterosView from '../views/DivisionEnterosView'
 import IntroEnterosView from '../views/IntroEnterosView'
 import RectaNumericaView from '../views/RectaNumericaView'
 import TresJarrasView from '../views/TresJarrasView'
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
     {
         path: '/producto-enteros',
         element: <Layout><ProductoEnteroView /></Layout>
+    },
+    {
+        path: '/division-enteros',
+        element: <Layout><DivisionEnterosView /></Layout>
     },
     {
         path: '/tres-jarras',

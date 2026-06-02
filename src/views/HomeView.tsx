@@ -13,6 +13,7 @@ export default function HomeView() {
         { id: 'suma', path: '/suma-enteros', title: 'Suma de Enteros', description: 'Operaciones básicas enteros', available: true },
         { id: 'resta', path: '/resta-enteros', title: 'Resta de Enteros', description: 'Operaciones básicas enteros', available: true },
         { id: 'producto', path: '/producto-enteros', title: 'Multiplicación de Enteros', description: 'Operaciones básicas enteros', available: true },
+        { id: 'division', path: '/division-enteros', title: 'División de Enteros', description: 'Operaciones básicas enteros', available: true },
         { id: 'concepto-fraccion', path: '/concepto-fraccion', title: '¿Qué es una Fracción?', description: 'Explora fracciones libremente', available: true },
         { id: 'regleta-fracciones', path: '/regleta-fracciones', title: 'Regleta de Fracciones', description: 'Fracciones interactivas', available: true },
         { id: 'recta-numerica-fracciones', path: '/recta-numerica-fracciones', title: 'Fracciones en la Recta', description: 'Ubica fracciones en la recta numérica', available: true },
