@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "setup" | "play" | "result";
@@ -249,6 +250,7 @@ export default function SumaEnterosView() {
 
     const [resultValue, setResultValue] = useState(0);
     const [snapshotInputs, setSnapshotInputs] = useState<InputConfig[]>([]);
+    const [showHelp, setShowHelp] = useState(false);
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const canGenerate = inputs.some((i) => i.count > 0);
@@ -438,8 +440,7 @@ export default function SumaEnterosView() {
                     <p className="text-[10px] text-white/30 font-semibold">Cancelación de pares</p>
                 </div>
 
-                {/* Step dots */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                     {(["setup", "play", "result"] as Phase[]).map((p, i) => (
                         <div
                             key={p}
@@ -451,6 +452,12 @@ export default function SumaEnterosView() {
                                 }`}
                         />
                     ))}
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                    >
+                        ?
+                    </button>
                 </div>
             </header>
 
@@ -458,50 +465,57 @@ export default function SumaEnterosView() {
           SETUP PHASE
       ═══════════════════════════════════════════════════════════════════ */}
             {phase === "setup" && (
-                <main className="flex-1 flex flex-col gap-4 px-4 pb-6 overflow-y-auto">
-                    {/* Hero text */}
-                    <div className="text-center anim-up pt-1">
-                        <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Elige tus fichas</p>
-                        <p className="text-white/45 text-sm leading-relaxed max-w-70 mx-auto">
-                            Azul&nbsp;=&nbsp;<span className="text-blue-400 font-bold">+1</span>
-                            &nbsp;·&nbsp;Rojo&nbsp;=&nbsp;<span className="text-red-400 font-bold">−1</span>
-                            &nbsp;·&nbsp;Al juntarlos se cancelan
-                        </p>
-                    </div>
+                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto">
+                    <div className="flex-1 flex flex-col gap-4">
+                        {/* Hero text */}
+                        <div className="text-center anim-up pt-1">
+                            <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Elige tus fichas</p>
+                            <p className="text-white/45 text-sm whitespace-nowrap">
+                                Azul&nbsp;=&nbsp;<span className="text-blue-400 font-bold">+1</span>&nbsp;·&nbsp;Rojo&nbsp;=&nbsp;<span className="text-red-400 font-bold">−1</span>&nbsp;·&nbsp;Al juntarlos se cancelan
+                            </p>
+                        </div>
 
-                    {/* Input cards */}
-                    <div className="flex flex-col gap-3">
-                        {inputs.map((inp, i) => (
-                            <div key={i} className="anim-up" style={{ animationDelay: `${i * 0.07}s` }}>
-                                <InputCard index={i} config={inp} onChange={(u) => updateInput(i, u)} />
-                            </div>
-                        ))}
-                    </div>
+                        {/* Input cards */}
+                        <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                            {inputs.map((inp, i) => (
+                                <>
+                                    {i > 0 && (
+                                        <div className="flex items-center justify-center shrink-0 sm:w-8 py-1">
+                                            <span className="text-white/30 text-3xl font-black">+</span>
+                                        </div>
+                                    )}
+                                    <div key={i} className="flex-1 anim-up" style={{ animationDelay: `${i * 0.07}s` }}>
+                                        <InputCard index={i} config={inp} onChange={(u) => updateInput(i, u)} />
+                                    </div>
+                                </>
+                            ))}
+                        </div>
 
-                    {/* Equation preview */}
-                    {canGenerate && (() => {
-                        const parts = inputs.filter((i) => i.count > 0);
-                        return (
-                            <div className="anim-up anim-pop" style={{ animationDelay: "0.16s" }}>
-                                <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-2 font-bold">
-                                    Vista previa
-                                </p>
-                                <div className="bg-white/4 border border-white/8 rounded-2xl px-4 py-3 flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-xl font-black">
-                                    {parts.map((p, i) => (
-                                        <span key={i} className="flex items-center gap-2">
-                                            {i > 0 && <span className="text-white/20 text-base">+</span>}
-                                            <span className={p.color === "blue" ? "text-blue-300" : "text-red-300"}>
-                                                {p.color === "blue" ? `+${p.count}` : `(−${p.count})`}
+                        {/* Equation preview */}
+                        {canGenerate && (() => {
+                            const parts = inputs.filter((i) => i.count > 0);
+                            return (
+                                <div className="anim-up anim-pop" style={{ animationDelay: "0.16s" }}>
+                                    <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-2 font-bold">
+                                        Vista previa
+                                    </p>
+                                    <div className="bg-white/4 border border-white/8 rounded-2xl px-4 py-3 flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-xl font-black">
+                                        {parts.map((p, i) => (
+                                            <span key={i} className="flex items-center gap-2">
+                                                {i > 0 && <span className="text-white/20 text-base">+</span>}
+                                                <span className={p.color === "blue" ? "text-blue-300" : "text-red-300"}>
+                                                    {p.color === "blue" ? `+${p.count}` : `(−${p.count})`}
+                                                </span>
                                             </span>
-                                        </span>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })()}
+                            );
+                        })()}
+                    </div>
 
-                    {/* Generate button */}
-                    <div className="anim-up" style={{ animationDelay: "0.22s" }}>
+                    {/* Generate button — fixed at bottom */}
+                    <div className="anim-up pt-4" style={{ animationDelay: "0.22s" }}>
                         <button
                             disabled={!canGenerate}
                             onClick={handleGenerate}
@@ -668,6 +682,52 @@ export default function SumaEnterosView() {
                     </button>
                 </main>
             )}
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo sumar enteros con fichas?"
+                bgColor="#080c18"
+                buttonColor="bg-indigo-500 hover:bg-indigo-400"
+            >
+                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Configura</p>
+                        <ol className="space-y-2 list-decimal list-inside">
+                            <li>En cada <strong className="text-white">Grupo</strong> elige el color: <span className="text-blue-400 font-bold">Azul (+1)</span> para positivas o <span className="text-red-400 font-bold">Rojo (−1)</span> para negativas.</li>
+                            <li>Ajusta la cantidad de fichas con los botones <strong className="text-white">+</strong> y <strong className="text-white">−</strong> (máximo 10 por grupo).</li>
+                            <li>Presiona <strong className="text-white">Generar Fichas ✨</strong> para esparcirlas en la mesa.</li>
+                        </ol>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Cancela pares</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li><strong className="text-white">Arrastra</strong> una ficha azul sobre una roja (o viceversa) para cancelar el par.</li>
+                            <li>Las fichas se <strong className="text-white">explotan</strong> cuando están lo suficientemente cerca.</li>
+                            <li>O presiona <strong className="text-amber-400">⚡ Cancelar todos los pares automáticamente</strong> para que el sistema lo haga por ti.</li>
+                            <li>Cuando no queden más pares, pulsa <strong className="text-indigo-400">✅ Ver resultados</strong>.</li>
+                        </ul>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Resultado</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Se muestra el <strong className="text-white">valor final</strong>: si sobran fichas azules es positivo, si sobran rojas es negativo, y si no sobra ninguna el resultado es <strong className="text-purple-400">cero</strong>.</li>
+                            <li>Presiona <strong className="text-white">Nuevo Ejercicio 🔄</strong> para practicar de nuevo.</li>
+                        </ul>
+                    </div>
+
+                    <div className="rounded-xl p-3" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                        <p className="text-xs font-bold mb-1 text-indigo-400">💡 Idea clave</p>
+                        <p className="text-xs text-white/60">Un <span className="text-blue-400 font-bold">+1</span> y un <span className="text-red-400 font-bold">−1</span> se cancelan porque su suma es <strong className="text-purple-400">0</strong>. Sumar enteros es contar cuántas fichas sobran después de cancelar todos los pares.</p>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
