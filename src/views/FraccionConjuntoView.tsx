@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ModalHelp from '../components/ModalHelp'
 
 type ObjectType = 'star' | 'circle' | 'square' | 'triangle' | 'heart'
 type ViewMode = 'free' | 'exercise'
@@ -114,6 +115,7 @@ export default function FraccionConjuntoView() {
     const [numerator, setNumerator] = useState(1)
     const [showMath, setShowMath] = useState(true)
     const [shake, setShake] = useState(false)
+    const [showHelp, setShowHelp] = useState(false)
     const [exercise, setExercise] = useState<Exercise | null>(null)
     const [checked, setChecked] = useState(false)
 
@@ -218,13 +220,21 @@ export default function FraccionConjuntoView() {
                     ← Volver
                 </button>
                 <h1 className="text-lg font-bold">Fracción de un Conjunto</h1>
-                <button onClick={toggleMode} className="absolute right-4 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all active:scale-95" style={{
-                    background: mode === 'free' ? 'rgba(251,191,36,0.15)' : 'rgba(45,212,191,0.15)',
-                    border: mode === 'free' ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(45,212,191,0.3)',
-                    color: mode === 'free' ? '#fbbf24' : '#2dd4bf'
-                }}>
-                    {mode === 'free' ? 'Libre' : 'Ejercicio'}
-                </button>
+                <div className="absolute right-4 flex items-center gap-2">
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-8 h-8 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                    >
+                        ?
+                    </button>
+                    <button onClick={toggleMode} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all active:scale-95" style={{
+                        background: mode === 'free' ? 'rgba(251,191,36,0.15)' : 'rgba(45,212,191,0.15)',
+                        border: mode === 'free' ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(45,212,191,0.3)',
+                        color: mode === 'free' ? '#fbbf24' : '#2dd4bf'
+                    }}>
+                        {mode === 'free' ? 'Libre' : 'Ejercicio'}
+                    </button>
+                </div>
             </div>
 
             {mode === 'exercise' && (
@@ -409,6 +419,50 @@ export default function FraccionConjuntoView() {
                     <span className="text-white/50">0 objetos</span>
                 )}
             </div>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo funciona la fracción de un conjunto?"
+                bgColor="#0f172a"
+                titleColor="#e2e8f0"
+            >
+                <div className="text-white/80 text-sm space-y-4">
+                    <p>Explora visualmente qué significa tomar una <strong className="text-white">fracción</strong> de un <strong className="text-white">conjunto de objetos</strong>.</p>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-amber-400">Modo Libre</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Elige la <strong className="text-white">forma</strong> del objeto (estrella, círculo, cuadrado, triángulo, corazón).</li>
+                            <li>Ajusta la <strong className="text-amber-400">Cantidad</strong> total de objetos con los botones <strong>−</strong>/<strong>+</strong> o pulsa el 🎲 para valores aleatorios.</li>
+                            <li>Define en <strong className="text-amber-400">cuántos grupos divides</strong> (denominador). Solo se permiten divisiones exactas.</li>
+                            <li>Selecciona <strong className="text-teal-400">cuántos grupos tomas</strong> (numerador). Los grupos tomados se colorean de <strong className="text-teal-400">teal</strong>.</li>
+                            <li>El <strong className="text-emerald-400">resultado</strong> muestra cuántos objetos seleccionaste y el cálculo paso a paso.</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                        <p className="font-bold text-teal-400">Modo Ejercicio (5 niveles)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li><strong className="text-white">Nivel 1:</strong> Fracción con numerador 1 (una parte del conjunto).</li>
+                            <li><strong className="text-white">Nivel 2:</strong> Fracción con numerador mayor (varias partes).</li>
+                            <li><strong className="text-white">Nivel 3:</strong> Conjuntos grandes con distintas fracciones.</li>
+                            <li><strong className="text-white">Nivel 4:</strong> Conjunto fijo de 20 objetos.</li>
+                            <li><strong className="text-white">Nivel 5:</strong> Te dan el resultado y debes descubrir la fracción.</li>
+                        </ol>
+                        <p className="text-white/50 text-xs">Pulsa <strong className="text-white/70">Nuevo</strong> para generar otro ejercicio del mismo nivel.</p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
+                        <p className="font-bold text-white text-xs uppercase tracking-wide">Consejos</p>
+                        <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
+                            <li>El <strong className="text-white/80">denominador</strong> solo permite divisores exactos de la cantidad total.</li>
+                            <li>Observa el <strong className="text-white/80">cálculo paso a paso</strong> debajo del resultado para entender el proceso.</li>
+                            <li>En modo ejercicio, algunos controles se bloquean para que resuelvas el problema dado.</li>
+                        </ul>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     )
 }
