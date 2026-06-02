@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "setup" | "flip" | "play" | "result";
@@ -256,6 +257,7 @@ export default function RestaEnterosView() {
     const [autoCancelling, setAutoCancelling] = useState(false);
     const [flippingIds, setFlippingIds] = useState<Set<string>>(new Set());
     const [resultValue, setResultValue] = useState(0);
+    const [showHelp, setShowHelp] = useState(false);
 
     // ── Computed ──────────────────────────────────────────────────────────────
     const minuendActual = minuendSign === "positive" ? minuendValue : -minuendValue;
@@ -520,73 +522,75 @@ export default function RestaEnterosView() {
                     <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">Resta de Enteros</h1>
                     <p className="text-[10px] text-white/30 font-semibold">Suma el opuesto del sustraendo</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                     {phaseList.map((p, i) => (
                         <div key={p} className={`h-1.5 rounded-full transition-all duration-300
               ${phase === p ? "w-5 bg-teal-400" : phaseList.indexOf(phase) > i ? "w-2.5 bg-white/25" : "w-2.5 bg-white/8"}`} />
                     ))}
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                    >
+                        ?
+                    </button>
                 </div>
             </header>
 
             {/* ══════════════════ SETUP ══════════════════ */}
             {phase === "setup" && (
-                <main className="flex-1 flex flex-col gap-4 px-4 pb-6 overflow-y-auto">
-                    <div className="text-center anim-up pt-1">
-                        <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Construye la resta</p>
-                        <p className="text-white/45 text-sm leading-relaxed max-w-xs mx-auto">
-                            Ingresa los dos números. Verás cómo{" "}
-                            <span className="text-teal-400 font-bold">restar = sumar el opuesto</span>
-                        </p>
-                    </div>
-
-                    <div className="anim-up" style={{ animationDelay: "0.05s" }}>
-                        <NumberInputCard
-                            label="Minuendo" sublabel="El número del que se resta"
-                            sign={minuendSign} count={minuendValue}
-                            onSignChange={setMinuendSign} onCountChange={setMinuendValue}
-                            accentColor="blue" />
-                    </div>
-
-                    <div className="flex items-center gap-3 px-2 anim-up" style={{ animationDelay: "0.1s" }}>
-                        <div className="flex-1 h-px bg-white/8" />
-                        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-                            <span className="text-white/50 text-lg font-black">−</span>
+                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto">
+                    <div className="flex-1 flex flex-col gap-4">
+                        <div className="text-center anim-up pt-1">
+                            <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Construye la resta</p>
+                            <p className="text-white/45 text-sm whitespace-nowrap">
+                                Ingresa los dos números ·{" "}
+                                <span className="text-teal-400 font-bold">Restar = sumar el opuesto</span>
+                            </p>
                         </div>
-                        <div className="flex-1 h-px bg-white/8" />
-                    </div>
 
-                    <div className="anim-up" style={{ animationDelay: "0.14s" }}>
-                        <NumberInputCard
-                            label="Sustraendo" sublabel="El número que se resta"
-                            sign={subtrahendSign} count={subtrahendValue}
-                            onSignChange={setSubtrahendSign} onCountChange={setSubtrahendValue}
-                            accentColor="orange" />
-                    </div>
-
-                    {/* Preview: NO result shown — student discovers it */}
-                    {canGenerate && (
-                        <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
-                            <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">La clave</p>
-
-                            {/* Original expression */}
-                            <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
-                                <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
-                                <span className="text-white/30">−</span>
-                                <span className={subtrahendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(subtrahendActual)}</span>
+                        <div className="flex flex-col sm:flex-row items-stretch gap-2 anim-up" style={{ animationDelay: "0.05s" }}>
+                            <div className="flex-1">
+                                <NumberInputCard
+                                    label="Minuendo" sublabel="El número del que se resta"
+                                    sign={minuendSign} count={minuendValue}
+                                    onSignChange={setMinuendSign} onCountChange={setMinuendValue}
+                                    accentColor="blue" />
                             </div>
 
-                        </div>
-                    )}
+                            <div className="flex items-center justify-center shrink-0 sm:w-8 py-1">
+                                <span className="text-white/30 text-3xl font-black">−</span>
+                            </div>
 
-                    <div className="anim-up" style={{ animationDelay: "0.24s" }}>
+                            <div className="flex-1" style={{ animationDelay: "0.1s" }}>
+                                <NumberInputCard
+                                    label="Sustraendo" sublabel="El número que se resta"
+                                    sign={subtrahendSign} count={subtrahendValue}
+                                    onSignChange={setSubtrahendSign} onCountChange={setSubtrahendValue}
+                                    accentColor="orange" />
+                            </div>
+                        </div>
+
+                        {canGenerate && (
+                            <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
+                                <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">La clave</p>
+                                <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
+                                    <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
+                                    <span className="text-white/30">−</span>
+                                    <span className={subtrahendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(subtrahendActual)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="anim-up pt-4" style={{ animationDelay: "0.24s" }}>
                         <button
                             disabled={!canGenerate}
                             onClick={handleGenerate}
                             className={`w-full py-4 rounded-2xl text-base font-black transition-all duration-200
                 ${canGenerate
-                                    ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
-                                    : "bg-white/6 text-white/20 cursor-not-allowed"
-                                }`}>
+                                ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
+                                : "bg-white/6 text-white/20 cursor-not-allowed"
+                            }`}>
                             Generar Fichas ✨
                         </button>
                     </div>
@@ -834,6 +838,62 @@ export default function RestaEnterosView() {
                     </button>
                 </main>
             )}
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo restar enteros con fichas?"
+                bgColor="#080c18"
+                buttonColor="bg-teal-500 hover:bg-teal-400"
+            >
+                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Configura</p>
+                        <ol className="space-y-2 list-decimal list-inside">
+                            <li>En el <strong className="text-white">Minuendo</strong> elige el signo (+/−) y la cantidad de fichas.</li>
+                            <li>En el <strong className="text-white">Sustraendo</strong> haz lo mismo con el número que se resta.</li>
+                            <li>Presiona <strong className="text-white">Generar Fichas ✨</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Voltea el sustraendo</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Las fichas del sustraendo tienen una marca <strong className="text-amber-400">S</strong>. Haz <strong className="text-white">doble clic</strong> en cada una para voltearla (cambia al opuesto).</li>
+                            <li>O presiona <strong className="text-amber-400">🔄 Voltear todas</strong> para hacerlo de golpe.</li>
+                            <li>Al voltear, una ficha <span className="text-blue-400 font-bold">+1</span> se vuelve <span className="text-red-400 font-bold">−1</span> y viceversa.</li>
+                        </ul>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Cancela pares</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li><strong className="text-white">Arrastra</strong> una ficha azul sobre una roja (o viceversa) para cancelar el par.</li>
+                            <li>O presiona <strong className="text-amber-400">⚡ Cancelar todos automáticamente</strong>.</li>
+                            <li>Cuando no queden pares, pulsa <strong className="text-teal-400">✅ Ver resultado</strong>.</li>
+                        </ul>
+                    </div>
+
+                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 4 — Resultado</p>
+                        <ul className="space-y-2 list-disc list-inside">
+                            <li>Se muestra el <strong className="text-white">valor final</strong>: positivo, negativo o cero.</li>
+                            <li>Presiona <strong className="text-white">Nuevo Ejercicio 🔄</strong> para practicar de nuevo.</li>
+                        </ul>
+                    </div>
+
+                    <div className="rounded-xl p-3" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)" }}>
+                        <p className="text-xs font-bold mb-1 text-teal-400">💡 Idea clave</p>
+                        <p className="text-xs text-white/60">Restar es lo mismo que <strong className="text-teal-400">sumar el opuesto</strong>. Al voltear las fichas del sustraendo conviertes la resta en una suma, y luego cancelas pares como siempre.</p>
+                    </div>
+                </div>
+            </ModalHelp>
         </div>
     );
 }
