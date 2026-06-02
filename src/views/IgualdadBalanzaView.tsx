@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ModalHelp from '../components/ModalHelp'
 
 type ObjType = 'apple' | 'orange' | 'lemon' | 'pear' | 'watermelon' | 'box'
 type Side = 'left' | 'right'
@@ -269,6 +270,7 @@ export default function IgualdadBalanzaView() {
   const [addedObj, setAddedObj] = useState<ObjType | null>(null)
   const [showDivByZero, setShowDivByZero] = useState(false)
   const [shakeScale, setShakeScale] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const leftRef = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
@@ -595,7 +597,15 @@ export default function IgualdadBalanzaView() {
             <div className="text-xs text-teal-400 font-bold">{cfg.prop}</div>
             <div className="text-[10px] text-white/40">{cfg.sub}</div>
           </div>
-          <div className="text-xs text-white/30">Nivel {level}/8</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHelp(true)}
+              className="w-7 h-7 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+            >
+              ?
+            </button>
+            <div className="text-xs text-white/30">Nivel {level}/8</div>
+          </div>
         </div>
 
         {/* Prompt */}
@@ -890,6 +900,63 @@ export default function IgualdadBalanzaView() {
           </div>
         )}
       </div>
+
+      <ModalHelp
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="¿Cómo usar la balanza de igualdad?"
+        bgColor="#080c18"
+        titleColor="#e2e8f0"
+      >
+        <div className="text-white/80 text-sm space-y-4">
+          <p>Explora las <strong className="text-white">propiedades de la igualdad</strong> usando una balanza. Cada objeto tiene un <strong className="text-white">peso</strong> distinto. Cuando ambos platos pesan lo mismo, hay equilibrio.</p>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-teal-400">Reflexiva (nivel 1)</p>
+            <p className="text-white/70">Coloca en el plato derecho los <strong className="text-white">mismos objetos</strong> que están en el izquierdo. Todo es igual a sí mismo.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-amber-400">Simétrica (nivel 2)</p>
+            <p className="text-white/70">Pulsa <strong className="text-amber-400">Intercambiar</strong> para swap los platos. Si A = B, entonces B = A.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-emerald-400">Transitiva (nivel 3)</p>
+            <p className="text-white/70">Equilibra la primera balanza con objetos del cajón, luego encuentra <strong className="text-white">otra combinación</strong> que también sume lo mismo. Si A = B y B = C, entonces A = C.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-violet-400">Adición (niveles 4-5)</p>
+            <p className="text-white/70">Agrega objetos a un lado para <strong className="text-white">romper el equilibrio</strong>, luego agrega lo mismo al otro lado para restaurarlo. Si A = B, entonces A + C = B + C.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-rose-400">Multiplicación (nivel 6)</p>
+            <p className="text-white/70">Usa <strong className="text-teal-400">×2</strong> o <strong className="text-teal-400">×3</strong> para duplicar/triplicar <strong className="text-white">ambos lados</strong>. Prueba también multiplicar solo un lado para ver cómo se desequilibra.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-sky-400">División (nivel 7)</p>
+            <p className="text-white/70">Usa <strong className="text-violet-400">÷2</strong> o <strong className="text-violet-400">÷4</strong> para dividir ambos lados. ¡Intenta <strong className="text-red-400">÷0</strong> para ver qué pasa!</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-3 space-y-2">
+            <p className="font-bold text-white">Libre (nivel 8)</p>
+            <p className="text-white/70">Experimenta libremente. <strong className="text-white">Arrastra</strong> objetos desde el cajón a los platos, o <strong className="text-white">toca</strong> un objeto en un plato para retirarlo.</p>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
+            <p className="font-bold text-white text-xs uppercase tracking-wide">Controles</p>
+            <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
+              <li><strong className="text-white/80">Arrastra</strong> objetos del cajón a un plato, o entre platos.</li>
+              <li><strong className="text-white/80">Toca</strong> un objeto en un plato para retirarlo.</li>
+              <li>Usa <strong className="text-white/80">Ver matemática</strong> para ver la ecuación y los pesos.</li>
+              <li>El <strong className="text-white/80">Historial</strong> registra cada acción realizada.</li>
+            </ul>
+          </div>
+        </div>
+      </ModalHelp>
     </div>
   )
 }
