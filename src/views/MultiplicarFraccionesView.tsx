@@ -763,25 +763,51 @@ export default function MultiplicarFraccionesView() {
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
-                title="¿Cómo funciona?"
+                title="¿Cómo multiplicar fracciones visualmente?"
                 bgColor="#0f172a"
                 titleColor="#e2e8f0"
             >
-                <div className="text-white/80 text-sm space-y-3">
-                    <p>Resuelve multiplicaciones de fracciones de forma visual. Hay 3 tipos de ejercicio:</p>
+                <div className="text-white/80 text-sm space-y-4">
+                    <p>Resuelve multiplicaciones paso a paso con barras, fichas y cuadrículas. Hay <strong className="text-white">3 tipos</strong> de ejercicio según el nivel:</p>
+
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-teal-400">Fracción × Entero</p>
-                        <p>Crea tantos grupos como indica el número entero. Cada grupo contiene la fracción. Luego junta todo para ver el resultado.</p>
+                        <p className="font-bold text-teal-400">Fracción × Entero (niveles 1-2)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Observa la <strong className="text-amber-400">fracción</strong> que debes multiplicar por un número <strong className="text-teal-400">entero</strong>.</li>
+                            <li>Usa los botones <strong>−</strong> y <strong>+</strong> para crear la <strong className="text-white">cantidad de grupos</strong> que indica el entero.</li>
+                            <li>Cada grupo muestra una barra con la fracción. Cuando tengas los grupos correctos, pulsa <strong className="text-teal-400">Juntar todo</strong>.</li>
+                            <li>Las partes coloreadas se combinan en una sola barra mostrando el <strong className="text-emerald-400">resultado</strong>.</li>
+                        </ol>
                     </div>
+
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-amber-400">Entero × Fracción (fracción de un conjunto)</p>
-                        <p>Divide las fichas en tantos grupos como indica el denominador, luego selecciona tantos grupos como indica el numerador.</p>
+                        <p className="font-bold text-amber-400">Entero × Fracción — fracción de un conjunto (niveles 3-4)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Tienes una cantidad de <strong className="text-amber-400">fichas</strong> y debes tomar una fracción de ellas.</li>
+                            <li>Usa <strong className="text-white">Dividir en</strong> para separar las fichas en tantos grupos como indica el <strong className="text-white">denominador</strong>.</li>
+                            <li>Usa <strong className="text-white">Tomar</strong> para seleccionar tantos grupos como indica el <strong className="text-white">numerador</strong>.</li>
+                            <li>Los grupos seleccionados se colorean de <strong className="text-teal-400">teal</strong>. Cuando coincidan con la fracción, pulsa <strong className="text-emerald-400">¿Cuántas fichas tomé?</strong>.</li>
+                        </ol>
                     </div>
+
                     <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-emerald-400">Fracción × Fracción</p>
-                        <p>Configura las columnas (denominador 1) y filas (denominador 2). Colorea las partes que indica cada numerador. La intersección es el resultado.</p>
+                        <p className="font-bold text-emerald-400">Fracción × Fracción (niveles 5-6)</p>
+                        <ol className="list-decimal list-inside space-y-1 text-white/70">
+                            <li>Se muestra una <strong className="text-white">cuadrícula</strong> donde debes configurar <strong className="text-teal-400">Columnas</strong> (denominador 1) y <strong className="text-amber-400">Filas</strong> (denominador 2).</li>
+                            <li>Ajusta <strong className="text-white">colorear</strong> en cada eje para marcar las partes que indica cada numerador.</li>
+                            <li>Las celdas <strong className="text-emerald-400">intersección</strong> (donde se cruzan columnas y filas coloreadas) representan el <strong className="text-white">numerador del resultado</strong>.</li>
+                            <li>El <strong className="text-white">total de celdas</strong> es el denominador. Cuando todo coincida, pulsa <strong className="text-emerald-400">Comprobar</strong>.</li>
+                        </ol>
                     </div>
-                    <p className="text-white/50 text-xs">Selecciona el nivel (1-7) para cambiar la dificultad.</p>
+
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
+                        <p className="font-bold text-white text-xs uppercase tracking-wide">Consejos generales</p>
+                        <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
+                            <li>El nivel <strong className="text-white/80">7</strong> mezcla todos los tipos aleatoriamente.</li>
+                            <li>Usa <strong className="text-white/80">Nuevo ejercicio</strong> para cambiar el problema y <strong className="text-white/80">Reiniciar</strong> para empezar de cero.</li>
+                            <li>Al completar, pulsa <strong className="text-indigo-400">Ver la matemática</strong> para ver la demostración formal de la operación.</li>
+                        </ul>
+                    </div>
                 </div>
             </ModalHelp>
         </div>
