@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import ModalHelp from "../components/ModalHelp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,11 +49,9 @@ const initBar = (parts: number): BarState => ({
 
 const coloredCount = (bar: BarState): number => bar.colored.filter(Boolean).length;
 
-/** Redistribute colored cells proportionally when denominator changes (exact fractions only) */
 const scaleBar = (bar: BarState, newParts: number): BarState => {
     const num = coloredCount(bar);
     const den = bar.parts;
-    // new numerator = num * (newParts / den) — only call this when it's exact
     const newNum = (num * newParts) / den;
     return {
         parts: newParts,
@@ -147,20 +146,17 @@ const ConfettiOverlay = ({ active }: { active: boolean }) => {
 interface FractionBarProps {
     bar: BarState;
     label: string;
-    colorClass: string;        // e.g. "bg-teal-400"
-    dotColor: string;          // e.g. "bg-teal-400"
-    // Setup
+    colorClass: string;
+    dotColor: string;
+    accentColor: string;
     onToggleCell?: (i: number) => void;
     onChangePartsSetup?: (delta: number) => void;
-    // Solving homogeneous
     onCellTap?: (i: number) => void;
     dimmedIndices?: Set<number>;
     highlightMode?: boolean;
-    // Solving heterogeneous
     snap?: FractionSnapshot;
     onScale?: (newParts: number) => void;
     showScaleControls?: boolean;
-    // General
     disabled?: boolean;
     setupPartsDisabled?: boolean;
 }
@@ -170,6 +166,7 @@ const FractionBar = ({
     label,
     colorClass,
     dotColor,
+    accentColor,
     onToggleCell,
     onChangePartsSetup,
     onCellTap,
@@ -187,9 +184,13 @@ const FractionBar = ({
     return (
         <div className="w-full space-y-2">
             {/* ── Header ── */}
-            <div className="flex items-center gap-2 flex-wrap min-h-7">
-                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} />
-                <span className="font-semibold text-gray-700 text-sm md:text-base">{label}</span>
+            <div className="flex items-center gap-2 flex-wrap min-h-8">
+                {/* Label pill */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${accentColor} border`}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor}`} />
+                    <span className="font-bold text-xs tracking-wide uppercase">{label}</span>
+                </div>
+
                 {showScaleControls && snap && (
                     <button
                         onClick={() => {
@@ -197,51 +198,56 @@ const FractionBar = ({
                             if (m > 1 && onScale) onScale(snap.denominator * (m - 1));
                         }}
                         disabled={disabled || bar.parts / snap.denominator <= 1}
-                        className="w-7 h-7 rounded-lg border border-gray-400 bg-white text-rose-400 font-bold text-sm flex items-center justify-center active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed touch-manipulation"
+                        className="w-7 h-7 rounded-lg border border-gray-300 bg-white text-rose-500 font-bold text-sm flex items-center justify-center active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed touch-manipulation shadow-sm"
                     >
                         ÷
                     </button>
                 )}
-                <FractionDisplay
-                    numerator={showScaleControls && snap ? snap.numerator : num}
-                    denominator={showScaleControls && snap ? snap.denominator : den}
-                    color="text-gray-800"
-                />
+
+                <div className="flex items-center gap-1.5">
+                    <FractionDisplay
+                        numerator={showScaleControls && snap ? snap.numerator : num}
+                        denominator={showScaleControls && snap ? snap.denominator : den}
+                        color="text-gray-800"
+                    />
+                </div>
+
                 {showScaleControls && snap && (
                     <button
                         onClick={() => {
                             if (onScale) onScale(snap.denominator * (bar.parts / snap.denominator + 1));
                         }}
                         disabled={disabled}
-                        className="w-7 h-7 rounded-lg border border-gray-400 bg-white text-indigo-500 font-bold text-sm flex items-center justify-center active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed touch-manipulation"
+                        className="w-7 h-7 rounded-lg border border-gray-300 bg-white text-indigo-500 font-bold text-sm flex items-center justify-center active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed touch-manipulation shadow-sm"
                     >
                         ×
                     </button>
                 )}
+
                 {showScaleControls && snap && snap.denominator !== den && (
-                    <div className="flex items-center gap-2 text-xs font-medium bg-indigo-50/80 text-indigo-700 px-3 py-1.5 rounded-full border border-indigo-200/60 ml-1">
+                    <div className="flex items-center gap-1.5 text-xs font-medium bg-violet-50 text-violet-700 px-2.5 py-1 rounded-full border border-violet-200 ml-1">
                         <div className="inline-flex flex-col items-center leading-none select-none font-bold">
-                            <span>{snap.numerator} <span className="text-indigo-500">× {den / snap.denominator}</span></span>
-                            <span className="w-full h-px bg-indigo-300 my-0.5" />
-                            <span>{snap.denominator} <span className="text-indigo-500">× {den / snap.denominator}</span></span>
+                            <span>{snap.numerator} <span className="text-violet-500">× {den / snap.denominator}</span></span>
+                            <span className="w-full h-px bg-violet-300 my-0.5" />
+                            <span>{snap.denominator} <span className="text-violet-500">× {den / snap.denominator}</span></span>
                         </div>
-                        <span className="font-bold text-sm text-indigo-400">=</span>
-                        <FractionDisplay numerator={num} denominator={den} color="text-indigo-700" size="small" />
+                        <span className="font-bold text-violet-400">=</span>
+                        <FractionDisplay numerator={num} denominator={den} color="text-violet-700" size="small" />
                     </div>
                 )}
                 {showScaleControls && snap && snap.denominator === den && (
-                    <div className="text-xs text-gray-400 ml-1">fracción original</div>
+                    <span className="text-xs text-gray-400 italic ml-1">fracción original</span>
                 )}
             </div>
 
             {/* ── Bar row ── */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2">
                 {/* Setup − button */}
                 {onChangePartsSetup && (
                     <button
                         onClick={() => onChangePartsSetup(-1)}
                         disabled={setupPartsDisabled || bar.parts <= 2}
-                        className="w-9 h-9 md:w-10 md:h-10 rounded-xl border border-gray-300 bg-white text-gray-500 font-bold text-xl flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 select-none"
+                        className="w-9 h-9 rounded-xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-xl flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation shadow-sm hover:border-gray-400 hover:text-gray-700 select-none"
                         aria-label="Reducir partes"
                     >
                         −
@@ -251,8 +257,8 @@ const FractionBar = ({
                 {/* Bar */}
                 <div className="flex-1">
                     <div
-                        className="flex w-full rounded-xl overflow-hidden border-2 border-gray-700 shadow-md"
-                        style={{ minHeight: 54 }}
+                        className="flex w-full rounded-2xl overflow-hidden border-2 border-gray-800 shadow-inner"
+                        style={{ minHeight: 52 }}
                     >
                         {bar.colored.map((filled, i) => {
                             const isDimmed = dimmedIndices?.has(i);
@@ -274,12 +280,12 @@ const FractionBar = ({
                                         }
                                     }}
                                     className={[
-                                        "flex-1 border-r last:border-r-0 border-gray-700 transition-all duration-150 select-none",
+                                        "flex-1 border-r-2 last:border-r-0 border-gray-800/40 transition-all duration-150 select-none",
                                         filled
                                             ? isDimmed
-                                                ? `${colorClass} opacity-25`
+                                                ? `${colorClass} opacity-20`
                                                 : `${colorClass}`
-                                            : "bg-slate-100",
+                                            : "bg-gray-100",
                                         tapable
                                             ? "cursor-pointer hover:brightness-110 active:scale-y-90"
                                             : onToggleCell && !disabled
@@ -287,7 +293,7 @@ const FractionBar = ({
                                                 : "cursor-default",
                                         "touch-manipulation",
                                     ].join(" ")}
-                                    style={{ minHeight: 54 }}
+                                    style={{ minHeight: 52 }}
                                 />
                             );
                         })}
@@ -299,7 +305,7 @@ const FractionBar = ({
                     <button
                         onClick={() => onChangePartsSetup(1)}
                         disabled={setupPartsDisabled || bar.parts >= 12}
-                        className="w-9 h-9 md:w-10 md:h-10 rounded-xl border border-gray-300 bg-white text-gray-500 font-bold text-xl flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 select-none"
+                        className="w-9 h-9 rounded-xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-xl flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation shadow-sm hover:border-gray-400 hover:text-gray-700 select-none"
                         aria-label="Aumentar partes"
                     >
                         +
@@ -309,7 +315,7 @@ const FractionBar = ({
 
             {/* Parts count */}
             {onChangePartsSetup && (
-                <div className="text-xs text-gray-400 font-medium ml-12">
+                <div className="text-xs text-gray-400 font-medium pl-11">
                     {den} partes
                 </div>
             )}
@@ -327,8 +333,8 @@ const ResultBarRow = ({ bar, index, eliminatingCells }: { bar: ResultBar; index:
             </div>
         )}
         <div
-            className="flex w-full rounded-xl overflow-hidden border-2 border-emerald-400/60 shadow-md"
-            style={{ minHeight: 54 }}
+            className="flex w-full rounded-2xl overflow-hidden border-2 border-gray-800 shadow-inner"
+            style={{ minHeight: 52 }}
         >
             {bar.filled.map((f, i) => {
                 const isEliminating = eliminatingCells.has(`${index}-${i}`);
@@ -336,15 +342,15 @@ const ResultBarRow = ({ bar, index, eliminatingCells }: { bar: ResultBar; index:
                     <div
                         key={i}
                         className={[
-                            "flex-1 border-r last:border-r-0 border-gray-700 transition-all duration-300",
+                            "flex-1 border-r-2 last:border-r-0 border-gray-800/40 transition-all duration-300",
                             isEliminating
                                 ? "bg-red-500"
                                 : f
                                     ? "bg-gradient-to-b from-emerald-400 to-emerald-500"
-                                    : "bg-emerald-50/70",
+                                    : "bg-emerald-50",
                         ].join(" ")}
                         style={{
-                            minHeight: 54,
+                            minHeight: 52,
                             ...(isEliminating ? { animation: "eliminateCell 0.45s ease-in forwards" } : {}),
                         }}
                     />
@@ -364,7 +370,7 @@ const ResultBarRow = ({ bar, index, eliminatingCells }: { bar: ResultBar; index:
 // ─── OpSign / MathStep ───────────────────────────────────────────────────────
 
 const OpSign = ({ op }: { op: string }) => (
-    <span className="text-2xl md:text-3xl font-bold text-gray-300 mx-2 select-none">
+    <span className="text-2xl md:text-3xl font-bold text-gray-300 mx-1.5 select-none">
         {op}
     </span>
 );
@@ -381,7 +387,7 @@ const MathStep = ({
     <div
         className={[
             "flex items-center justify-center flex-wrap gap-2 p-3 rounded-xl",
-            highlight ? "bg-purple-50/80 border border-purple-200/60" : "bg-gray-50/80 border border-gray-200/50",
+            highlight ? "bg-violet-50 border border-violet-200/60" : "bg-gray-50 border border-gray-200/60",
         ].join(" ")}
     >
         <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mr-1 shadow-sm">
@@ -391,21 +397,28 @@ const MathStep = ({
     </div>
 );
 
+// ─── SectionCard ─────────────────────────────────────────────────────────────
+
+const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+    <div className={`bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4 ${className}`}>
+        {children}
+    </div>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SumaRestaFraccionesView() {
     const navigate = useNavigate();
+
     // ── Core state ──────────────────────────────────────────────────────────────
     const [operation, setOperation] = useState<Operation>("sum");
     const [phase, setPhase] = useState<Phase>("setup");
     const [barA, setBarA] = useState<BarState>(initBar(4));
     const [barB, setBarB] = useState<BarState>(initBar(4));
 
-    // Snapshots (saved when Resolver is pressed)
     const [snapA, setSnapA] = useState<FractionSnapshot | null>(null);
     const [snapB, setSnapB] = useState<FractionSnapshot | null>(null);
 
-    // Solving
     const [subPhase, setSubPhase] = useState<SubPhase>("moveA");
     const [movedA, setMovedA] = useState<Set<number>>(new Set());
     const [movedB, setMovedB] = useState<Set<number>>(new Set());
@@ -413,18 +426,16 @@ export default function SumaRestaFraccionesView() {
     const [eliminatingCells, setEliminatingCells] = useState<Set<string>>(new Set());
     const eliminatingLockRef = useRef(false);
 
-    // Heterogeneous
     const [isHeterogeneous, setIsHeterogeneous] = useState(false);
     const [heteroJoined, setHeteroJoined] = useState(false);
 
-    // Alerts
     const [alertMsg, setAlertMsg] = useState<string | null>(null);
     const [subtractionAlert, setSubtractionAlert] = useState(false);
     const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Complete
     const [showConfetti, setShowConfetti] = useState(false);
     const [showMath, setShowMath] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     // ── Alert helper ────────────────────────────────────────────────────────────
     const showAlert = useCallback((msg: string) => {
@@ -490,13 +501,12 @@ export default function SumaRestaFraccionesView() {
         setPhase("solving");
     };
 
-    // ── Heterogeneous: scale a bar by multiplier ─────────────────────────────────
+    // ── Heterogeneous: scale a bar by multiplier ──────────────────────────────
     const handleScaleBar = (bar: "A" | "B", newParts: number) => {
         const setter = bar === "A" ? setBarA : setBarB;
         const snap = bar === "A" ? snapA : snapB;
         if (!snap) return;
         setter(() => {
-            // numerator scales exactly
             const newNum = (snap.numerator * newParts) / snap.denominator;
             return {
                 parts: newParts,
@@ -507,7 +517,6 @@ export default function SumaRestaFraccionesView() {
         });
     };
 
-    // Update result bar preview when denoms match (hetero)
     const denominatorsMatch =
         isHeterogeneous && barA.parts === barB.parts && barA.parts > 1;
 
@@ -522,7 +531,7 @@ export default function SumaRestaFraccionesView() {
         }
     }, [barA.parts, barB.parts, phase, isHeterogeneous, heteroJoined, denominatorsMatch]);
 
-    // ── Homogeneous: tap cell to move ─────────────────────────────────────────────
+    // ── Homogeneous: tap cell to move ─────────────────────────────────────────
 
     const findLastFilled = (bars: ResultBar[]): [number, number] | null => {
         for (let bi = bars.length - 1; bi >= 0; bi--) {
@@ -532,12 +541,11 @@ export default function SumaRestaFraccionesView() {
         }
         return null;
     };
+
     const handleCellTap = (bar: "A" | "B", cellIndex: number) => {
         if (isHeterogeneous) {
             if (!denominatorsMatch) {
-                showAlert(
-                    "Las piezas son de distinto tamaño. Necesitas hacerlas iguales primero."
-                );
+                showAlert("Las piezas son de distinto tamaño. Necesitas hacerlas iguales primero.");
             }
             return;
         }
@@ -550,17 +558,13 @@ export default function SumaRestaFraccionesView() {
             const newMovedA = new Set(movedA);
             newMovedA.add(cellIndex);
             setMovedA(newMovedA);
-
-            // Add one filled cell to result bars
             setResultBars((prev) => addOneToResult(prev));
 
-            // Check if ALL of A is now moved
             const totalAColored = barA.colored.filter(Boolean).length;
             if (newMovedA.size >= totalAColored) {
                 setSubPhase("moveB");
             }
         } else {
-            // Bar B
             if (subPhase !== "moveB") return;
             if (movedB.has(cellIndex)) return;
             if (!barB.colored[cellIndex]) return;
@@ -601,13 +605,10 @@ export default function SumaRestaFraccionesView() {
                 return bars;
             }
         }
-        // All bars full — add a new one
         const den = bars[0]?.parts ?? 1;
         const newBar: ResultBar = {
             parts: den,
-            filled: Array(den)
-                .fill(false)
-                .map((_, i) => i === 0),
+            filled: Array(den).fill(false).map((_, i) => i === 0),
         };
         return [...bars, newBar];
     };
@@ -631,11 +632,10 @@ export default function SumaRestaFraccionesView() {
     const allAMoved = movedA.size >= totalAColored;
     const allBMoved = movedB.size >= totalBColored;
 
-    const canCheck =
-        phase === "solving" && !isHeterogeneous && allAMoved && allBMoved;
+    const canCheck = phase === "solving" && !isHeterogeneous && allAMoved && allBMoved;
     const canCheckHetero = phase === "solving" && isHeterogeneous && heteroJoined;
 
-    // ── Hetero join/eliminate ────────────────────────────────────────────────────
+    // ── Hetero join/eliminate ─────────────────────────────────────────────────
     const handleHeteroJoin = () => {
         if (!denominatorsMatch) return;
         const den = barA.parts;
@@ -647,9 +647,7 @@ export default function SumaRestaFraccionesView() {
         const barsNeeded = Math.max(1, Math.ceil(finalNum / den));
         const newBars: ResultBar[] = Array.from({ length: barsNeeded }, (_, bi) => ({
             parts: den,
-            filled: Array(den)
-                .fill(false)
-                .map((_, ci) => bi * den + ci < finalNum),
+            filled: Array(den).fill(false).map((_, ci) => bi * den + ci < finalNum),
         }));
 
         setResultBars(newBars);
@@ -657,7 +655,7 @@ export default function SumaRestaFraccionesView() {
         setSubPhase("done");
     };
 
-    // ── Comprobar ──────────────────────────────────────────────────────────────
+    // ── Comprobar ─────────────────────────────────────────────────────────────
     const handleCheck = () => {
         setPhase("complete");
         setShowConfetti(true);
@@ -699,10 +697,9 @@ export default function SumaRestaFraccionesView() {
     const getInstruction = (): { text: string; tone: string } => {
         if (phase === "setup") {
             return {
-                text:
-                    operation === "sum"
-                        ? "Ajusta las barras con +/− y toca las celdas para colorearlas. Cuando estés listo presiona Resolver."
-                        : "Colorea más partes en la Barra A que en la Barra B. Luego presiona Resolver.",
+                text: operation === "sum"
+                    ? "Ajusta las barras con +/− y toca las celdas para colorearlas. Cuando estés listo presiona Resolver."
+                    : "Colorea más partes en la Barra A que en la Barra B. Luego presiona Resolver.",
                 tone: "blue",
             };
         }
@@ -710,55 +707,41 @@ export default function SumaRestaFraccionesView() {
             if (isHeterogeneous) {
                 if (!denominatorsMatch)
                     return {
-                        text: "Las partes son de distinto tamaño. Usa los botones ×n para ampliar y ÷n para reducir cada barra hasta que ambas tengan el mismo denominador.",
+                        text: "Las partes son de distinto tamaño. Usa los botones × y ÷ para ampliar o reducir cada barra hasta que ambas tengan el mismo denominador.",
                         tone: "amber",
                     };
                 if (!heteroJoined)
                     return {
-                        text:
-                            operation === "sum"
-                                ? "¡Denominadores iguales! Pulsa «Juntar» para combinar las partes en el resultado."
-                                : "¡Denominadores iguales! Pulsa «Eliminar» para restar las partes del resultado.",
+                        text: operation === "sum"
+                            ? "¡Denominadores iguales! Pulsa «Juntar» para combinar las partes en el resultado."
+                            : "¡Denominadores iguales! Pulsa «Eliminar» para restar las partes del resultado.",
                         tone: "green",
                     };
-                return {
-                    text: "¡Listo! Pulsa «Comprobar» para verificar tu respuesta.",
-                    tone: "green",
-                };
+                return { text: "¡Listo! Pulsa «Comprobar» para verificar tu respuesta.", tone: "green" };
             }
             if (subPhase === "moveA")
-                return {
-                    text: "Toca las partes coloreadas de la Barra A para trasladarlas al resultado.",
-                    tone: "blue",
-                };
+                return { text: "Toca las partes coloreadas de la Barra A para trasladarlas al resultado.", tone: "blue" };
             if (subPhase === "moveB")
                 return {
-                    text:
-                        operation === "sum"
-                            ? "Ahora toca las partes coloreadas de la Barra B para sumarlas."
-                            : "Ahora toca las partes de la Barra B — se eliminarán del resultado.",
+                    text: operation === "sum"
+                        ? "Ahora toca las partes coloreadas de la Barra B para sumarlas."
+                        : "Ahora toca las partes de la Barra B — se eliminarán del resultado.",
                     tone: "blue",
                 };
-            return {
-                text: "¡Listo! Pulsa «Comprobar» para verificar tu respuesta.",
-                tone: "green",
-            };
+            return { text: "¡Listo! Pulsa «Comprobar» para verificar tu respuesta.", tone: "green" };
         }
-        return {
-            text: "¡Operación completada correctamente!",
-            tone: "emerald",
-        };
+        return { text: "¡Operación completada correctamente!", tone: "emerald" };
     };
 
     const { text: instrText, tone: instrTone } = getInstruction();
-    const instrClass =
-        instrTone === "amber"
-            ? "bg-amber-50 border-amber-200 text-amber-800"
-            : instrTone === "green"
-                ? "bg-green-50 border-green-200 text-green-800"
-                : instrTone === "emerald"
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                    : "bg-blue-50 border-blue-200 text-blue-800";
+
+    const instrStyles: Record<string, string> = {
+        amber: "bg-amber-50 border-amber-200 text-amber-800",
+        green: "bg-emerald-50 border-emerald-200 text-emerald-800",
+        emerald: "bg-emerald-50 border-emerald-200 text-emerald-800",
+        blue: "bg-sky-50 border-sky-200 text-sky-800",
+    };
+    const instrClass = instrStyles[instrTone] ?? instrStyles.blue;
 
     // ── Math steps ────────────────────────────────────────────────────────────
     const renderMathSteps = () => {
@@ -767,13 +750,13 @@ export default function SumaRestaFraccionesView() {
 
         if (!isHeterogeneous) {
             return (
-                <div className="space-y-3 text-center">
+                <div className="space-y-2.5 text-center">
                     <MathStep label="1">
                         <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" />
                         <OpSign op={opSym} />
                         <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" />
                         <OpSign op="=" />
-                        <span className="text-2xl font-bold text-gray-400">?</span>
+                        <span className="text-2xl font-bold text-gray-300">?</span>
                     </MathStep>
                     <MathStep label="2">
                         <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" color="text-teal-600" />
@@ -786,7 +769,7 @@ export default function SumaRestaFraccionesView() {
                         <MathStep label="3" highlight>
                             <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-600" />
                             <OpSign op="=" />
-                            <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-purple-600" />
+                            <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-violet-600" />
                             <span className="text-xs text-gray-400 ml-1">(simplificado)</span>
                         </MathStep>
                     )}
@@ -794,7 +777,6 @@ export default function SumaRestaFraccionesView() {
             );
         }
 
-        // Heterogeneous
         const multA = barA.parts / snapA.denominator;
         const multB = barB.parts / snapB.denominator;
         const eqNumA = snapA.numerator * multA;
@@ -802,33 +784,33 @@ export default function SumaRestaFraccionesView() {
         const eqDen = barA.parts;
 
         return (
-            <div className="space-y-3 text-center">
+            <div className="space-y-2.5 text-center">
                 <MathStep label="1">
                     <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" />
                     <OpSign op={opSym} />
                     <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" />
                     <OpSign op="=" />
-                    <span className="text-2xl font-bold text-gray-400">?</span>
+                    <span className="text-2xl font-bold text-gray-300">?</span>
                 </MathStep>
                 <MathStep label="2">
-                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-2xl md:text-3xl text-teal-600">
+                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-2xl text-teal-600">
                                 <span>{snapA.numerator} <span className="text-indigo-500 text-base">× {multA}</span></span>
                                 <span className="w-full h-0.5 bg-teal-600 my-1 rounded" />
                                 <span>{snapA.denominator} <span className="text-indigo-500 text-base">× {multA}</span></span>
                             </div>
-                            <span className="text-lg font-bold text-gray-400">=</span>
+                            <span className="text-gray-400 font-bold">=</span>
                             <FractionDisplay numerator={eqNumA} denominator={eqDen} size="large" color="text-teal-600" />
                         </div>
                         <div className="w-px h-8 bg-gray-200 hidden sm:block" />
                         <div className="flex items-center gap-2">
-                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-2xl md:text-3xl text-amber-600">
+                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-2xl text-amber-600">
                                 <span>{snapB.numerator} <span className="text-indigo-500 text-base">× {multB}</span></span>
                                 <span className="w-full h-0.5 bg-amber-600 my-1 rounded" />
                                 <span>{snapB.denominator} <span className="text-indigo-500 text-base">× {multB}</span></span>
                             </div>
-                            <span className="text-lg font-bold text-gray-400">=</span>
+                            <span className="text-gray-400 font-bold">=</span>
                             <FractionDisplay numerator={eqNumB} denominator={eqDen} size="large" color="text-amber-600" />
                         </div>
                     </div>
@@ -844,7 +826,7 @@ export default function SumaRestaFraccionesView() {
                     <MathStep label="4" highlight>
                         <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-600" />
                         <OpSign op="=" />
-                        <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-purple-600" />
+                        <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-violet-600" />
                         <span className="text-xs text-gray-400 ml-1">(simplificado)</span>
                     </MathStep>
                 )}
@@ -854,161 +836,170 @@ export default function SumaRestaFraccionesView() {
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100/60 flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <ConfettiOverlay active={showConfetti} />
 
             {/* ── Header ── */}
-            <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/60 px-4 py-2.5 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
+            <header className="bg-white border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 text-xs font-semibold hover:bg-gray-100 hover:text-gray-700 hover:border-gray-300 active:scale-95 transition-all touch-manipulation"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 active:scale-95 transition-all touch-manipulation"
                 >
                     ← Volver
                 </button>
-                <h1 className="text-base md:text-lg font-bold text-gray-800 tracking-tight flex-1 text-center">
-                    Operaciones con Fracciones
-                </h1>
-                {phase !== "setup" && (
-                    <span
-                        className={[
-                            "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
+
+                <div className="flex-1 flex items-center justify-center gap-1.5">
+                    <h1 className=" font-bold text-gray-800 tracking-tight">
+                        Operaciones con Fracciones
+                    </h1>
+                    {phase !== "setup" && (
+                        <span className={[
+                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
                             phase === "complete"
                                 ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                                 : "bg-indigo-50 text-indigo-500 border-indigo-200",
-                        ].join(" ")}
-                    >
-                        {phase === "complete" ? "¡Completado!" : "Resolviendo"}
-                    </span>
-                )}
+                        ].join(" ")}>
+                            {phase === "complete" ? "¡Completado!" : "Resolviendo"}
+                        </span>
+                    )}
+                </div>
+
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-sm font-bold flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
+                >
+                    ?
+                </button>
             </header>
 
-            <main className="flex-1 px-3 py-4 max-w-5xl mx-auto w-full space-y-3 pb-16">
+            <main className="flex-1 px-3 py-3 max-w-5xl mx-auto w-full space-y-3 pb-8">
 
-                {/* ── Operation selector (setup only) ── */}
+                {/* ── Operation selector ── */}
                 {phase === "setup" && (
-                    <div className="flex gap-1.5 bg-white/80 backdrop-blur-sm rounded-xl p-1 border border-gray-200/80 shadow-sm">
+                    <div className="flex gap-2 p-1 bg-gray-200/60 rounded-xl">
                         {(["sum", "sub"] as Operation[]).map((op) => (
                             <button
                                 key={op}
                                 onClick={() => setOperation(op)}
                                 className={[
-                                    "flex-1 py-1.5 rounded-lg font-bold text-sm transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-1.5",
+                                    "flex-1 py-2 rounded-lg font-bold text-sm transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2",
                                     operation === op
-                                        ? "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-200/60"
-                                        : "text-gray-400 hover:bg-gray-50 hover:text-gray-600",
+                                        ? op === "sum"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "bg-white text-rose-600 shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700",
                                 ].join(" ")}
                             >
-                                <span className="text-base">{op === "sum" ? "+" : "−"}</span>
-                                <span>{op === "sum" ? "Suma" : "Resta"}</span>
+                                <span className={[
+                                    "w-6 h-6 rounded-full flex items-center justify-center text-white text-base font-bold",
+                                    operation === op
+                                        ? op === "sum" ? "bg-indigo-500" : "bg-rose-500"
+                                        : "bg-gray-400",
+                                ].join(" ")}>
+                                    {op === "sum" ? "+" : "−"}
+                                </span>
+                                {op === "sum" ? "Suma" : "Resta"}
                             </button>
                         ))}
                     </div>
                 )}
 
-                {/* ── Instruction ── */}
-                <div className={`rounded-xl px-3 py-2 text-xs font-medium border backdrop-blur-sm ${instrClass}`}>
-                    {instrText}
+                {/* ── Instruction banner ── */}
+                <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs font-medium border ${instrClass}`}>
+                    <span className="mt-0.5 flex-shrink-0">
+                        {instrTone === "amber" ? "⚡" : instrTone === "green" ? "✓" : instrTone === "emerald" ? "🎉" : "💡"}
+                    </span>
+                    <span>{instrText}</span>
                 </div>
 
                 {/* ── Alerts ── */}
-                {alertMsg && (
-                    <div className="rounded-xl px-4 py-2.5 text-sm font-medium bg-red-50/90 backdrop-blur-sm border border-red-200/80 text-red-700 animate-pulse">
-                        ⚠ {alertMsg}
-                    </div>
-                )}
-                {subtractionAlert && (
-                    <div className="rounded-xl px-4 py-2.5 text-sm font-medium bg-red-50/90 backdrop-blur-sm border border-red-200/80 text-red-700 animate-pulse">
-                        ⚠ No puedes restar más de lo que hay en la Barra A.
+                {(alertMsg || subtractionAlert) && (
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium bg-red-50 border border-red-200 text-red-700">
+                        <span>⚠️</span>
+                        <span>{alertMsg ?? "No puedes restar más de lo que hay en la Barra A."}</span>
                     </div>
                 )}
 
                 {/* ── Bars card ── */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-200/80 shadow-lg shadow-gray-200/40 p-4 md:p-5 space-y-5">
+                <SectionCard>
+                    <div className="space-y-2">
+                        {/* Bar A */}
+                        <FractionBar
+                            bar={barA}
+                            label="Barra A"
+                            colorClass="bg-gradient-to-b from-teal-400 to-teal-500"
+                            dotColor="bg-teal-500"
+                            accentColor="bg-teal-50 text-teal-700 border-teal-200"
+                            onToggleCell={phase === "setup" ? (i) => handleToggleCell("A", i) : undefined}
+                            onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("A", d) : undefined}
+                            setupPartsDisabled={phase !== "setup"}
+                            onCellTap={phase === "solving" && !isHeterogeneous ? (i) => handleCellTap("A", i) : undefined}
+                            dimmedIndices={phase === "solving" && !isHeterogeneous ? movedA : undefined}
+                            highlightMode={phase === "solving" && !isHeterogeneous && subPhase === "moveA"}
+                            showScaleControls={phase === "solving" && isHeterogeneous && !heteroJoined}
+                            snap={snapA ?? undefined}
+                            onScale={phase === "solving" && isHeterogeneous && !heteroJoined ? (n) => handleScaleBar("A", n) : undefined}
+                            disabled={phase === "complete" || (phase === "solving" && isHeterogeneous && heteroJoined)}
+                        />
 
-                    {/* Bar A */}
-                    <FractionBar
-                        bar={barA}
-                        label="Barra A"
-                        colorClass="bg-gradient-to-b from-teal-400 to-teal-500"
-                        dotColor="bg-teal-500"
-                        // Setup
-                        onToggleCell={phase === "setup" ? (i) => handleToggleCell("A", i) : undefined}
-                        onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("A", d) : undefined}
-                        setupPartsDisabled={phase !== "setup"}
-                        // Solving homogeneous tap
-                        onCellTap={
-                            phase === "solving" && !isHeterogeneous
-                                ? (i) => handleCellTap("A", i)
-                                : undefined
-                        }
-                        dimmedIndices={phase === "solving" && !isHeterogeneous ? movedA : undefined}
-                        highlightMode={phase === "solving" && !isHeterogeneous && subPhase === "moveA"}
-                        // Solving heterogeneous
-                        showScaleControls={phase === "solving" && isHeterogeneous && !heteroJoined}
-                        snap={snapA ?? undefined}
-                        onScale={
-                            phase === "solving" && isHeterogeneous && !heteroJoined
-                                ? (n) => handleScaleBar("A", n)
-                                : undefined
-                        }
-                        disabled={phase === "complete" || (phase === "solving" && isHeterogeneous && heteroJoined)}
-                    />
-
-                    {/* Operation symbol */}
-                    <div className="flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-b from-indigo-100 to-indigo-50 border-2 border-indigo-200 flex items-center justify-center font-bold text-indigo-600 text-xl select-none shadow-sm">
-                            {operation === "sum" ? "+" : "−"}
+                        {/* Divider with operation */}
+                        <div className="flex items-center">
+                            <div className="flex-1 h-px bg-gray-100" />
+                            <div className={[
+                                "w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-base select-none shadow-sm mx-2",
+                                operation === "sum" ? "bg-indigo-500" : "bg-rose-500",
+                            ].join(" ")}>
+                                {operation === "sum" ? "+" : "−"}
+                            </div>
+                            <div className="flex-1 h-px bg-gray-100" />
                         </div>
+
+                        {/* Bar B */}
+                        <FractionBar
+                            bar={barB}
+                            label="Barra B"
+                            colorClass="bg-gradient-to-b from-amber-400 to-amber-500"
+                            dotColor="bg-amber-500"
+                            accentColor="bg-amber-50 text-amber-700 border-amber-200"
+                            onToggleCell={phase === "setup" ? (i) => handleToggleCell("B", i) : undefined}
+                            onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("B", d) : undefined}
+                            setupPartsDisabled={phase !== "setup"}
+                            onCellTap={phase === "solving" && !isHeterogeneous ? (i) => handleCellTap("B", i) : undefined}
+                            dimmedIndices={phase === "solving" && !isHeterogeneous ? movedB : undefined}
+                            highlightMode={phase === "solving" && !isHeterogeneous && subPhase === "moveB"}
+                            showScaleControls={phase === "solving" && isHeterogeneous && !heteroJoined}
+                            snap={snapB ?? undefined}
+                            onScale={phase === "solving" && isHeterogeneous && !heteroJoined ? (n) => handleScaleBar("B", n) : undefined}
+                            disabled={phase === "complete" || (phase === "solving" && isHeterogeneous && heteroJoined)}
+                        />
                     </div>
+                </SectionCard>
 
-                    {/* Bar B */}
-                    <FractionBar
-                        bar={barB}
-                        label="Barra B"
-                        colorClass="bg-gradient-to-b from-amber-400 to-amber-500"
-                        dotColor="bg-amber-500"
-                        onToggleCell={phase === "setup" ? (i) => handleToggleCell("B", i) : undefined}
-                        onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("B", d) : undefined}
-                        setupPartsDisabled={phase !== "setup"}
-                        onCellTap={
-                            phase === "solving" && !isHeterogeneous
-                                ? (i) => handleCellTap("B", i)
-                                : undefined
-                        }
-                        dimmedIndices={phase === "solving" && !isHeterogeneous ? movedB : undefined}
-                        highlightMode={phase === "solving" && !isHeterogeneous && subPhase === "moveB"}
-                        showScaleControls={phase === "solving" && isHeterogeneous && !heteroJoined}
-                        snap={snapB ?? undefined}
-                        onScale={
-                            phase === "solving" && isHeterogeneous && !heteroJoined
-                                ? (n) => handleScaleBar("B", n)
-                                : undefined
-                        }
-                        disabled={phase === "complete" || (phase === "solving" && isHeterogeneous && heteroJoined)}
-                    />
-                </div>
-
-                {/* ── Progress bar (homogeneous solving) ── */}
+                {/* ── Progress tracker (homogeneous solving) ── */}
                 {phase === "solving" && !isHeterogeneous && (
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200/80 shadow-md px-4 py-3 flex items-center gap-3">
-                        <div className="flex-1 space-y-1">
-                            <div className="text-xs font-semibold text-gray-500">Partes trasladadas</div>
-                            <div className="flex gap-2 flex-wrap">
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-semibold">
+                    <SectionCard className="py-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Partes trasladadas</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs px-2.5 py-1 rounded-full bg-teal-100 text-teal-700 font-bold">
                                     A: {movedA.size}/{totalAColored}
                                 </span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
-                                    {operation === "sub" ? "Eliminadas" : ""} B: {movedB.size}/{totalBColored}
+                                <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
+                                    B: {movedB.size}/{totalBColored}
+                                </span>
+                                <span className="text-sm font-bold text-indigo-600 ml-1">
+                                    {movedA.size + movedB.size}/{totalAColored + totalBColored}
                                 </span>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-xs text-gray-400">Total</div>
-                            <div className="font-bold text-indigo-600 text-lg">
-                                {movedA.size + movedB.size}/{totalAColored + totalBColored}
-                            </div>
+                        {/* Progress bar */}
+                        <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-indigo-400 to-indigo-500 rounded-full transition-all duration-300"
+                                style={{ width: `${((movedA.size + movedB.size) / (totalAColored + totalBColored)) * 100}%` }}
+                            />
                         </div>
-                    </div>
+                    </SectionCard>
                 )}
 
                 {/* ── Resolver button ── */}
@@ -1017,10 +1008,10 @@ export default function SumaRestaFraccionesView() {
                         onClick={handleResolve}
                         disabled={!canResolve}
                         className={[
-                            "w-full py-3.5 rounded-xl font-bold text-lg transition-all active:scale-[0.98] touch-manipulation",
+                            "w-full py-3.5 rounded-xl font-bold text-base transition-all active:scale-[0.98] touch-manipulation",
                             canResolve
-                                ? "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-200/60 hover:shadow-xl hover:shadow-indigo-300/60"
-                                : "bg-gray-100 text-gray-400 cursor-not-allowed",
+                                ? "bg-indigo-500 text-white shadow-md hover:bg-indigo-600"
+                                : "bg-gray-200 text-gray-400 cursor-not-allowed",
                         ].join(" ")}
                     >
                         Resolver →
@@ -1031,25 +1022,19 @@ export default function SumaRestaFraccionesView() {
                 {(phase === "solving" || phase === "complete") &&
                     resultBars.length > 0 &&
                     resultBars[0].parts > 0 && (
-                        <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-emerald-300/60 shadow-lg shadow-emerald-100/40 p-4 md:p-5 space-y-3">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                                <span className="font-semibold text-gray-700 text-sm md:text-base">Resultado</span>
+                        <SectionCard className="border-emerald-200/60">
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wide">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    Resultado
+                                </div>
                                 {phase === "complete" && (
-                                    <div className="ml-1 flex items-center gap-1.5">
-                                        <FractionDisplay
-                                            numerator={resultNumerator}
-                                            denominator={resultDenominator}
-                                            color="text-emerald-600"
-                                        />
+                                    <div className="flex items-center gap-1.5 ml-1">
+                                        <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} color="text-emerald-600" />
                                         {needsSimplify && (
                                             <>
                                                 <span className="text-gray-400 font-bold text-lg">=</span>
-                                                <FractionDisplay
-                                                    numerator={simplified.num}
-                                                    denominator={simplified.den}
-                                                    color="text-purple-600"
-                                                />
+                                                <FractionDisplay numerator={simplified.num} denominator={simplified.den} color="text-violet-600" />
                                             </>
                                         )}
                                     </div>
@@ -1060,14 +1045,14 @@ export default function SumaRestaFraccionesView() {
                                     <ResultBarRow key={idx} bar={rb} index={idx} eliminatingCells={eliminatingCells} />
                                 ))}
                             </div>
-                        </div>
+                        </SectionCard>
                     )}
 
                 {/* ── Hetero join/eliminate ── */}
                 {phase === "solving" && isHeterogeneous && denominatorsMatch && !heteroJoined && (
                     <button
                         onClick={handleHeteroJoin}
-                        className="w-full py-3.5 rounded-xl font-bold text-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-200/60 hover:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
+                        className="w-full py-3.5 rounded-xl font-bold text-base bg-emerald-500 text-white shadow-md hover:bg-emerald-600 active:scale-[0.98] transition-all touch-manipulation"
                     >
                         {operation === "sum" ? "🤝 Juntar" : "✂️ Eliminar"}
                     </button>
@@ -1077,7 +1062,7 @@ export default function SumaRestaFraccionesView() {
                 {(canCheck || canCheckHetero) && (
                     <button
                         onClick={handleCheck}
-                        className="w-full py-3.5 rounded-xl font-bold text-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-200/60 hover:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
+                        className="w-full py-3.5 rounded-xl font-bold text-base bg-emerald-500 text-white shadow-md hover:bg-emerald-600 active:scale-[0.98] transition-all touch-manipulation"
                     >
                         ✓ Comprobar
                     </button>
@@ -1086,37 +1071,57 @@ export default function SumaRestaFraccionesView() {
                 {/* ── Complete ── */}
                 {phase === "complete" && (
                     <div className="space-y-3">
-                        <div className="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl px-6 py-5 text-center text-white shadow-xl shadow-emerald-200/50">
-                            <div className="text-4xl mb-1">🎉</div>
-                            <div className="text-2xl font-black tracking-tight">¡Correcto!</div>
-                            <div className="text-sm opacity-90 mt-1">Has completado la operación</div>
-                        </div>
+                        {/* Success card */}
+                        <SectionCard className="bg-gradient-to-br from-emerald-500 to-teal-500 border-0 text-center py-6">
+                            <div className="text-4xl mb-2">🎉</div>
+                            <div className="text-2xl font-black text-white tracking-tight">¡Correcto!</div>
+                            <div className="text-sm text-white/80 mt-1">Has completado la operación</div>
+                        </SectionCard>
 
                         <button
                             onClick={() => setShowMath((s) => !s)}
-                            className="w-full py-3 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 border border-indigo-200/80 hover:bg-indigo-100 active:scale-[0.98] transition-all touch-manipulation shadow-sm"
+                            className="w-full py-3 rounded-xl font-bold text-sm bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all touch-manipulation"
                         >
                             {showMath ? "Ocultar la matemática" : "📐 Ver la matemática"}
                         </button>
 
                         {showMath && (
-                            <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-indigo-200/50 shadow-lg shadow-indigo-100/30 p-5">
+                            <SectionCard className="border-indigo-200/50">
                                 <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-4 text-center">
                                     Pasos matemáticos
                                 </h3>
                                 {renderMathSteps()}
-                            </div>
+                            </SectionCard>
                         )}
 
                         <button
                             onClick={handleReset}
-                            className="w-full py-3.5 rounded-xl font-bold text-base bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-800 active:scale-[0.98] transition-all touch-manipulation border border-gray-200 shadow-sm"
+                            className="w-full py-3 rounded-xl font-bold text-sm bg-white text-gray-600 hover:bg-gray-50 active:scale-[0.98] transition-all touch-manipulation border border-gray-200"
                         >
                             🔄 Empezar de nuevo
                         </button>
                     </div>
                 )}
             </main>
+
+            <ModalHelp
+                open={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="¿Cómo sumar y restar fracciones?"
+                bgColor="#f8fafc"
+                titleColor="#1e293b"
+                buttonColor="bg-indigo-500 hover:bg-indigo-400"
+            >
+                <ol className="space-y-3 text-gray-600 text-sm leading-relaxed list-decimal list-inside">
+                    <li>Elige la operación: <strong className="text-indigo-600">Suma</strong> o <strong className="text-rose-500">Resta</strong>.</li>
+                    <li>Ajusta la <strong className="text-teal-600">Barra A</strong> y la <strong className="text-amber-600">Barra B</strong> usando los botones <strong>+</strong> y <strong>−</strong> para cambiar el número de partes, y toca las celdas para colorearlas.</li>
+                    <li>Presiona <strong className="text-indigo-600">Resolver</strong> para comenzar.</li>
+                    <li>Si ambas barras tienen el <strong>mismo denominador</strong>, toca las partes coloreadas de la Barra A y luego de la Barra B para trasladarlas al resultado.</li>
+                    <li>Si tienen <strong>distinto denominador</strong>, usa los botones <strong className="text-indigo-500">×</strong> y <strong className="text-rose-400">÷</strong> para ampliar o reducir cada barra hasta igualar los denominadores. Luego pulsa <strong className="text-emerald-600">Juntar</strong> o <strong className="text-rose-500">Eliminar</strong>.</li>
+                    <li>Pulsa <strong className="text-emerald-600">Comprobar</strong> para verificar tu respuesta.</li>
+                    <li>Al completar, pulsa <strong>📐 Ver la matemática</strong> para ver los pasos detallados.</li>
+                </ol>
+            </ModalHelp>
         </div>
     );
 }
