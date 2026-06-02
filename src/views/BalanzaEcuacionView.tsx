@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ModalHelp from '../components/ModalHelp'
 
 type TT = 'var' | 'unit'
 interface Term { type: TT; val: number }
@@ -327,6 +328,7 @@ export default function BalanzaEcuacionView() {
   const [consolidating, setConsolidating] = useState(false)
   const [fadeCopiesL, setFadeCopiesL] = useState(0)
   const [fadeCopiesR, setFadeCopiesR] = useState(0)
+  const [showHelp, setShowHelp] = useState(false)
 
   const leftDropRef = useRef<HTMLDivElement>(null)
   const rightDropRef = useRef<HTMLDivElement>(null)
@@ -590,7 +592,12 @@ export default function BalanzaEcuacionView() {
         <div className="flex items-center justify-between">
           <button onClick={() => nav(-1)} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm hover:bg-white/10 active:scale-95 transition-all">← Volver</button>
           <h1 className="text-lg font-bold text-white/80">Balanza de Ecuaciones</h1>
-          <div className="w-20" />
+          <button
+            onClick={() => setShowHelp(true)}
+            className="w-7 h-7 rounded-full bg-white/10 border border-white/20 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+          >
+            ?
+          </button>
         </div>
 
         <div className="bg-white/5 rounded-xl border border-white/10 p-3 space-y-2">
@@ -738,6 +745,35 @@ export default function BalanzaEcuacionView() {
           </div>
         )}
       </div>
+
+      <ModalHelp
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="¿Cómo usar la Balanza de Ecuaciones?"
+        bgColor="#080c18"
+        buttonColor="bg-blue-500 hover:bg-blue-400"
+      >
+        <ol className="space-y-3 text-white/80 text-sm leading-relaxed list-decimal list-inside">
+          <li>
+            <strong className="text-white">Escribe la ecuación</strong> en los campos del primer y segundo miembro usando el teclado virtual. Presiona <strong className="text-teal-400">Generar balanza</strong>.
+          </li>
+          <li>
+            <strong className="text-white">Arrastra fichas</strong> desde la columna izquierda (+x, −x, +1, −1) y suéltalas sobre los platillos de la balanza. Las fichas representan términos que sumas o restas a ambos lados.
+          </li>
+          <li>
+            Para mantener el equilibrio, debes arrastrar <strong className="text-amber-300">la misma cantidad</strong> de variables y unidades a <strong className="text-white">ambos platillos</strong>.
+          </li>
+          <li>
+            También puedes <strong className="text-sky-300">multiplicar</strong> (×2, ×3…) o <strong className="text-emerald-300">dividir</strong> (÷2, ÷3…) arrastrando esas operaciones a ambos platillos.
+          </li>
+          <li>
+            Presiona <strong className="text-blue-400">Operar</strong> para aplicar los cambios. Las fichas que se cancelan (+x con −x, +1 con −1) desaparecen con una animación.
+          </li>
+          <li>
+            Repite hasta aislar <strong className="text-sky-300">x</strong> en un lado y el número en el otro. Cuando la ecuación quede resuelta verás el mensaje de victoria.
+          </li>
+        </ol>
+      </ModalHelp>
     </div>
   )
 }
