@@ -20,7 +20,7 @@ const TOK: Record<TokType, { tt: TT; s: 1 | -1; label: string }> = {
 }
 
 function parseExpr(raw: string): Term[] {
-  const t = raw.replace(/\s/g, '').replace(/X/g, 'x')
+  const t = raw.replace(/\s/g, '').replace(/X/g, 'x').replace(/−/g, '-')
   if (!t) return [{ type: 'unit', val: 0 }]
   const parts = t.match(/[+-]?[^+-]+/g) || []
   let v = 0, u = 0
