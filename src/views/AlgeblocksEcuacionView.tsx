@@ -25,6 +25,13 @@ const PRESETS: PresetEq[] = [
   { label: '3x - 1 = 8', eq: '3x - 1 = 8', desc: 'Neutralizar -1 sumando +1' },
 ]
 
+const KB_ROWS = [
+  ['1', '2', '3', 'x', '⌫'],
+  ['4', '5', '6', '2x', '+'],
+  ['7', '8', '9', '3x', '−'],
+  ['0', 'C', '✓'],
+]
+
 function parseSideTerms(raw: string): { vars: number; units: number } {
   const clean = raw.replace(/\s+/g, '').replace(/−/g, '-').replace(/X/g, 'x')
   if (!clean) return { vars: 0, units: 0 }
@@ -111,8 +118,10 @@ export default function AlgeblocksEcuacionView() {
   const [showHelp, setShowHelp] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState('0')
 
-  // Entrada de ecuación completa (soporta formato libre ej. "12 = 10 + 2x" o "5 - 3x = 2x - 10")
-  const [fullEqInput, setFullEqInput] = useState(PRESETS[0].eq)
+  // Estado del teclado virtual
+  const [kbL, setKbL] = useState('12')
+  const [kbR, setKbR] = useState('10+2x')
+  const [activeKb, setActiveKb] = useState<'left' | 'right' | null>(null)
 
   // Estado del tapete
   const [leftTiles, setLeftTiles] = useState<AlgeTerm[]>(() => {
@@ -136,8 +145,8 @@ export default function AlgeblocksEcuacionView() {
   // Cargar ecuación procesando ambos miembros
   const handleLoadEquation = useCallback((raw: string, desc?: string) => {
     const parts = raw.split('=')
-    const rawL = parts[0] || '0'
-    const rawR = parts.length > 1 ? parts.slice(1).join('=') : '0'
+    const rawL = parts[0]?.trim() || '0'
+    const rawR = parts.length > 1 ? parts.slice(1).join('=').trim() : '0'
 
     const pL = parseSideTerms(rawL)
     const pR = parseSideTerms(rawR)
@@ -145,24 +154,39 @@ export default function AlgeblocksEcuacionView() {
     setIsDivided(false)
     setCancelledIds(new Set())
     setHistory([])
+    setActiveKb(null)
     setLeftTiles(createTilesFromCounts(pL.vars, pL.units, 'L'))
     setRightTiles(createTilesFromCounts(pR.vars, pR.units, 'R'))
-    setFbMsg(desc || `Ecuación cargada: ${rawL.trim()} = ${rawR.trim()}`)
+    setFbMsg(desc || `Ecuación cargada: ${rawL} = ${rawR}`)
   }, [])
 
   const handleSelectPreset = (idxStr: string) => {
     setSelectedPreset(idxStr)
     const idx = parseInt(idxStr, 10)
     if (!isNaN(idx) && PRESETS[idx]) {
-      setFullEqInput(PRESETS[idx].eq)
+      const parts = PRESETS[idx].eq.split('=')
+      const l = parts[0]?.trim() || ''
+      const r = parts[1]?.trim() || ''
+      setKbL(l)
+      setKbR(r)
       handleLoadEquation(PRESETS[idx].eq, PRESETS[idx].desc)
     }
   }
 
-  const handleCustomSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    handleLoadEquation(fullEqInput)
-  }
+  // Manejo de teclas del teclado virtual
+  const handleKb = useCallback((key: string) => {
+    const set = activeKb === 'left' ? setKbL : setKbR
+    if (key === '⌫') {
+      set(prev => prev.slice(0, -1))
+    } else if (key === 'C') {
+      set('')
+    } else if (key === '✓') {
+      setActiveKb(null)
+      handleLoadEquation(`${kbL} = ${kbR}`)
+    } else {
+      set(prev => prev + key)
+    }
+  }, [activeKb, kbL, kbR, handleLoadEquation])
 
   // Contadores algebraicos reales en cada miembro
   const xCountL = leftTiles.filter(t => t.type === 'x').reduce((acc, t) => acc + t.sign, 0)
@@ -345,8 +369,8 @@ export default function AlgeblocksEcuacionView() {
         </button>
       </header>
 
-      {/* ── 2. Barra de Control / Entrada de Ecuación Unificada (36-44px) ── */}
-      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs overflow-x-auto">
+      {/* ── 2. Barra de Control / Entrada con Teclado Virtual (36-44px) ── */}
+      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs">
         {/* Selector de Presets */}
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] lg:text-[11px] text-white/40 font-semibold hidden sm:inline">Reto:</span>
@@ -363,25 +387,46 @@ export default function AlgeblocksEcuacionView() {
           </select>
         </div>
 
-        {/* Entrada de ecuación personalizada (caja unificada) */}
-        <form onSubmit={handleCustomSubmit} className="flex items-center gap-1 shrink-0">
+        {/* Entrada de ecuación interactiva con Teclado Virtual */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <span className="text-[10px] text-white/40 font-semibold hidden md:inline">Ecuación:</span>
-          <input
-            type="text"
-            value={fullEqInput}
-            onChange={e => setFullEqInput(e.target.value)}
-            placeholder="ej. 12 = 10 + 2x o 5 - 3x = 2x - 10"
-            className="w-36 sm:w-48 lg:w-64 h-7 lg:h-8 px-2 rounded bg-black/40 border border-white/20 font-mono text-[10px] sm:text-[11px] lg:text-xs text-center text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
-            title="Escribe cualquier ecuación lineal (ej. 12 = 10 + 2x o 5 - 3x = 2x - 10)"
-          />
           <button
-            type="submit"
-            className="h-7 lg:h-8 px-2.5 sm:px-3 rounded bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0"
+            type="button"
+            onClick={() => setActiveKb(activeKb === 'left' ? null : 'left')}
+            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${
+              activeKb === 'left'
+                ? 'border-indigo-400 bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-400/50'
+                : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'
+            }`}
+            title="Tocar para editar 1° miembro con teclado virtual"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            {kbL || '0'}
+          </button>
+          <span className="text-white/40 font-bold text-xs lg:text-sm shrink-0">=</span>
+          <button
+            type="button"
+            onClick={() => setActiveKb(activeKb === 'right' ? null : 'right')}
+            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${
+              activeKb === 'right'
+                ? 'border-indigo-400 bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-400/50'
+                : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'
+            }`}
+            title="Tocar para editar 2° miembro con teclado virtual"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            {kbR || '0'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleLoadEquation(`${kbL} = ${kbR}`)}
+            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0 flex items-center gap-1"
             title="Cargar y graficar ecuación"
           >
-            Cargar
+            <RefreshCw size={11} />
+            <span className="hidden xs:inline">Cargar</span>
           </button>
-        </form>
+        </div>
 
         {/* Botones Deshacer y Reiniciar */}
         <div className="flex items-center gap-1 shrink-0">
@@ -397,7 +442,7 @@ export default function AlgeblocksEcuacionView() {
           )}
 
           <button
-            onClick={() => handleLoadEquation(fullEqInput)}
+            onClick={() => handleLoadEquation(`${kbL} = ${kbR}`)}
             className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all"
             title="Reiniciar ecuación actual"
           >
@@ -405,6 +450,85 @@ export default function AlgeblocksEcuacionView() {
             <span className="hidden sm:inline">Reiniciar</span>
           </button>
         </div>
+
+        {/* ── Teclado Virtual Flotante (Popover Overlay) ── */}
+        {activeKb && (
+          <>
+            {/* Backdrop invisible para cerrar al hacer clic afuera */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setActiveKb(null)}
+            />
+
+            <div className="absolute left-2 sm:left-24 top-9 sm:top-10 lg:top-12 z-50 w-[270px] sm:w-[290px] lg:w-[320px] bg-[#0c1529] p-2.5 lg:p-3 rounded-xl border border-indigo-500/40 shadow-2xl space-y-1.5 lg:space-y-2 backdrop-blur-md">
+              {/* Selector de Miembro y Botón Cerrar */}
+              <div className="flex items-center justify-between text-[11px] lg:text-xs text-white/50 px-0.5">
+                <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setActiveKb('left')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                      activeKb === 'left' ? 'bg-indigo-500 text-white shadow-sm' : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    1° Miembro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveKb('right')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                      activeKb === 'right' ? 'bg-indigo-500 text-white shadow-sm' : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    2° Miembro
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveKb(null)}
+                  className="text-white/40 hover:text-white p-0.5 text-xs font-bold"
+                  title="Cerrar teclado"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Display del miembro en edición */}
+              <div
+                className="text-center font-mono text-white text-xs lg:text-sm py-1 px-2 bg-white/5 rounded border border-white/10 min-h-[28px] flex items-center justify-center font-bold tracking-wider"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                {activeKb === 'left' ? kbL || '0' : kbR || '0'}
+              </div>
+
+              {/* Teclas */}
+              <div className="grid grid-cols-5 gap-1 lg:gap-1.5">
+                {KB_ROWS.flat().map((k, i) => {
+                  const isOp = k === '+' || k === '−'
+                  const isDel = k === '⌫'
+                  const isClr = k === 'C'
+                  const isOk = k === '✓'
+                  let cls = 'h-7 lg:h-8 rounded text-[11px] lg:text-xs font-bold active:scale-95 transition-all flex items-center justify-center '
+                  if (isOk) cls += 'col-span-3 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/35'
+                  else if (isDel) cls += 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/30'
+                  else if (isClr) cls += 'bg-red-500/15 text-red-300/70 border border-red-400/20 hover:bg-red-500/25'
+                  else if (isOp) cls += 'bg-sky-500/20 text-sky-300 border border-sky-400/30 hover:bg-sky-500/30'
+                  else cls += 'bg-white/10 text-white border border-white/10 hover:bg-white/15'
+                  return (
+                    <button
+                      key={`${k}-${i}`}
+                      type="button"
+                      className={cls}
+                      onClick={() => handleKb(k)}
+                    >
+                      {k}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── 3. Área de Trabajo: Tapete de Álgebra (flex-1 min-h-0) ── */}
@@ -731,7 +855,7 @@ export default function AlgeblocksEcuacionView() {
       >
         <ol className="space-y-2 text-white/80 text-xs leading-relaxed list-decimal list-inside pb-2">
           <li>
-            <strong className="text-white">Ingresar cualquier ecuación lineal</strong>: Escribe la ecuación completa en la casilla superior (ej. <span className="font-mono text-sky-300">12 = 10 + 2x</span> o <span className="font-mono text-sky-300">5 - 3x = 2x - 10</span>) o elige un reto prefijado y pulsa <strong className="text-indigo-400">Cargar</strong>. Todas las cantidades positivas y negativas se graficarán fielmente en cada miembro.
+            <strong className="text-white">Teclado virtual para editar</strong>: Toca la casilla del primer o segundo miembro para abrir el teclado virtual interactivo e ingresar números, operaciones y variables (ej. <span className="font-mono text-sky-300">12</span> = <span className="font-mono text-teal-300">10 + 2x</span> o <span className="font-mono text-sky-300">5 - 3x</span> = <span className="font-mono text-teal-300">2x - 10</span>) y pulsa <strong className="text-emerald-400">✓</strong> o <strong className="text-indigo-400">Cargar</strong>.
           </li>
           <li>
             <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los botones laterales (<strong className="text-sky-300">+x</strong>, <strong className="text-red-300">−x</strong>, <strong className="text-blue-300">+1</strong>, <strong className="text-red-300">−1</strong>) para agregar la misma cantidad a ambos miembros manteniendo la igualdad. Las fichas no desaparecen de inmediato para que veas los pares opuestos conviviendo.
