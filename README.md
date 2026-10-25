@@ -59,7 +59,11 @@ src/
     ├── MonedaFalsaView.tsx    # Juego de lógica con balanza y 9 monedas
     ├── RegletaFracionesView.tsx # Regleta de fracciones interactiva
     ├── BalanzaEcuacionView.tsx # Balanza de ecuaciones de primer grado
-    ├── BalanzaEcuacion2View.tsx # Balanza de ecuaciones de primer grado 2
+    ├── BalanzaEcuacion2View.tsx # Balanza de ecuaciones de primer grado 2 (responsiva)
+    ├── AlgeblocksEcuacionView.tsx # Álgebra Tiles: pares cero y reparto visual
+    ├── MaquinaEcuacionView.tsx    # Máquina de ecuaciones: operaciones inversas
+    ├── BarrasEcuacionView.tsx     # Modelo de barras (método Singapur)
+    ├── PuenteEcuacionView.tsx     # El puente del igual: transposición guiada
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -352,6 +356,11 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/granjero-rio` | `GranjeroRioView` | Juego de lógica del granjero y el río |
 | `/moneda-falsa` | `MonedaFalsaView` | Juego de lógica con balanza y monedas |
 | `/regleta-fracciones` | `RegletaFracionesView` | Regleta de fracciones interactiva |
+| `/balanza-ecuacion-2` | `BalanzaEcuacion2View` | Balanza de ecuaciones responsiva |
+| `/algeblocks-ecuacion` | `AlgeblocksEcuacionView` | Álgebra tiles con pares cero y reparto |
+| `/maquina-ecuacion` | `MaquinaEcuacionView` | Máquina con operaciones inversas |
+| `/barras-ecuacion` | `BarrasEcuacionView` | Modelo de barras estilo Singapur |
+| `/puente-ecuacion` | `PuenteEcuacionView` | El puente del igual con transposición |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |

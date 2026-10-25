@@ -189,8 +189,11 @@ export const topics: Topic[] = [
 
     // ── Regularidad, equivalencia y cambio ───────────────────────────────────
     { id: 'igualdad-balanza', competency: 'regularidad', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true },
-    { id: 'balanza-ecuacion', competency: 'regularidad', path: '/balanza-ecuacion', title: 'Balanza de Ecuaciones', description: 'Resuelve ecuaciones de primer grado', available: true },
-    { id: 'balanza-ecuacion-2', competency: 'regularidad', path: '/balanza-ecuacion-2', title: 'Balanza de Ecuaciones 2', description: 'Resuelve ecuaciones de primer grado', available: true },
+    { id: 'balanza-ecuacion-2', competency: 'regularidad', path: '/balanza-ecuacion-2', title: 'Balanza de Ecuaciones', description: 'Equilibrio y resolución gráfica de ecuaciones', available: true },
+    { id: 'algeblocks-ecuacion', competency: 'regularidad', path: '/algeblocks-ecuacion', title: 'Álgebra Tiles (Reparto)', description: 'Fichas algebraicas, pares cero y reparto visual', available: true },
+    { id: 'maquina-ecuacion', competency: 'regularidad', path: '/maquina-ecuacion', title: 'Máquina de Ecuaciones', description: 'Desarmar ecuaciones con operaciones inversas', available: true },
+    { id: 'barras-ecuacion', competency: 'regularidad', path: '/barras-ecuacion', title: 'Modelo de Barras', description: 'Método visual Singapur con barras de longitud', available: true },
+    { id: 'puente-ecuacion', competency: 'regularidad', path: '/puente-ecuacion', title: 'El Puente del Igual', description: 'Transposición de términos y cambio de signos', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },

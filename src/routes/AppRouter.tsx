@@ -20,8 +20,11 @@ import DivisionFraccionesView from '../views/DivisionFraccionesView'
 import ConceptoFraccionView from '../views/ConceptoFraccionView'
 import FraccionConjuntoView from '../views/FraccionConjuntoView'
 import IgualdadBalanzaView from '../views/IgualdadBalanzaView'
-import BalanzaEcuacionView from '../views/BalanzaEcuacionView'
 import BalanzaEcuacion2View from '../views/BalanzaEcuacion2View'
+import AlgeblocksEcuacionView from '../views/AlgeblocksEcuacionView'
+import MaquinaEcuacionView from '../views/MaquinaEcuacionView'
+import BarrasEcuacionView from '../views/BarrasEcuacionView'
+import PuenteEcuacionView from '../views/PuenteEcuacionView'
 import GeoplanoView from '../views/GeoplanoView'
 import AngulosView from '../views/AngulosView'
 
@@ -108,7 +111,23 @@ const router = createBrowserRouter([
     },
     {
         path: '/balanza-ecuacion',
-        element: <Layout><BalanzaEcuacionView /></Layout>
+        element: <AlgeblocksEcuacionView />
+    },
+    {
+        path: '/algeblocks-ecuacion',
+        element: <AlgeblocksEcuacionView />
+    },
+    {
+        path: '/maquina-ecuacion',
+        element: <MaquinaEcuacionView />
+    },
+    {
+        path: '/barras-ecuacion',
+        element: <BarrasEcuacionView />
+    },
+    {
+        path: '/puente-ecuacion',
+        element: <PuenteEcuacionView />
     },
     {
         path: '/balanza-ecuacion-2',
