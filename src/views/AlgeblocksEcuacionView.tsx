@@ -533,62 +533,76 @@ export default function AlgeblocksEcuacionView() {
 
       {/* ── 3. Área de Trabajo: Tapete de Álgebra (flex-1 min-h-0) ── */}
       <div className="flex-1 min-h-0 flex items-stretch overflow-hidden px-1 sm:px-2 lg:px-4 py-1 lg:py-2 gap-1 sm:gap-2 lg:gap-3" style={{ touchAction: 'none' }}>
-        {/* Panel Izquierdo: Herramientas para añadir fichas a ambos lados */}
-        <aside className="w-[52px] sm:w-[60px] lg:w-[70px] shrink-0 flex flex-col items-center justify-between py-1 lg:py-2 bg-white/[0.02] border border-white/5 rounded-xl">
-          <div className="w-full flex flex-col items-center gap-1">
-            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-wider text-white/30 text-center leading-tight">
-              Añadir a ambos
+        {/* Panel Izquierdo: Herramientas divididas en 2 grupos claramente diferenciados */}
+        <aside className="w-[56px] sm:w-[64px] lg:w-[74px] shrink-0 flex flex-col items-center justify-between py-1 lg:py-2 bg-white/[0.02] border border-white/5 rounded-xl">
+          <div className="w-full flex flex-col items-center gap-1.5">
+            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-wider text-white/40 text-center leading-tight">
+              Añadir
             </span>
 
-            {/* Variable +x */}
-            <button
-              onClick={() => addTileToBoth('x', 1)}
-              disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 hover:bg-sky-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
-              title="Añadir +x a ambos miembros"
-            >
-              <div className="w-2.5 h-3 bg-sky-500 rounded-sm mb-0.5" />
-              <span className="text-[9px] lg:text-[11px] leading-none">+x</span>
-            </button>
+            {/* GRUPO 1: VARIABLES (x) - Bloque Celeste distintivo con barra vertical */}
+            <div className="w-full flex flex-col items-center gap-1 p-1 rounded-lg bg-sky-950/40 border border-sky-500/30 shadow-sm">
+              <span className="text-[7px] sm:text-[8px] font-black text-sky-300 uppercase tracking-wider leading-none">
+                Var (x)
+              </span>
 
-            {/* Variable -x */}
-            <button
-              onClick={() => addTileToBoth('x', -1)}
-              disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
-              title="Añadir −x a ambos miembros"
-            >
-              <div className="w-2.5 h-3 bg-red-500 rounded-sm mb-0.5" />
-              <span className="text-[9px] lg:text-[11px] leading-none">−x</span>
-            </button>
+              {/* Variable +x */}
+              <button
+                onClick={() => addTileToBoth('x', 1)}
+                disabled={isDivided}
+                className="w-10 sm:w-11 lg:w-13 h-7 sm:h-7.5 lg:h-8 rounded bg-sky-500/25 border-2 border-sky-400 text-sky-200 hover:bg-sky-500/40 active:scale-95 transition-all flex items-center justify-center gap-1 font-bold disabled:opacity-40 shadow-sm"
+                title="Añadir barra +x a ambos miembros"
+              >
+                <div className="w-1.5 h-3.5 bg-sky-400 rounded-[1px]" />
+                <span className="text-[10px] sm:text-[11px] lg:text-xs leading-none">+x</span>
+              </button>
 
-            {/* Unidad +1 */}
-            <button
-              onClick={() => addTileToBoth('unit', 1)}
-              disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 hover:bg-blue-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
-              title="Añadir +1 a ambos miembros"
-            >
-              <div className="w-2.5 h-2.5 bg-blue-500 rounded-sm mb-0.5" />
-              <span className="text-[9px] lg:text-[11px] leading-none">+1</span>
-            </button>
+              {/* Variable -x */}
+              <button
+                onClick={() => addTileToBoth('x', -1)}
+                disabled={isDivided}
+                className="w-10 sm:w-11 lg:w-13 h-7 sm:h-7.5 lg:h-8 rounded bg-rose-500/25 border-2 border-rose-400 text-rose-200 hover:bg-rose-500/40 active:scale-95 transition-all flex items-center justify-center gap-1 font-bold disabled:opacity-40 shadow-sm"
+                title="Añadir barra −x a ambos miembros"
+              >
+                <div className="w-1.5 h-3.5 bg-rose-400 rounded-[1px]" />
+                <span className="text-[10px] sm:text-[11px] lg:text-xs leading-none">−x</span>
+              </button>
+            </div>
 
-            {/* Unidad -1 */}
-            <button
-              onClick={() => addTileToBoth('unit', -1)}
-              disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
-              title="Añadir −1 a ambos miembros"
-            >
-              <div className="w-2.5 h-2.5 bg-red-500 rounded-sm mb-0.5" />
-              <span className="text-[9px] lg:text-[11px] leading-none">−1</span>
-            </button>
+            {/* GRUPO 2: UNIDADES (1) - Bloque Ámbar/Azul con icono cuadrado */}
+            <div className="w-full flex flex-col items-center gap-1 p-1 rounded-lg bg-amber-950/25 border border-amber-500/35 shadow-sm">
+              <span className="text-[7px] sm:text-[8px] font-black text-amber-300 uppercase tracking-wider leading-none">
+                Unid (1)
+              </span>
+
+              {/* Unidad +1 */}
+              <button
+                onClick={() => addTileToBoth('unit', 1)}
+                disabled={isDivided}
+                className="w-10 sm:w-11 lg:w-13 h-7 sm:h-7.5 lg:h-8 rounded bg-blue-500/25 border border-blue-400 text-blue-200 hover:bg-blue-500/40 active:scale-95 transition-all flex items-center justify-center gap-1 font-bold disabled:opacity-40 shadow-sm"
+                title="Añadir cuadrito +1 a ambos miembros"
+              >
+                <div className="w-2.5 h-2.5 bg-blue-400 rounded-sm" />
+                <span className="text-[10px] sm:text-[11px] lg:text-xs leading-none">+1</span>
+              </button>
+
+              {/* Unidad -1 */}
+              <button
+                onClick={() => addTileToBoth('unit', -1)}
+                disabled={isDivided}
+                className="w-10 sm:w-11 lg:w-13 h-7 sm:h-7.5 lg:h-8 rounded bg-red-500/25 border border-red-400 text-red-200 hover:bg-red-500/40 active:scale-95 transition-all flex items-center justify-center gap-1 font-bold disabled:opacity-40 shadow-sm"
+                title="Añadir cuadrito −1 a ambos miembros"
+              >
+                <div className="w-2.5 h-2.5 bg-red-400 rounded-sm" />
+                <span className="text-[10px] sm:text-[11px] lg:text-xs leading-none">−1</span>
+              </button>
+            </div>
 
             {/* Invertir signos (multiplicar por -1) */}
             <button
               onClick={handleInvertSigns}
               disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-purple-500/20 border border-purple-400/40 text-purple-200 hover:bg-purple-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              className="w-10 sm:w-11 lg:w-13 h-6 sm:h-6.5 lg:h-7 rounded bg-purple-500/20 border border-purple-400/40 text-purple-200 hover:bg-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-0.5 font-bold disabled:opacity-40"
               title="Multiplicar ambos miembros por −1 (cambiar signos)"
             >
               <span className="text-[10px] lg:text-xs font-mono font-bold leading-none">±</span>
@@ -596,8 +610,8 @@ export default function AlgeblocksEcuacionView() {
             </button>
           </div>
 
-          <div className="text-[7px] sm:text-[8px] lg:text-[9px] text-white/30 text-center px-0.5 leading-tight">
-            Pares cero
+          <div className="text-[7px] sm:text-[8px] text-white/30 text-center px-0.5 leading-tight">
+            a ambos
           </div>
         </aside>
 
@@ -615,14 +629,14 @@ export default function AlgeblocksEcuacionView() {
 
               {!isDivided ? (
                 <div className="flex-1 min-h-0 flex flex-wrap content-start gap-1.5 overflow-y-auto pr-0.5">
-                  {/* Fichas Variables (x y −x) */}
+                  {/* Fichas Variables (x y −x): altura doble de las unidades y ancho ligeramente mayor */}
                   {leftTiles.filter(t => t.type === 'x').map(t => {
                     const isCancel = cancelledIds.has(t.id)
                     const isPos = t.sign > 0
                     return (
                       <div
                         key={t.id}
-                        className={`w-7 sm:w-8 lg:w-9 h-14 sm:h-18 lg:h-22 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
+                        className={`w-7 lg:w-8 h-12 lg:h-14 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
                           isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
                         } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
                       >
@@ -631,7 +645,7 @@ export default function AlgeblocksEcuacionView() {
                     )
                   })}
 
-                  {/* Fichas de Unidades (+1 y −1) */}
+                  {/* Fichas de Unidades (+1 y −1): cuadradas h-6 (24px) / lg:h-7 (28px) */}
                   <div className={`flex flex-wrap gap-1 items-start ${leftTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
                     {leftTiles.filter(t => t.type === 'unit').map(t => {
                       const isCancel = cancelledIds.has(t.id)
@@ -656,7 +670,7 @@ export default function AlgeblocksEcuacionView() {
                     /* Si las variables estaban a la izquierda: 1 x por fila */
                     Array.from({ length: numRows }).map((_, idx) => (
                       <div key={idx} className="flex items-center gap-2 p-1 rounded bg-sky-500/10 border border-sky-400/20">
-                        <div className="w-7 lg:w-8 h-9 lg:h-11 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
+                        <div className="w-7 lg:w-8 h-10 lg:h-12 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
                           x
                         </div>
                         <span className="text-white/40 text-xs font-bold">=</span>
@@ -705,14 +719,14 @@ export default function AlgeblocksEcuacionView() {
 
               {!isDivided ? (
                 <div className="flex-1 min-h-0 flex flex-wrap content-start gap-1.5 overflow-y-auto pr-0.5">
-                  {/* Fichas Variables (x y −x en miembro derecho) */}
+                  {/* Fichas Variables (x y −x): altura doble de las unidades y ancho ligeramente mayor */}
                   {rightTiles.filter(t => t.type === 'x').map(t => {
                     const isCancel = cancelledIds.has(t.id)
                     const isPos = t.sign > 0
                     return (
                       <div
                         key={t.id}
-                        className={`w-7 sm:w-8 lg:w-9 h-14 sm:h-18 lg:h-22 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
+                        className={`w-7 lg:w-8 h-12 lg:h-14 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
                           isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
                         } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
                       >
@@ -721,7 +735,7 @@ export default function AlgeblocksEcuacionView() {
                     )
                   })}
 
-                  {/* Fichas de Unidades (+1 y −1 en miembro derecho) */}
+                  {/* Fichas de Unidades (+1 y −1): cuadradas h-6 (24px) / lg:h-7 (28px) */}
                   <div className={`flex flex-wrap gap-1 items-start ${rightTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
                     {rightTiles.filter(t => t.type === 'unit').map(t => {
                       const isCancel = cancelledIds.has(t.id)
@@ -746,7 +760,7 @@ export default function AlgeblocksEcuacionView() {
                     /* Si las variables estaban a la derecha: 1 x por fila */
                     Array.from({ length: numRows }).map((_, idx) => (
                       <div key={idx} className="flex items-center gap-2 p-1 rounded bg-sky-500/10 border border-sky-400/20">
-                        <div className="w-7 lg:w-8 h-9 lg:h-11 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
+                        <div className="w-7 lg:w-8 h-10 lg:h-12 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
                           x
                         </div>
                         <span className="text-white/40 text-xs font-bold">=</span>
@@ -858,7 +872,7 @@ export default function AlgeblocksEcuacionView() {
             <strong className="text-white">Teclado virtual para editar</strong>: Toca la casilla del primer o segundo miembro para abrir el teclado virtual interactivo e ingresar números, operaciones y variables (ej. <span className="font-mono text-sky-300">12</span> = <span className="font-mono text-teal-300">10 + 2x</span> o <span className="font-mono text-sky-300">5 - 3x</span> = <span className="font-mono text-teal-300">2x - 10</span>) y pulsa <strong className="text-emerald-400">✓</strong> o <strong className="text-indigo-400">Cargar</strong>.
           </li>
           <li>
-            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los botones laterales (<strong className="text-sky-300">+x</strong>, <strong className="text-red-300">−x</strong>, <strong className="text-blue-300">+1</strong>, <strong className="text-red-300">−1</strong>) para agregar la misma cantidad a ambos miembros manteniendo la igualdad. Las fichas no desaparecen de inmediato para que veas los pares opuestos conviviendo.
+            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los paneles laterales diferenciados: el recuadro superior <strong className="text-sky-300">Var (x)</strong> para barras (+x, −x) y el recuadro inferior <strong className="text-amber-300">Unid (1)</strong> para cuadritos (+1, −1). Las fichas no desaparecen de inmediato para que veas los pares opuestos conviviendo.
           </li>
           <li>
             <strong className="text-white">Botón Operar</strong>: Cuando tengas fichas opuestas (como $+1$ con $-1$ o $+x$ con $-x$) en cualquier miembro, presiona <strong className="text-amber-400">Operar</strong> para cancelarlas y eliminarlas simultáneamente.
