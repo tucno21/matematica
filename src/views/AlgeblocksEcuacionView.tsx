@@ -11,18 +11,18 @@ interface AlgeTerm {
 
 interface PresetEq {
   label: string
-  exprL: string
-  exprR: string
+  eq: string
   desc: string
 }
 
 const PRESETS: PresetEq[] = [
-  { label: '2x + 4 = 10', exprL: '2x + 4', exprR: '10', desc: 'Básico: 2 variables y unidades positivas' },
-  { label: '3x + 2 = 11', exprL: '3x + 2', exprR: '11', desc: '3 variables con reparto exacto' },
-  { label: '2x - 3 = 5', exprL: '2x - 3', exprR: '5', desc: 'Neutralizar -3 sumando +3 a ambos lados' },
-  { label: '3x + 1 = x + 7', exprL: '3x + 1', exprR: 'x + 7', desc: 'Variables en ambos miembros: restar x' },
-  { label: '4x - 2 = 2x + 6', exprL: '4x - 2', exprR: '2x + 6', desc: 'Restar 2x y sumar +2 a ambos lados' },
-  { label: '3x - 1 = 8', exprL: '3x - 1', exprR: '8', desc: 'Neutralizar -1 sumando +1' },
+  { label: '12 = 10 + 2x', eq: '12 = 10 + 2x', desc: 'Incógnita en segundo miembro: aislar 2x a la derecha' },
+  { label: '5 - 3x = 2x - 10', eq: '5 - 3x = 2x - 10', desc: 'Variables y unidades negativas en ambos miembros' },
+  { label: '2x + 4 = 10', eq: '2x + 4 = 10', desc: 'Básico: 2 variables y unidades positivas' },
+  { label: '3x + 1 = x + 7', eq: '3x + 1 = x + 7', desc: 'Variables en ambos miembros: restar x' },
+  { label: '2x - 3 = 5', eq: '2x - 3 = 5', desc: 'Neutralizar -3 sumando +3 a ambos lados' },
+  { label: '4x - 2 = 2x + 6', eq: '4x - 2 = 2x + 6', desc: 'Restar 2x y sumar +2 a ambos lados' },
+  { label: '3x - 1 = 8', eq: '3x - 1 = 8', desc: 'Neutralizar -1 sumando +1' },
 ]
 
 function parseSideTerms(raw: string): { vars: number; units: number } {
@@ -48,15 +48,19 @@ function parseSideTerms(raw: string): { vars: number; units: number } {
 
 function createTilesFromCounts(vars: number, units: number, prefix: string): AlgeTerm[] {
   const list: AlgeTerm[] = []
-  const varSign: 1 | -1 = vars >= 0 ? 1 : -1
-  const varCount = Math.min(Math.abs(vars), 16)
-  for (let i = 0; i < varCount; i++) {
-    list.push({ id: `x-${prefix}-${i}-${Math.random()}`, type: 'x', sign: varSign })
+  if (vars !== 0) {
+    const varSign: 1 | -1 = vars > 0 ? 1 : -1
+    const varCount = Math.min(Math.abs(vars), 20)
+    for (let i = 0; i < varCount; i++) {
+      list.push({ id: `x-${prefix}-${i}-${Date.now()}-${Math.random()}`, type: 'x', sign: varSign })
+    }
   }
-  const unitSign: 1 | -1 = units >= 0 ? 1 : -1
-  const unitCount = Math.min(Math.abs(units), 32)
-  for (let i = 0; i < unitCount; i++) {
-    list.push({ id: `u-${prefix}-${i}-${Math.random()}`, type: 'unit', sign: unitSign })
+  if (units !== 0) {
+    const unitSign: 1 | -1 = units > 0 ? 1 : -1
+    const unitCount = Math.min(Math.abs(units), 36)
+    for (let i = 0; i < unitCount; i++) {
+      list.push({ id: `u-${prefix}-${i}-${Date.now()}-${Math.random()}`, type: 'unit', sign: unitSign })
+    }
   }
   return list
 }
@@ -64,7 +68,7 @@ function createTilesFromCounts(vars: number, units: number, prefix: string): Alg
 function findPairsToCancel(tiles: AlgeTerm[]): Set<string> {
   const toCancel = new Set<string>()
 
-  // Variables x
+  // Variables x (+x y -x)
   const posX = tiles.filter(t => t.type === 'x' && t.sign > 0)
   const negX = tiles.filter(t => t.type === 'x' && t.sign < 0)
   const xPairs = Math.min(posX.length, negX.length)
@@ -73,7 +77,7 @@ function findPairsToCancel(tiles: AlgeTerm[]): Set<string> {
     toCancel.add(negX[i].id)
   }
 
-  // Unidades
+  // Unidades (+1 y -1)
   const posU = tiles.filter(t => t.type === 'unit' && t.sign > 0)
   const negU = tiles.filter(t => t.type === 'unit' && t.sign < 0)
   const uPairs = Math.min(posU.length, negU.length)
@@ -107,18 +111,19 @@ export default function AlgeblocksEcuacionView() {
   const [showHelp, setShowHelp] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState('0')
 
-  // Inputs para ecuación personalizada
-  const [inputL, setInputL] = useState(PRESETS[0].exprL)
-  const [inputR, setInputR] = useState(PRESETS[0].exprR)
+  // Entrada de ecuación completa (soporta formato libre ej. "12 = 10 + 2x" o "5 - 3x = 2x - 10")
+  const [fullEqInput, setFullEqInput] = useState(PRESETS[0].eq)
 
   // Estado del tapete
   const [leftTiles, setLeftTiles] = useState<AlgeTerm[]>(() => {
-    const { vars, units } = parseSideTerms(PRESETS[0].exprL)
-    return createTilesFromCounts(vars, units, 'L')
+    const parts = PRESETS[0].eq.split('=')
+    const pL = parseSideTerms(parts[0] || '')
+    return createTilesFromCounts(pL.vars, pL.units, 'L')
   })
   const [rightTiles, setRightTiles] = useState<AlgeTerm[]>(() => {
-    const { vars, units } = parseSideTerms(PRESETS[0].exprR)
-    return createTilesFromCounts(vars, units, 'R')
+    const parts = PRESETS[0].eq.split('=')
+    const pR = parseSideTerms(parts[1] || '')
+    return createTilesFromCounts(pR.vars, pR.units, 'R')
   })
 
   // Historial para deshacer
@@ -128,34 +133,38 @@ export default function AlgeblocksEcuacionView() {
   const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set())
   const [fbMsg, setFbMsg] = useState('Añade fichas opuestas a ambos lados y presiona "Operar" para cancelar pares cero.')
 
-  // Cargar ecuación desde los inputs o preset
-  const loadEquation = useCallback((exprL: string, exprR: string, desc?: string) => {
-    const pL = parseSideTerms(exprL)
-    const pR = parseSideTerms(exprR)
+  // Cargar ecuación procesando ambos miembros
+  const handleLoadEquation = useCallback((raw: string, desc?: string) => {
+    const parts = raw.split('=')
+    const rawL = parts[0] || '0'
+    const rawR = parts.length > 1 ? parts.slice(1).join('=') : '0'
+
+    const pL = parseSideTerms(rawL)
+    const pR = parseSideTerms(rawR)
+
     setIsDivided(false)
     setCancelledIds(new Set())
     setHistory([])
     setLeftTiles(createTilesFromCounts(pL.vars, pL.units, 'L'))
     setRightTiles(createTilesFromCounts(pR.vars, pR.units, 'R'))
-    setFbMsg(desc || `Ecuación cargada: ${exprL} = ${exprR}.`)
+    setFbMsg(desc || `Ecuación cargada: ${rawL.trim()} = ${rawR.trim()}`)
   }, [])
 
   const handleSelectPreset = (idxStr: string) => {
     setSelectedPreset(idxStr)
     const idx = parseInt(idxStr, 10)
     if (!isNaN(idx) && PRESETS[idx]) {
-      setInputL(PRESETS[idx].exprL)
-      setInputR(PRESETS[idx].exprR)
-      loadEquation(PRESETS[idx].exprL, PRESETS[idx].exprR, PRESETS[idx].desc)
+      setFullEqInput(PRESETS[idx].eq)
+      handleLoadEquation(PRESETS[idx].eq, PRESETS[idx].desc)
     }
   }
 
   const handleCustomSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    loadEquation(inputL, inputR)
+    handleLoadEquation(fullEqInput)
   }
 
-  // Contadores algebraicos reales
+  // Contadores algebraicos reales en cada miembro
   const xCountL = leftTiles.filter(t => t.type === 'x').reduce((acc, t) => acc + t.sign, 0)
   const unitCountL = leftTiles.filter(t => t.type === 'unit').reduce((acc, t) => acc + t.sign, 0)
   const xCountR = rightTiles.filter(t => t.type === 'x').reduce((acc, t) => acc + t.sign, 0)
@@ -166,8 +175,41 @@ export default function AlgeblocksEcuacionView() {
   const pendingCancelR = findPairsToCancel(rightTiles)
   const hasCancellablePairs = pendingCancelL.size > 0 || pendingCancelR.size > 0
 
-  const isSolved = xCountL === 1 && unitCountL === 0 && xCountR === 0 && !isDivided
-  const canDivide = xCountL > 1 && unitCountL === 0 && xCountR === 0 && unitCountR > 0 && unitCountR % xCountL === 0 && !isDivided && !hasCancellablePairs
+  // Detectar simetría: si las variables están a la izquierda O a la derecha
+  let varSide: 'left' | 'right' | null = null
+  let activeVarCount = 0
+  let activeUnitCount = 0
+
+  if (xCountL !== 0 && unitCountL === 0 && xCountR === 0 && unitCountR !== 0) {
+    varSide = 'left'
+    activeVarCount = xCountL
+    activeUnitCount = unitCountR
+  } else if (xCountR !== 0 && unitCountR === 0 && xCountL === 0 && unitCountL !== 0) {
+    varSide = 'right'
+    activeVarCount = xCountR
+    activeUnitCount = unitCountL
+  }
+
+  const quotient = activeVarCount !== 0 ? activeUnitCount / activeVarCount : 0
+  const isIntegerQuotient = Number.isInteger(quotient)
+  const numRows = Math.abs(activeVarCount)
+  const unitsPerRow = Math.abs(quotient)
+  const unitSignPerRow: 1 | -1 = quotient >= 0 ? 1 : -1
+
+  // Estado resuelto: cuando queda 1x = n o n = 1x
+  const isSolved =
+    ((xCountL === 1 && unitCountL === 0 && xCountR === 0 && !isDivided && !hasCancellablePairs) ||
+     (xCountR === 1 && unitCountR === 0 && xCountL === 0 && !isDivided && !hasCancellablePairs))
+
+  const solvedVal = xCountL === 1 ? unitCountR : unitCountL
+
+  // El botón repartir funciona sin importar en qué miembro esté la variable
+  const canDivide =
+    varSide !== null &&
+    numRows > 1 &&
+    isIntegerQuotient &&
+    !isDivided &&
+    !hasCancellablePairs
 
   // Acción: Añadir ficha a ambos miembros (NO se elimina automáticamente)
   const addTileToBoth = (type: 'x' | 'unit', sign: 1 | -1) => {
@@ -182,7 +224,16 @@ export default function AlgeblocksEcuacionView() {
     setRightTiles(prev => [...prev, { id: idR, type, sign }])
 
     const name = type === 'x' ? (sign > 0 ? '+x' : '−x') : (sign > 0 ? '+1' : '−1')
-    setFbMsg(`Se añadió ${name} a ambos miembros. Presiona "Operar" para cancelar opuestos.`)
+    setFbMsg(`Se añadió ${name} a ambos miembros. Presiona "Operar" para cancelar pares cero.`)
+  }
+
+  // Acción: Multiplicar ambos miembros por -1 (invertir signos)
+  const handleInvertSigns = () => {
+    if (isDivided) return
+    setHistory(prev => [...prev, { left: leftTiles, right: rightTiles }])
+    setLeftTiles(prev => prev.map(t => ({ ...t, sign: (t.sign * -1) as 1 | -1 })))
+    setRightTiles(prev => prev.map(t => ({ ...t, sign: (t.sign * -1) as 1 | -1 })))
+    setFbMsg('Se multiplicaron ambos miembros por −1 (cambio de signo en todas las fichas).')
   }
 
   // Acción: OPERAR (Cancelar pares cero en ambos miembros)
@@ -224,21 +275,32 @@ export default function AlgeblocksEcuacionView() {
 
   // Acción: Reparto visual en filas
   const handleDivide = () => {
-    if (!canDivide) return
+    if (!canDivide || varSide === null) return
     setIsDivided(true)
-    setFbMsg(`¡Reparto equitativo! ${unitCountR} unidades repartidas entre ${xCountL} barras x. Cada x vale ${unitCountR / xCountL}.`)
+    const sideName = varSide === 'left' ? 'primer miembro' : 'segundo miembro'
+    setFbMsg(`¡Reparto equitativo! ${Math.abs(activeUnitCount)} unidades distribuidas entre ${numRows} barras x (${sideName}). x = ${quotient}.`)
   }
 
   // Acción: Consolidar solución final
   const handleConsolidate = () => {
-    if (!isDivided) return
-    const finalVal = unitCountR / xCountL
-    setLeftTiles([{ id: `x-sol-${Math.random()}`, type: 'x', sign: 1 }])
-    const newR: AlgeTerm[] = []
-    for (let i = 0; i < finalVal; i++) {
-      newR.push({ id: `u-final-${i}`, type: 'unit', sign: 1 })
+    if (!isDivided || varSide === null) return
+    const finalVal = quotient
+    const absVal = Math.abs(finalVal)
+    const signVal: 1 | -1 = finalVal >= 0 ? 1 : -1
+
+    const unitTiles: AlgeTerm[] = []
+    for (let i = 0; i < absVal; i++) {
+      unitTiles.push({ id: `u-final-${i}-${Math.random()}`, type: 'unit', sign: signVal })
     }
-    setRightTiles(newR)
+
+    if (varSide === 'left') {
+      setLeftTiles([{ id: `x-sol-${Math.random()}`, type: 'x', sign: 1 }])
+      setRightTiles(unitTiles)
+    } else {
+      setLeftTiles(unitTiles)
+      setRightTiles([{ id: `x-sol-${Math.random()}`, type: 'x', sign: 1 }])
+    }
+
     setIsDivided(false)
     setFbMsg(`¡Ecuación resuelta con éxito! x = ${finalVal}`)
   }
@@ -283,8 +345,8 @@ export default function AlgeblocksEcuacionView() {
         </button>
       </header>
 
-      {/* ── 2. Barra de Control / Entrada de Ecuación (36-44px) ── */}
-      <div className="relative shrink-0 flex items-center justify-between gap-1 sm:gap-2 lg:gap-3 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs overflow-x-auto">
+      {/* ── 2. Barra de Control / Entrada de Ecuación Unificada (36-44px) ── */}
+      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs overflow-x-auto">
         {/* Selector de Presets */}
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] lg:text-[11px] text-white/40 font-semibold hidden sm:inline">Reto:</span>
@@ -301,36 +363,27 @@ export default function AlgeblocksEcuacionView() {
           </select>
         </div>
 
-        {/* Entrada de ecuación personalizada */}
+        {/* Entrada de ecuación personalizada (caja unificada) */}
         <form onSubmit={handleCustomSubmit} className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] text-white/40 font-semibold hidden md:inline">Ecuación:</span>
           <input
             type="text"
-            value={inputL}
-            onChange={e => setInputL(e.target.value)}
-            placeholder="2x + 4"
-            className="w-16 sm:w-20 lg:w-24 h-7 lg:h-8 px-1.5 rounded bg-black/40 border border-white/20 font-mono text-[10px] sm:text-[11px] lg:text-xs text-center text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
-            title="Primer miembro (ej. 2x + 4)"
-          />
-          <span className="text-white/60 font-bold text-xs">=</span>
-          <input
-            type="text"
-            value={inputR}
-            onChange={e => setInputR(e.target.value)}
-            placeholder="10"
-            className="w-14 sm:w-16 lg:w-20 h-7 lg:h-8 px-1.5 rounded bg-black/40 border border-white/20 font-mono text-[10px] sm:text-[11px] lg:text-xs text-center text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
-            title="Segundo miembro (ej. 10 o x + 6)"
+            value={fullEqInput}
+            onChange={e => setFullEqInput(e.target.value)}
+            placeholder="ej. 12 = 10 + 2x o 5 - 3x = 2x - 10"
+            className="w-36 sm:w-48 lg:w-64 h-7 lg:h-8 px-2 rounded bg-black/40 border border-white/20 font-mono text-[10px] sm:text-[11px] lg:text-xs text-center text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
+            title="Escribe cualquier ecuación lineal (ej. 12 = 10 + 2x o 5 - 3x = 2x - 10)"
           />
           <button
             type="submit"
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0"
-            title="Cargar ecuación personalizada"
+            className="h-7 lg:h-8 px-2.5 sm:px-3 rounded bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0"
+            title="Cargar y graficar ecuación"
           >
             Cargar
           </button>
         </form>
 
-        {/* Botones Reiniciar y Deshacer */}
+        {/* Botones Deshacer y Reiniciar */}
         <div className="flex items-center gap-1 shrink-0">
           {history.length > 0 && (
             <button
@@ -344,7 +397,7 @@ export default function AlgeblocksEcuacionView() {
           )}
 
           <button
-            onClick={() => loadEquation(inputL, inputR)}
+            onClick={() => handleLoadEquation(fullEqInput)}
             className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all"
             title="Reiniciar ecuación actual"
           >
@@ -367,10 +420,10 @@ export default function AlgeblocksEcuacionView() {
             <button
               onClick={() => addTileToBoth('x', 1)}
               disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-8 sm:h-9 lg:h-10 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 hover:bg-sky-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 hover:bg-sky-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
               title="Añadir +x a ambos miembros"
             >
-              <div className="w-2.5 h-3.5 bg-sky-500 rounded-sm mb-0.5" />
+              <div className="w-2.5 h-3 bg-sky-500 rounded-sm mb-0.5" />
               <span className="text-[9px] lg:text-[11px] leading-none">+x</span>
             </button>
 
@@ -378,10 +431,10 @@ export default function AlgeblocksEcuacionView() {
             <button
               onClick={() => addTileToBoth('x', -1)}
               disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-8 sm:h-9 lg:h-10 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
               title="Añadir −x a ambos miembros"
             >
-              <div className="w-2.5 h-3.5 bg-red-500 rounded-sm mb-0.5" />
+              <div className="w-2.5 h-3 bg-red-500 rounded-sm mb-0.5" />
               <span className="text-[9px] lg:text-[11px] leading-none">−x</span>
             </button>
 
@@ -389,10 +442,10 @@ export default function AlgeblocksEcuacionView() {
             <button
               onClick={() => addTileToBoth('unit', 1)}
               disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-8 sm:h-9 lg:h-10 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 hover:bg-blue-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 hover:bg-blue-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
               title="Añadir +1 a ambos miembros"
             >
-              <div className="w-3 h-3 bg-blue-500 rounded-sm mb-0.5" />
+              <div className="w-2.5 h-2.5 bg-blue-500 rounded-sm mb-0.5" />
               <span className="text-[9px] lg:text-[11px] leading-none">+1</span>
             </button>
 
@@ -400,11 +453,22 @@ export default function AlgeblocksEcuacionView() {
             <button
               onClick={() => addTileToBoth('unit', -1)}
               disabled={isDivided}
-              className="w-9 sm:w-11 lg:w-13 h-8 sm:h-9 lg:h-10 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-red-500/20 border border-red-400/40 text-red-200 hover:bg-red-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
               title="Añadir −1 a ambos miembros"
             >
-              <div className="w-3 h-3 bg-red-500 rounded-sm mb-0.5" />
+              <div className="w-2.5 h-2.5 bg-red-500 rounded-sm mb-0.5" />
               <span className="text-[9px] lg:text-[11px] leading-none">−1</span>
+            </button>
+
+            {/* Invertir signos (multiplicar por -1) */}
+            <button
+              onClick={handleInvertSigns}
+              disabled={isDivided}
+              className="w-9 sm:w-11 lg:w-13 h-7 sm:h-8 lg:h-9 rounded-lg bg-purple-500/20 border border-purple-400/40 text-purple-200 hover:bg-purple-500/30 active:scale-95 transition-all flex flex-col items-center justify-center font-bold disabled:opacity-40"
+              title="Multiplicar ambos miembros por −1 (cambiar signos)"
+            >
+              <span className="text-[10px] lg:text-xs font-mono font-bold leading-none">±</span>
+              <span className="text-[7px] sm:text-[8px] leading-none text-purple-300">×(−1)</span>
             </button>
           </div>
 
@@ -434,7 +498,7 @@ export default function AlgeblocksEcuacionView() {
                     return (
                       <div
                         key={t.id}
-                        className={`w-7 sm:w-8 lg:w-9 h-16 sm:h-20 lg:h-24 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
+                        className={`w-7 sm:w-8 lg:w-9 h-14 sm:h-18 lg:h-22 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
                           isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
                         } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
                       >
@@ -444,7 +508,7 @@ export default function AlgeblocksEcuacionView() {
                   })}
 
                   {/* Fichas de Unidades (+1 y −1) */}
-                  <div className="flex flex-wrap gap-1 items-start pl-1.5 border-l border-white/10">
+                  <div className={`flex flex-wrap gap-1 items-start ${leftTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
                     {leftTiles.filter(t => t.type === 'unit').map(t => {
                       const isCancel = cancelledIds.has(t.id)
                       const isPos = t.sign > 0
@@ -462,17 +526,39 @@ export default function AlgeblocksEcuacionView() {
                   </div>
                 </div>
               ) : (
-                /* Modo Reparto: Filas correspondientes a cada x */
+                /* Modo Reparto en 1° Miembro */
                 <div className="flex-1 min-h-0 flex flex-col justify-around py-1 overflow-y-auto">
-                  {Array.from({ length: xCountL }).map((_, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-1 rounded bg-white/5 border border-white/10">
-                      <div className="w-7 lg:w-8 h-9 lg:h-11 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
-                        x
+                  {varSide === 'left' ? (
+                    /* Si las variables estaban a la izquierda: 1 x por fila */
+                    Array.from({ length: numRows }).map((_, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-1 rounded bg-sky-500/10 border border-sky-400/20">
+                        <div className="w-7 lg:w-8 h-9 lg:h-11 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
+                          x
+                        </div>
+                        <span className="text-white/40 text-xs font-bold">=</span>
+                        <span className="text-sky-300 font-bold text-xs">Fila {idx + 1}</span>
                       </div>
-                      <span className="text-white/40 text-xs font-bold">=</span>
-                      <span className="text-emerald-400 font-bold text-xs">Fila {idx + 1}</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    /* Si las unidades estaban a la izquierda: unitsPerRow por fila */
+                    Array.from({ length: numRows }).map((_, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 p-1 rounded bg-teal-500/10 border border-teal-400/20 overflow-x-auto">
+                        {Array.from({ length: unitsPerRow }).map((__, uIdx) => (
+                          <div
+                            key={uIdx}
+                            className={`w-6 h-6 lg:w-7 lg:h-7 rounded flex items-center justify-center font-mono font-bold text-[10px] lg:text-xs text-white shadow-sm animate-pulse ${
+                              unitSignPerRow > 0 ? 'bg-blue-500 border border-blue-300' : 'bg-red-500 border border-red-300'
+                            }`}
+                          >
+                            {unitSignPerRow > 0 ? '+1' : '−1'}
+                          </div>
+                        ))}
+                        <span className="text-teal-300 font-mono font-bold text-xs pl-2">
+                          ({unitSignPerRow > 0 ? `+${unitsPerRow}` : `−${unitsPerRow}`})
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -502,7 +588,7 @@ export default function AlgeblocksEcuacionView() {
                     return (
                       <div
                         key={t.id}
-                        className={`w-7 sm:w-8 lg:w-9 h-16 sm:h-20 lg:h-24 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
+                        className={`w-7 sm:w-8 lg:w-9 h-14 sm:h-18 lg:h-22 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
                           isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
                         } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
                       >
@@ -512,7 +598,7 @@ export default function AlgeblocksEcuacionView() {
                   })}
 
                   {/* Fichas de Unidades (+1 y −1 en miembro derecho) */}
-                  <div className="flex flex-wrap gap-1 items-start pl-1.5 border-l border-white/10">
+                  <div className={`flex flex-wrap gap-1 items-start ${rightTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
                     {rightTiles.filter(t => t.type === 'unit').map(t => {
                       const isCancel = cancelledIds.has(t.id)
                       const isPos = t.sign > 0
@@ -530,26 +616,39 @@ export default function AlgeblocksEcuacionView() {
                   </div>
                 </div>
               ) : (
-                /* Modo Reparto: Grupos asignados a cada fila */
+                /* Modo Reparto en 2° Miembro */
                 <div className="flex-1 min-h-0 flex flex-col justify-around py-1 overflow-y-auto">
-                  {Array.from({ length: xCountL }).map((_, idx) => {
-                    const perRow = unitCountR / xCountL
-                    return (
+                  {varSide === 'right' ? (
+                    /* Si las variables estaban a la derecha: 1 x por fila */
+                    Array.from({ length: numRows }).map((_, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-1 rounded bg-sky-500/10 border border-sky-400/20">
+                        <div className="w-7 lg:w-8 h-9 lg:h-11 rounded bg-sky-500 border border-sky-300 flex items-center justify-center font-mono font-bold text-xs lg:text-sm text-white">
+                          x
+                        </div>
+                        <span className="text-white/40 text-xs font-bold">=</span>
+                        <span className="text-sky-300 font-bold text-xs">Fila {idx + 1}</span>
+                      </div>
+                    ))
+                  ) : (
+                    /* Si las unidades estaban a la derecha: unitsPerRow por fila */
+                    Array.from({ length: numRows }).map((_, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 p-1 rounded bg-teal-500/10 border border-teal-400/20 overflow-x-auto">
-                        {Array.from({ length: perRow }).map((__, uIdx) => (
+                        {Array.from({ length: unitsPerRow }).map((__, uIdx) => (
                           <div
                             key={uIdx}
-                            className="w-6 h-6 lg:w-7 lg:h-7 rounded bg-blue-500 border border-blue-300 flex items-center justify-center font-mono font-bold text-[10px] lg:text-xs text-white shadow-sm animate-pulse"
+                            className={`w-6 h-6 lg:w-7 lg:h-7 rounded flex items-center justify-center font-mono font-bold text-[10px] lg:text-xs text-white shadow-sm animate-pulse ${
+                              unitSignPerRow > 0 ? 'bg-blue-500 border border-blue-300' : 'bg-red-500 border border-red-300'
+                            }`}
                           >
-                            +1
+                            {unitSignPerRow > 0 ? '+1' : '−1'}
                           </div>
                         ))}
                         <span className="text-teal-300 font-mono font-bold text-xs pl-2">
-                          ({perRow})
+                          ({unitSignPerRow > 0 ? `+${unitsPerRow}` : `−${unitsPerRow}`})
                         </span>
                       </div>
-                    )
-                  })}
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -572,7 +671,7 @@ export default function AlgeblocksEcuacionView() {
           {isSolved ? (
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] sm:text-[11px] lg:text-xs font-bold animate-bounce">
               <Sparkles size={13} className="text-emerald-300 shrink-0" />
-              <span>{fbMsg}</span>
+              <span>¡Ecuación resuelta! x = {solvedVal}</span>
             </div>
           ) : (
             <div className="text-[10px] sm:text-[11px] lg:text-xs text-white/70 truncate max-w-full font-medium">
@@ -594,17 +693,17 @@ export default function AlgeblocksEcuacionView() {
             title="Cancelar fichas opuestas (+ y −) en ambos miembros"
           >
             <Zap size={13} />
-            <span>Operar {hasCancellablePairs && '(Pares cero)'}</span>
+            <span>Operar {hasCancellablePairs && `(${pendingCancelL.size / 2 + pendingCancelR.size / 2})`}</span>
           </button>
 
-          {/* Botón REPARTIR */}
+          {/* Botón REPARTIR (soporta variables a la izquierda O a la derecha) */}
           {canDivide && (
             <button
               onClick={handleDivide}
               className="h-7 lg:h-8 px-2.5 sm:px-3.5 lg:px-4 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
               <Split size={13} />
-              <span>Repartir en {xCountL} grupos</span>
+              <span>Repartir en {numRows} grupos</span>
             </button>
           )}
 
@@ -615,7 +714,7 @@ export default function AlgeblocksEcuacionView() {
               className="h-7 lg:h-8 px-3 lg:px-5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
               <Check size={14} />
-              <span>Aislar x = {unitCountR / xCountL}</span>
+              <span>Aislar x = {quotient}</span>
             </button>
           )}
         </div>
@@ -625,26 +724,29 @@ export default function AlgeblocksEcuacionView() {
       <ModalHelp
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        title="¿Cómo usar Álgebra Tiles y Reparto?"
+        title="¿Cómo resolver cualquier ecuación en Álgebra Tiles?"
         bgColor="#080c18"
         maxWidth="max-w-md"
         buttonColor="bg-indigo-500 hover:bg-indigo-400"
       >
         <ol className="space-y-2 text-white/80 text-xs leading-relaxed list-decimal list-inside pb-2">
           <li>
-            <strong className="text-white">Ingresar o elegir una ecuación</strong>: Usa el selector de retos o escribe los miembros en las casillas (ej. <span className="font-mono text-sky-300">2x + 4</span> = <span className="font-mono text-teal-300">10</span> o <span className="font-mono text-sky-300">3x + 1</span> = <span className="font-mono text-teal-300">x + 7</span>) y presiona <strong className="text-indigo-400">Cargar</strong>.
+            <strong className="text-white">Ingresar cualquier ecuación lineal</strong>: Escribe la ecuación completa en la casilla superior (ej. <span className="font-mono text-sky-300">12 = 10 + 2x</span> o <span className="font-mono text-sky-300">5 - 3x = 2x - 10</span>) o elige un reto prefijado y pulsa <strong className="text-indigo-400">Cargar</strong>. Todas las cantidades positivas y negativas se graficarán fielmente en cada miembro.
           </li>
           <li>
-            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los botones laterales (<strong className="text-sky-300">+x</strong>, <strong className="text-red-300">−x</strong>, <strong className="text-blue-300">+1</strong>, <strong className="text-red-300">−1</strong>) para agregar la misma cantidad a ambos miembros manteniendo la igualdad. Las fichas no desaparecen de inmediato para que observes las combinaciones.
+            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los botones laterales (<strong className="text-sky-300">+x</strong>, <strong className="text-red-300">−x</strong>, <strong className="text-blue-300">+1</strong>, <strong className="text-red-300">−1</strong>) para agregar la misma cantidad a ambos miembros manteniendo la igualdad. Las fichas no desaparecen de inmediato para que veas los pares opuestos conviviendo.
           </li>
           <li>
-            <strong className="text-white">Botón Operar</strong>: Cuando tengas fichas opuestas (como $+1$ con $-1$ o $+x$ con $-x$) en el primer o segundo miembro, presiona el botón <strong className="text-amber-400">Operar</strong> para cancelar los pares cero y eliminarlos.
+            <strong className="text-white">Botón Operar</strong>: Cuando tengas fichas opuestas (como $+1$ con $-1$ o $+x$ con $-x$) en cualquier miembro, presiona <strong className="text-amber-400">Operar</strong> para cancelarlas y eliminarlas simultáneamente.
           </li>
           <li>
-            <strong className="text-white">Reparto equitativo</strong>: Cuando las barras $x$ queden solas a la izquierda y las unidades a la derecha, presiona <strong className="text-indigo-400">Repartir</strong> para organizar las unidades en filas iguales y deducir cuánto vale una sola $x$.
+            <strong className="text-white">Botón Invertir signos (±)</strong>: Si las variables quedan negativas (ej. $-x = -3$ o $-2x = 6$), puedes pulsar <strong className="text-purple-400">±</strong> para multiplicar ambos miembros por $-1$.
           </li>
           <li>
-            Presiona <strong className="text-emerald-400">Aislar x</strong> para consolidar la solución final.
+            <strong className="text-white">Reparto equitativo simétrico</strong>: Ya sea que las barras $x$ queden en el primer miembro (ej. $2x = 6$) o en el segundo (ej. $2 = 2x$ o $15 = 5x$), el botón <strong className="text-indigo-400">Repartir</strong> organizará las unidades en filas iguales para ver cuánto vale cada $x$.
+          </li>
+          <li>
+            Pulsa <strong className="text-emerald-400">Aislar x</strong> para consolidar la solución final.
           </li>
         </ol>
       </ModalHelp>
