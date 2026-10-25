@@ -32,43 +32,46 @@ const KB_ROWS = [
   ['0', 'C', '✓'],
 ]
 
-function parseSideTerms(raw: string): { vars: number; units: number } {
+// Genera fichas respetando el orden secuencial de aparición en la expresión
+function createTilesFromExpr(raw: string, prefix: string): AlgeTerm[] {
   const clean = raw.replace(/\s+/g, '').replace(/−/g, '-').replace(/X/g, 'x')
-  if (!clean) return { vars: 0, units: 0 }
+  if (!clean) return []
   const matches = clean.match(/[+-]?[^+-]+/g) || []
-  let v = 0
-  let u = 0
-  for (const p of matches) {
+  const list: AlgeTerm[] = []
+
+  matches.forEach((p, termIdx) => {
     if (p.includes('x')) {
       let coeff = p.replace('x', '')
       if (coeff === '' || coeff === '+') coeff = '1'
       if (coeff === '-') coeff = '-1'
       const n = parseInt(coeff, 10)
-      if (!isNaN(n)) v += n
+      if (!isNaN(n) && n !== 0) {
+        const sign: 1 | -1 = n > 0 ? 1 : -1
+        const count = Math.min(Math.abs(n), 20)
+        for (let i = 0; i < count; i++) {
+          list.push({
+            id: `x-${prefix}-${termIdx}-${i}-${Date.now()}-${Math.random()}`,
+            type: 'x',
+            sign,
+          })
+        }
+      }
     } else {
       const n = parseInt(p, 10)
-      if (!isNaN(n)) u += n
+      if (!isNaN(n) && n !== 0) {
+        const sign: 1 | -1 = n > 0 ? 1 : -1
+        const count = Math.min(Math.abs(n), 36)
+        for (let i = 0; i < count; i++) {
+          list.push({
+            id: `u-${prefix}-${termIdx}-${i}-${Date.now()}-${Math.random()}`,
+            type: 'unit',
+            sign,
+          })
+        }
+      }
     }
-  }
-  return { vars: v, units: u }
-}
+  })
 
-function createTilesFromCounts(vars: number, units: number, prefix: string): AlgeTerm[] {
-  const list: AlgeTerm[] = []
-  if (vars !== 0) {
-    const varSign: 1 | -1 = vars > 0 ? 1 : -1
-    const varCount = Math.min(Math.abs(vars), 20)
-    for (let i = 0; i < varCount; i++) {
-      list.push({ id: `x-${prefix}-${i}-${Date.now()}-${Math.random()}`, type: 'x', sign: varSign })
-    }
-  }
-  if (units !== 0) {
-    const unitSign: 1 | -1 = units > 0 ? 1 : -1
-    const unitCount = Math.min(Math.abs(units), 36)
-    for (let i = 0; i < unitCount; i++) {
-      list.push({ id: `u-${prefix}-${i}-${Date.now()}-${Math.random()}`, type: 'unit', sign: unitSign })
-    }
-  }
   return list
 }
 
@@ -123,16 +126,14 @@ export default function AlgeblocksEcuacionView() {
   const [kbR, setKbR] = useState('10+2x')
   const [activeKb, setActiveKb] = useState<'left' | 'right' | null>(null)
 
-  // Estado del tapete
+  // Estado del tapete (continuo en orden secuencial)
   const [leftTiles, setLeftTiles] = useState<AlgeTerm[]>(() => {
     const parts = PRESETS[0].eq.split('=')
-    const pL = parseSideTerms(parts[0] || '')
-    return createTilesFromCounts(pL.vars, pL.units, 'L')
+    return createTilesFromExpr(parts[0] || '', 'L')
   })
   const [rightTiles, setRightTiles] = useState<AlgeTerm[]>(() => {
     const parts = PRESETS[0].eq.split('=')
-    const pR = parseSideTerms(parts[1] || '')
-    return createTilesFromCounts(pR.vars, pR.units, 'R')
+    return createTilesFromExpr(parts[1] || '', 'R')
   })
 
   // Historial para deshacer
@@ -142,21 +143,18 @@ export default function AlgeblocksEcuacionView() {
   const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set())
   const [fbMsg, setFbMsg] = useState('Añade fichas opuestas a ambos lados y presiona "Operar" para cancelar pares cero.')
 
-  // Cargar ecuación procesando ambos miembros
+  // Cargar ecuación procesando ambos miembros secuencialmente
   const handleLoadEquation = useCallback((raw: string, desc?: string) => {
     const parts = raw.split('=')
     const rawL = parts[0]?.trim() || '0'
     const rawR = parts.length > 1 ? parts.slice(1).join('=').trim() : '0'
 
-    const pL = parseSideTerms(rawL)
-    const pR = parseSideTerms(rawR)
-
     setIsDivided(false)
     setCancelledIds(new Set())
     setHistory([])
     setActiveKb(null)
-    setLeftTiles(createTilesFromCounts(pL.vars, pL.units, 'L'))
-    setRightTiles(createTilesFromCounts(pR.vars, pR.units, 'R'))
+    setLeftTiles(createTilesFromExpr(rawL, 'L'))
+    setRightTiles(createTilesFromExpr(rawR, 'R'))
     setFbMsg(desc || `Ecuación cargada: ${rawL} = ${rawR}`)
   }, [])
 
@@ -235,7 +233,7 @@ export default function AlgeblocksEcuacionView() {
     !isDivided &&
     !hasCancellablePairs
 
-  // Acción: Añadir ficha a ambos miembros (NO se elimina automáticamente)
+  // Acción: Añadir ficha a ambos miembros siempre al final como continuación (sin separar)
   const addTileToBoth = (type: 'x' | 'unit', sign: 1 | -1) => {
     if (isDivided) return
 
@@ -248,7 +246,7 @@ export default function AlgeblocksEcuacionView() {
     setRightTiles(prev => [...prev, { id: idR, type, sign }])
 
     const name = type === 'x' ? (sign > 0 ? '+x' : '−x') : (sign > 0 ? '+1' : '−1')
-    setFbMsg(`Se añadió ${name} a ambos miembros. Presiona "Operar" para cancelar pares cero.`)
+    setFbMsg(`Se añadió ${name} al final de ambos miembros. Presiona "Operar" para cancelar pares cero.`)
   }
 
   // Acción: Multiplicar ambos miembros por -1 (invertir signos)
@@ -327,6 +325,38 @@ export default function AlgeblocksEcuacionView() {
 
     setIsDivided(false)
     setFbMsg(`¡Ecuación resuelta con éxito! x = ${finalVal}`)
+  }
+
+  // Renderizado individual de ficha en flujo continuo (sin contenedores separados)
+  const renderTile = (t: AlgeTerm) => {
+    const isCancel = cancelledIds.has(t.id)
+    const isPos = t.sign > 0
+
+    if (t.type === 'x') {
+      return (
+        <div
+          key={t.id}
+          className={`w-7 lg:w-8 h-12 lg:h-14 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 shrink-0 ${
+            isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
+          } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
+          title={isPos ? 'Variable +x' : 'Variable −x'}
+        >
+          {isPos ? 'x' : '−x'}
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={t.id}
+        className={`w-6 h-6 lg:w-7 lg:h-7 rounded flex items-center justify-center font-mono font-bold text-[10px] sm:text-[11px] lg:text-xs text-white shadow-sm transition-all duration-500 shrink-0 ${
+          isPos ? 'bg-blue-500 border border-blue-300' : 'bg-red-500 border border-red-300'
+        } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
+        title={isPos ? 'Unidad +1' : 'Unidad −1'}
+      >
+        {isPos ? '+1' : '−1'}
+      </div>
+    )
   }
 
   return (
@@ -628,40 +658,9 @@ export default function AlgeblocksEcuacionView() {
               </div>
 
               {!isDivided ? (
-                <div className="flex-1 min-h-0 flex flex-wrap content-start gap-1.5 overflow-y-auto pr-0.5">
-                  {/* Fichas Variables (x y −x): altura doble de las unidades y ancho ligeramente mayor */}
-                  {leftTiles.filter(t => t.type === 'x').map(t => {
-                    const isCancel = cancelledIds.has(t.id)
-                    const isPos = t.sign > 0
-                    return (
-                      <div
-                        key={t.id}
-                        className={`w-7 lg:w-8 h-12 lg:h-14 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
-                          isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
-                        } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
-                      >
-                        {isPos ? 'x' : '−x'}
-                      </div>
-                    )
-                  })}
-
-                  {/* Fichas de Unidades (+1 y −1): cuadradas h-6 (24px) / lg:h-7 (28px) */}
-                  <div className={`flex flex-wrap gap-1 items-start ${leftTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
-                    {leftTiles.filter(t => t.type === 'unit').map(t => {
-                      const isCancel = cancelledIds.has(t.id)
-                      const isPos = t.sign > 0
-                      return (
-                        <div
-                          key={t.id}
-                          className={`w-6 h-6 lg:w-7 lg:h-7 rounded flex items-center justify-center font-mono font-bold text-[10px] sm:text-[11px] lg:text-xs text-white shadow-sm transition-all duration-500 ${
-                            isPos ? 'bg-blue-500 border border-blue-300' : 'bg-red-500 border border-red-300'
-                          } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
-                        >
-                          {isPos ? '+1' : '−1'}
-                        </div>
-                      )
-                    })}
-                  </div>
+                /* Flujo continuo: todas las fichas en orden secuencial sin separadores ni quiebres forzados */
+                <div className="flex-1 min-h-0 flex flex-wrap content-start items-center gap-1.5 overflow-y-auto pr-0.5">
+                  {leftTiles.map(renderTile)}
                 </div>
               ) : (
                 /* Modo Reparto en 1° Miembro */
@@ -718,40 +717,9 @@ export default function AlgeblocksEcuacionView() {
               </div>
 
               {!isDivided ? (
-                <div className="flex-1 min-h-0 flex flex-wrap content-start gap-1.5 overflow-y-auto pr-0.5">
-                  {/* Fichas Variables (x y −x): altura doble de las unidades y ancho ligeramente mayor */}
-                  {rightTiles.filter(t => t.type === 'x').map(t => {
-                    const isCancel = cancelledIds.has(t.id)
-                    const isPos = t.sign > 0
-                    return (
-                      <div
-                        key={t.id}
-                        className={`w-7 lg:w-8 h-12 lg:h-14 rounded-md shadow-md flex items-center justify-center font-mono font-black text-xs sm:text-sm lg:text-base text-white select-none transition-all duration-500 ${
-                          isPos ? 'bg-sky-500 border border-sky-300' : 'bg-red-500 border border-red-300'
-                        } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
-                      >
-                        {isPos ? 'x' : '−x'}
-                      </div>
-                    )
-                  })}
-
-                  {/* Fichas de Unidades (+1 y −1): cuadradas h-6 (24px) / lg:h-7 (28px) */}
-                  <div className={`flex flex-wrap gap-1 items-start ${rightTiles.some(t => t.type === 'x') ? 'pl-1.5 border-l border-white/10' : ''}`}>
-                    {rightTiles.filter(t => t.type === 'unit').map(t => {
-                      const isCancel = cancelledIds.has(t.id)
-                      const isPos = t.sign > 0
-                      return (
-                        <div
-                          key={t.id}
-                          className={`w-6 h-6 lg:w-7 lg:h-7 rounded flex items-center justify-center font-mono font-bold text-[10px] sm:text-[11px] lg:text-xs text-white shadow-sm transition-all duration-500 ${
-                            isPos ? 'bg-blue-500 border border-blue-300' : 'bg-red-500 border border-red-300'
-                          } ${isCancel ? 'scale-0 opacity-0 rotate-45 ring-2 ring-amber-400' : 'scale-100 opacity-100'}`}
-                        >
-                          {isPos ? '+1' : '−1'}
-                        </div>
-                      )
-                    })}
-                  </div>
+                /* Flujo continuo: todas las fichas en orden secuencial sin separadores ni quiebres forzados */
+                <div className="flex-1 min-h-0 flex flex-wrap content-start items-center gap-1.5 overflow-y-auto pr-0.5">
+                  {rightTiles.map(renderTile)}
                 </div>
               ) : (
                 /* Modo Reparto en 2° Miembro */
@@ -872,7 +840,7 @@ export default function AlgeblocksEcuacionView() {
             <strong className="text-white">Teclado virtual para editar</strong>: Toca la casilla del primer o segundo miembro para abrir el teclado virtual interactivo e ingresar números, operaciones y variables (ej. <span className="font-mono text-sky-300">12</span> = <span className="font-mono text-teal-300">10 + 2x</span> o <span className="font-mono text-sky-300">5 - 3x</span> = <span className="font-mono text-teal-300">2x - 10</span>) y pulsa <strong className="text-emerald-400">✓</strong> o <strong className="text-indigo-400">Cargar</strong>.
           </li>
           <li>
-            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los paneles laterales diferenciados: el recuadro superior <strong className="text-sky-300">Var (x)</strong> para barras (+x, −x) y el recuadro inferior <strong className="text-amber-300">Unid (1)</strong> para cuadritos (+1, −1). Las fichas no desaparecen de inmediato para que veas los pares opuestos conviviendo.
+            <strong className="text-white">Añadir fichas a ambos lados</strong>: Usa los paneles laterales diferenciados: el recuadro superior <strong className="text-sky-300">Var (x)</strong> para barras (+x, −x) y el recuadro inferior <strong className="text-amber-300">Unid (1)</strong> para cuadritos (+1, −1). Las nuevas fichas se colocan de forma continua al final de cada miembro.
           </li>
           <li>
             <strong className="text-white">Botón Operar</strong>: Cuando tengas fichas opuestas (como $+1$ con $-1$ o $+x$ con $-x$) en cualquier miembro, presiona <strong className="text-amber-400">Operar</strong> para cancelarlas y eliminarlas simultáneamente.
