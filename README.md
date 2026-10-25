@@ -46,6 +46,7 @@ src/
 └── views/
     ├── HomeView.tsx           # Página principal (competencias)
     ├── CompetenciaView.tsx    # Temas de una competencia + buscador
+    ├── GeoplanoView.tsx       # Geoplano configurable con retos (pantalla completa)
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -97,6 +98,19 @@ public/
   - Grilla compacta de 2 a 3 columnas, con contador de temas
   - Estado vacío para competencias sin actividades y para búsquedas sin resultados
 - Los temas y competencias se definen en `src/data/curriculum.ts`
+
+### 1.1 📐 Geoplano (`GeoplanoView`)
+- **Tablero adaptativo**: 13 puntos en el lado corto por defecto (también 7 o 5); el lado largo se llena solo, así en horizontal hay más columnas y en vertical más filas (506×809 → 13×18, 809×506 → 26×13)
+- **Detección de orientación**: al girar la tablet la cuadrícula se recalcula y el tablero se reinicia con aviso
+- **Interfaz compacta**: barras de 40-45 px con botones de 32 px (tocables) y mediciones integradas en la barra inferior, para no robar área de trabajo
+- **Ligas elásticas**: arrastra de un punto a otro; los puntos hacen imán y la liga se ajusta sola
+- **Encadenar y cerrar**: continúa desde el último punto de la liga seleccionada y vuelve al primer punto para cerrarla (o usa el botón "Cerrar")
+- **6 colores de liga**: al cambiar de color con una liga seleccionada, se recolorea
+- **Edición**: seleccionar tocando la liga, moverla arrastrando un vértice, eliminarla, deshacer y borrar todo (con confirmación)
+- **Medidas automáticas**: lados, área (u²) y perímetro (u) de la figura cerrada
+- **8 retos con validación automática**: cuadrado, rectángulo, triángulo, triángulo rectángulo, rectángulo de área 6, cuadrado de área 9, pentágono y figura cerrada de área 12
+- **Estado efímero**: al salir de la vista se pierde la figura (sin localStorage ni backend)
+- **Sin dependencias nuevas**: Canvas 2D + eventos de puntero, optimizado para tablets modestas
 
 ### 2. 🌡️ Introducción a Enteros (`IntroEnterosView`)
 - **Termómetro interactivo** arrastrable (rango: -20°C a 30°C)
@@ -225,7 +239,9 @@ public/
 
 | Módulo | Estado | Líneas de código | Interactividad |
 |---|---|---|---|
-| HomeView | ✅ Completo | ~89 | Búsqueda, navegación |
+| HomeView | ✅ Completo | ~180 | Navegación, actualización PWA |
+| CompetenciaView | ✅ Completo | ~185 | Búsqueda de temas por competencia |
+| GeoplanoView | ✅ Completo | ~1022 | Canvas, ligas arrastrables, retos automáticos |
 | IntroEnterosView | ✅ Completo | ~671 | Arrastre, botones |
 | RectaNumericaView | ✅ Completo | ~843 | Dados, arrastre, juego por turnos |
 | SumaEnterosView | ✅ Completo | ~673 | Fichas arrastrables, cancelación |
@@ -308,6 +324,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 |------|-----------|-------------|
 | `/` | `HomeView` | Página principal con las competencias |
 | `/competencia/:competencyId` | `CompetenciaView` | Temas de una competencia con buscador |
+| `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

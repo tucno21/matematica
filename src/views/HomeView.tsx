@@ -97,7 +97,7 @@ export default function HomeView() {
                                         <Icon size={17} className={accent.text} />
                                     </div>
                                     <span className="text-[10px] font-bold text-white/25">
-                                        {total > 0 ? `${total} temas` : 'Próximamente'}
+                                        {total > 0 ? `${total} ${total === 1 ? 'tema' : 'temas'}` : 'Próximamente'}
                                     </span>
                                 </div>
 

@@ -91,7 +91,7 @@ export default function CompetenciaView() {
                 </div>
 
                 <span className={`hidden md:inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${accent.bg} ${accent.border} ${accent.text}`}>
-                    {competencyTopics.length} {isRecreativa ? 'juegos' : 'temas'}
+                    {competencyTopics.length} {isRecreativa ? 'juegos' : competencyTopics.length === 1 ? 'tema' : 'temas'}
                 </span>
             </header>
 
