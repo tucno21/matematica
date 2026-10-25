@@ -25,7 +25,7 @@ No test runner is configured.
 Follow `AddView.md` at the repo root. Checklist:
 1. Create `src/views/NameView.tsx` with `export default` and a "← Volver" button using `useNavigate`
 2. Register route in `src/routes/AppRouter.tsx` — wrap with `<Layout>` unless the view is full-screen
-3. Add a `Topic` entry in `src/views/HomeView.tsx` `topics` array
+3. Add a `Topic` entry in `src/data/curriculum.ts` (assign it a `competency`), not in `HomeView`
 4. Update `README.md` (file tree, status table, routes table)
 
 ## Conventions

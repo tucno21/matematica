@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Layout from '../components/Layout'
 import HomeView from '../views/HomeView'
+import CompetenciaView from '../views/CompetenciaView'
 import SumaEnterosView from '../views/SumaEnterosView'
 import RestaEnterosView from '../views/RestaEnterosView'
 import ProductoEnteroView from '../views/ProductoEnteroView'
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
     {
         path: '/',
         element: <Layout><HomeView /></Layout>
+    },
+    {
+        path: '/competencia/:competencyId',
+        element: <Layout><CompetenciaView /></Layout>
     },
     {
         path: '/intro-enteros',

@@ -35,14 +35,17 @@ src/
 │   └── vite.svg              # Logo Vite (por defecto)
 ├── components/
 │   └── Layout.tsx             # Layout wrapper (min-h-screen)
+├── data/
+│   └── curriculum.ts          # Competencias MINEDU + temas (fuente única)
 ├── routes/
 │   └── AppRouter.tsx          # Definición de rutas (createBrowserRouter)
 ├── store/
 │   └── useAppStore.ts         # Store Zustand (vacío, preparado para uso futuro)
 ├── types/
-│   └── index.ts               # Interfaz Topic
+│   └── index.ts               # Tipos (Topic, Competency)
 └── views/
-    ├── HomeView.tsx           # Página principal (grilla de temas)
+    ├── HomeView.tsx           # Página principal (competencias)
+    ├── CompetenciaView.tsx    # Temas de una competencia + buscador
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -84,11 +87,16 @@ public/
 
 ## 📚 Módulos Implementados
 
-### 1. 🏠 Página Principal (`HomeView`)
-- Grilla de 8 temas matemáticos con búsqueda en tiempo real
-- 5 temas activos y 3 marcados como "Próximamente"
-- Navegación fluida con `react-router-dom`
-- Diseño oscuro con efecto glassmorphism
+### 1. 🏠 Página Principal (`HomeView`) y Competencias (`CompetenciaView`)
+- **HomeView**: 4 tarjetas de competencias del Currículo Nacional (MINEDU) + 1 tarjeta de actividad recreativa
+  - Diseño compacto pensado para tablets: todo cabe en una sola pantalla (sin scroll)
+  - Cada tarjeta muestra icono, nombre corto, una línea descriptiva y número de temas
+  - Botón de actualización de la app (limpia caché y service worker)
+- **CompetenciaView** (`/competencia/:competencyId`): temas de la competencia seleccionada
+  - Buscador en tiempo real en la cabecera (título y descripción)
+  - Grilla compacta de 2 a 3 columnas, con contador de temas
+  - Estado vacío para competencias sin actividades y para búsquedas sin resultados
+- Los temas y competencias se definen en `src/data/curriculum.ts`
 
 ### 2. 🌡️ Introducción a Enteros (`IntroEnterosView`)
 - **Termómetro interactivo** arrastrable (rango: -20°C a 30°C)
@@ -298,7 +306,8 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 
 | Ruta | Componente | Descripción |
 |------|-----------|-------------|
-| `/` | `HomeView` | Página principal con grilla de temas |
+| `/` | `HomeView` | Página principal con las competencias |
+| `/competencia/:competencyId` | `CompetenciaView` | Temas de una competencia con buscador |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

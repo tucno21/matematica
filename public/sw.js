@@ -1,12 +1,11 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'matematica-v2';
+const CACHE_NAME = 'matematica-v3';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/favicon.svg',
     '/manifest.json',
-    '/sw.js',
 ];
 
 // Install: cache static assets
@@ -40,7 +39,8 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch: cache-first strategy for all requests (offline-first)
+// Fetch: network-first for navigations (para recibir siempre la última
+// versión del index.html) y cache-first para assets con hash.
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -54,44 +54,35 @@ self.addEventListener('fetch', (event) => {
     // Skip other protocols
     if (!url.protocol.startsWith('http')) return;
 
-    // Cache-first strategy for navigation requests
+    // Navigation requests: network-first, cache como fallback offline
     if (request.mode === 'navigate') {
         event.respondWith(
-            caches.match(request).then((cached) => {
-                if (cached) {
-                    console.log('[SW] Sirviendo desde cache:', url.pathname);
-                    return cached;
-                }
-
-                return fetch(request)
-                    .then((response) => {
-                        // Solo cachear respuestas exitosas
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
+            fetch(request)
+                .then((response) => {
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
-                    })
-                    .catch(() => {
-                        // Si falla la red, servir index.html como fallback
-                        console.log('[SW] Sin conexión, sirviendo index.html desde cache');
-                        return caches.match('/index.html');
+                    }
+
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(request, responseClone);
                     });
-            })
+                    return response;
+                })
+                .catch(() => {
+                    // Sin conexión: servir la última copia cacheada
+                    return caches.match(request)
+                        .then((cached) => cached || caches.match('/index.html'))
+                        .then((cached) => cached || new Response('Offline', { status: 503 }));
+                })
         );
         return;
     }
 
-    // Cache-first strategy for static assets (JS, CSS, images, fonts)
+    // Assets locales con hash (/assets/xxx.js, imágenes, fuentes): cache-first.
+    // Nunca se cachean archivos de /src/ (Vite los sirve solo en desarrollo).
     if (
         url.pathname.startsWith('/assets/') ||
-        url.pathname.startsWith('/src/') ||
-        url.pathname.endsWith('.js') ||
-        url.pathname.endsWith('.css') ||
         url.pathname.endsWith('.svg') ||
         url.pathname.endsWith('.png') ||
         url.pathname.endsWith('.jpg') ||
@@ -105,7 +96,6 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.match(request).then((cached) => {
                 if (cached) {
-                    console.log('[SW] Sirviendo activo estático desde cache:', url.pathname);
                     return cached;
                 }
 
@@ -123,7 +113,6 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         console.log('[SW] No se pudo cargar activo estático:', url.pathname);
-                        // Retornar una respuesta vacía o un placeholder
                         return new Response('Not Found', { status: 404 });
                     });
             })
@@ -131,29 +120,28 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Network-first for everything else (API calls, etc.)
+    // Resto: network-first con cache como respaldo
     event.respondWith(
-        caches.match(request).then((cached) => {
-            return fetch(request)
-                .then((response) => {
-                    if (!response || response.status !== 200) {
-                        return response;
-                    }
-
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
+        fetch(request)
+            .then((response) => {
+                if (!response || response.status !== 200) {
                     return response;
-                })
-                .catch(() => {
+                }
+
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(request, responseClone);
+                });
+                return response;
+            })
+            .catch(() => {
+                return caches.match(request).then((cached) => {
                     if (cached) {
-                        console.log('[SW] Usando cache como fallback:', url.pathname);
                         return cached;
                     }
                     console.log('[SW] Sin conexión y sin cache para:', url.pathname);
                     return new Response('Offline', { status: 503 });
                 });
-        })
+            })
     );
 });

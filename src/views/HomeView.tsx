@@ -1,45 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RefreshCw } from 'lucide-react'
-import type { Topic } from '../types'
+import { ChevronRight, RefreshCw } from 'lucide-react'
+import { accents, competencies, competencyIcons, recreativa, topics } from '../data/curriculum'
+import type { Competency } from '../types'
 
 export default function HomeView() {
     const navigate = useNavigate()
-    const [search, setSearch] = useState('')
-
-    const topics: Topic[] = [
-        { id: 'intro', path: '/intro-enteros', title: 'Introducción a Enteros', description: 'Números positivos y negativos', available: true },
-        { id: 'recta', path: '/recta-numerica', title: 'Recta Numérica Enteros', description: 'Ubicación en la recta', available: true },
-        { id: 'suma', path: '/suma-enteros', title: 'Suma de Enteros', description: 'Operaciones básicas enteros', available: true },
-        { id: 'resta', path: '/resta-enteros', title: 'Resta de Enteros', description: 'Operaciones básicas enteros', available: true },
-        { id: 'producto', path: '/producto-enteros', title: 'Multiplicación de Enteros', description: 'Operaciones básicas enteros', available: true },
-        { id: 'division', path: '/division-enteros', title: 'División de Enteros', description: 'Operaciones básicas enteros', available: true },
-        { id: 'concepto-fraccion', path: '/concepto-fraccion', title: '¿Qué es una Fracción?', description: 'Explora fracciones libremente', available: true },
-        { id: 'regleta-fracciones', path: '/regleta-fracciones', title: 'Regleta de Fracciones', description: 'Fracciones interactivas', available: true },
-        { id: 'recta-numerica-fracciones', path: '/recta-numerica-fracciones', title: 'Fracciones en la Recta', description: 'Ubica fracciones en la recta numérica', available: true },
-        { id: 'suma-resta-fracciones', path: '/suma-resta-fracciones', title: 'Suma y Resta de Fracciones', description: 'Operaciones con fracciones', available: true },
-        { id: 'multiplicar-fracciones', path: '/multiplicar-fracciones', title: 'Multiplicar Fracciones', description: 'Multiplicación visual de fracciones', available: true },
-        { id: 'division-fracciones', path: '/division-fracciones', title: 'Dividir Fracciones', description: 'División visual de fracciones', available: true },
-        { id: 'fraccion-conjunto', path: '/fraccion-conjunto', title: 'Fracción de un Conjunto', description: 'Parte de un grupo de objetos', available: true },
-        { id: 'igualdad-balanza', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true },
-        { id: 'balanza-ecuacion', path: '/balanza-ecuacion', title: 'Balanza de Ecuaciones', description: 'Resuelve ecuaciones de primer grado', available: true },
-        { id: 'tres-jarras', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
-        { id: 'tres-pescados', path: '/tres-pescados', title: 'Los Tres Pescados', description: 'Pensamiento lógico', available: true },
-        { id: 'granjero-rio', path: '/granjero-rio', title: 'El Granjero y el Río', description: 'Pensamiento lógico', available: true },
-        { id: 'moneda-falsa', path: '/moneda-falsa', title: 'La Moneda Falsa', description: 'Pensamiento lógico', available: true },
-    ]
-
-    const filteredTopics = topics.filter(t =>
-        t.title.toLowerCase().includes(search.toLowerCase()) ||
-        t.description.toLowerCase().includes(search.toLowerCase())
-    )
-
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [isUpdating, setIsUpdating] = useState(false)
 
-    const handleTopicClick = (topic: Topic) => {
-        if (topic.available) navigate(topic.path)
-    }
+    const planCompetencies = competencies.filter((competency) => competency.id !== 'recreativa')
+    const countTopics = (competency: Competency) =>
+        topics.filter((topic) => topic.competency === competency.id).length
 
     const handleUpdateClick = () => {
         if (!navigator.onLine) {
@@ -69,70 +41,103 @@ export default function HomeView() {
         }
     }
 
+    const recreativaAccent = accents[recreativa.accent]
+    const RecreativaIcon = competencyIcons[recreativa.id]
+
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white px-4 py-8" style={{ fontFamily: "'Nunito', sans-serif" }}>
-            {/* Header */}
-            <header className="text-center mb-8 relative">
-                <button
-                    onClick={handleUpdateClick}
-                    className="absolute right-0 top-0 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
-                    title="Actualizar aplicación"
-                >
-                    <RefreshCw size={18} className="text-white/50" />
-                </button>
-                <h1 className="text-4xl font-black tracking-tight">Matemáticas</h1>
-                <p className="text-white/40 mt-1 text-sm">Aprende de forma interactiva</p>
-            </header>
-
-            {/* Search */}
-            <div className="relative mb-8 max-w-xl mx-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={18} />
-                <input
-                    type="text"
-                    placeholder="Buscar tema..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
-            </div>
-
-            {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
-                {filteredTopics.map(topic => (
-                    <div
-                        key={topic.id}
-                        onClick={() => handleTopicClick(topic)}
-                        className={`
-              rounded-2xl p-5 border border-white/10 bg-white/5 backdrop-blur
-              transition-all duration-300
-              ${topic.available ? 'cursor-pointer hover:scale-[1.03] hover:shadow-lg hover:shadow-teal-500/10' : 'opacity-40 cursor-not-allowed'}
-            `}
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            {!topic.available && (
-                                <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/40">
-                                    Próximamente
-                                </span>
-                            )}
-                        </div>
-
-                        <h2 className="text-lg font-bold mb-1">
-                            {topic.title}
-                        </h2>
-
-                        <p className="text-sm text-white/40">
-                            {topic.description}
+        <div
+            className="flex min-h-dvh flex-col bg-[#080c18] text-white px-4 py-4 sm:px-6 sm:py-5"
+            style={{ fontFamily: "'Nunito', sans-serif" }}
+        >
+            <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center">
+                {/* Header */}
+                <header className="flex items-center justify-between gap-3 mb-4">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-none">
+                            Matemáticas
+                        </h1>
+                        <p className="text-[11px] sm:text-xs text-white/35 mt-1.5">
+                            Elige una competencia
                         </p>
                     </div>
-                ))}
-            </div>
+                    <button
+                        onClick={handleUpdateClick}
+                        className="shrink-0 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
+                        title="Actualizar aplicación"
+                    >
+                        <RefreshCw size={17} className="text-white/50" />
+                    </button>
+                </header>
 
-            {/* Empty state */}
-            {filteredTopics.length === 0 && (
-                <div className="text-center mt-10 text-white/30">
-                    No se encontraron resultados
+                {/* Competencias */}
+                <div className="grid max-h-[clamp(340px,58dvh,560px)] flex-1 grid-cols-2 auto-rows-fr gap-3 sm:gap-4">
+                    {planCompetencies.map((competency) => {
+                        const accent = accents[competency.accent]
+                        const Icon = competencyIcons[competency.id]
+                        const total = countTopics(competency)
+
+                        return (
+                            <button
+                                key={competency.id}
+                                type="button"
+                                onClick={() => navigate(competency.path)}
+                                className={`group relative flex flex-col justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] hover:shadow-lg ${accent.shadow} active:scale-[0.99]`}
+                            >
+                                <div
+                                    className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${accent.gradient} to-transparent blur-2xl`}
+                                />
+                                <Icon
+                                    size={84}
+                                    strokeWidth={1.25}
+                                    className={`pointer-events-none absolute -right-2 bottom-1 ${accent.text} opacity-[0.07]`}
+                                />
+
+                                <div className="relative flex items-center gap-2.5">
+                                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${accent.bg} ${accent.border}`}>
+                                        <Icon size={17} className={accent.text} />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-white/25">
+                                        {total > 0 ? `${total} temas` : 'Próximamente'}
+                                    </span>
+                                </div>
+
+                                <h2 className="relative mt-2.5 text-base sm:text-lg font-black leading-tight">
+                                    {competency.shortTitle}
+                                </h2>
+                                <p className="relative mt-0.5 text-[11px] sm:text-xs text-white/35 leading-snug line-clamp-1">
+                                    {competency.cardHint}
+                                </p>
+                            </button>
+                        )
+                    })}
                 </div>
-            )}
+
+                {/* Actividad recreativa */}
+                <button
+                    type="button"
+                    onClick={() => navigate(recreativa.path)}
+                    className={`group mt-3 sm:mt-4 flex shrink-0 items-center gap-3 overflow-hidden rounded-2xl border ${recreativaAccent.border} bg-gradient-to-r ${recreativaAccent.gradient} via-white/[0.03] to-transparent p-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-lg ${recreativaAccent.shadow} active:scale-[0.99]`}
+                >
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${recreativaAccent.bg} ${recreativaAccent.border}`}>
+                        <RecreativaIcon size={17} className={recreativaAccent.text} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-sm sm:text-[15px] font-black leading-tight">
+                            {recreativa.title}
+                        </h2>
+                        <p className="mt-0.5 text-[11px] text-white/35 leading-snug line-clamp-1">
+                            {recreativa.cardHint}
+                        </p>
+                    </div>
+                    <span className={`hidden sm:inline text-[10px] font-bold ${recreativaAccent.text} opacity-60`}>
+                        {countTopics(recreativa)} juegos
+                    </span>
+                    <ChevronRight
+                        size={16}
+                        className={`shrink-0 ${recreativaAccent.text} opacity-40 transition-all group-hover:translate-x-0.5 group-hover:opacity-100`}
+                    />
+                </button>
+            </div>
 
             {/* Update modal */}
             {showUpdateModal && (
