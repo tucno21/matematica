@@ -220,7 +220,7 @@ function ScaleSVG({ angle, tL, tR, pL, pR, pSL, pSR, hlL, hlR, cancelSet, fadeCo
   const W = 400, H = 250, px = 200, py = 32, half = 145, chain = 116, pY = py + chain
   const plateW = 114, plateH = 7
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[min(56vh,320px)] select-none" style={{ touchAction: 'none' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[min(56vh,320px)] lg:max-h-[min(65vh,480px)] xl:max-h-[min(70vh,560px)] select-none" style={{ touchAction: 'none' }}>
       <ellipse cx={px} cy={H - 5} rx={36} ry={6} fill="#475569" />
       <rect x={px - 4} y={py} width={8} height={H - py - 5} fill="#64748b" />
       <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: `${px}px ${py}px`, transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}>
@@ -261,12 +261,12 @@ function EqChips({ left, right }: { left: Term[]; right: Term[] }) {
   const chip = (t: Term, first: boolean) => {
     const isPos = t.val >= 0
     const bg = isPos ? 'bg-blue-500/25 border-blue-400/40 text-blue-200' : 'bg-red-500/25 border-red-400/40 text-red-200'
-    return <span key={`${t.type}${t.val}${first}`} className={`px-1.5 py-0.5 rounded text-[10px] font-mono border font-bold ${bg}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>{fmtT(t, first)}</span>
+    return <span key={`${t.type}${t.val}${first}`} className={`px-1.5 py-0.5 lg:px-2.5 lg:py-1 rounded text-[10px] lg:text-xs font-mono border font-bold ${bg}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>{fmtT(t, first)}</span>
   }
   return (
-    <div className="flex items-center justify-center gap-1 flex-wrap">
+    <div className="flex items-center justify-center gap-1 lg:gap-1.5 flex-wrap">
       {left.length ? left.map((t, i) => chip(t, i === 0)) : <span className="text-white/30 text-xs">0</span>}
-      <span className="text-white/40 font-bold text-xs mx-0.5">=</span>
+      <span className="text-white/40 font-bold text-xs lg:text-sm mx-0.5">=</span>
       {right.length ? right.map((t, i) => chip(t, i === 0)) : <span className="text-white/30 text-xs">0</span>}
     </div>
   )
@@ -563,22 +563,22 @@ export default function BalanzaEcuacion2View() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
-      {/* ── Barra superior compacta (34px) ── */}
-      <header className="flex h-9 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-3 bg-[#0a0f1d]">
+      {/* ── Barra superior compacta (34px tablet / 42px laptop) ── */}
+      <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
         <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => nav(-1)}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all lg:h-8 lg:w-8"
+            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
             aria-label="Volver"
             title="Volver"
           >
             <ArrowLeft size={15} />
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-[13px] font-bold text-white/90 truncate lg:text-sm">
+            <h1 className="text-[13px] lg:text-[15px] font-bold text-white/90 truncate">
               Balanza de Ecuaciones
             </h1>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono bg-teal-400/10 text-teal-300 border border-teal-400/20">
+            <span className="hidden sm:inline-block px-1.5 py-0.5 lg:px-2 rounded text-[9px] lg:text-[10px] font-mono bg-teal-400/10 text-teal-300 border border-teal-400/20">
               1° Grado
             </span>
           </div>
@@ -594,7 +594,7 @@ export default function BalanzaEcuacion2View() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowHelp(true)}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all lg:h-8 lg:w-8"
+            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
             aria-label="Ayuda"
             title="Ayuda"
           >
@@ -603,22 +603,22 @@ export default function BalanzaEcuacion2View() {
         </div>
       </header>
 
-      {/* ── Barra de entrada de ecuación (36px) ── */}
-      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-white/5 bg-[#0d1424] px-2 py-1 text-[11px]">
-        <div className="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
-          <span className="text-[10px] text-white/40 font-medium shrink-0 hidden sm:inline">Ecuación:</span>
+      {/* ── Barra de entrada de ecuación (36px tablet / 42px laptop) ── */}
+      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 lg:gap-3 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs">
+        <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2 flex-1 min-w-0">
+          <span className="text-[10px] lg:text-[11px] text-white/40 font-medium shrink-0 hidden sm:inline">Ecuación:</span>
           <button
             onClick={() => setActiveKb(activeKb === 'left' ? null : 'left')}
-            className={`h-7 min-w-[64px] sm:min-w-[76px] px-2 rounded-md font-mono text-[11px] font-bold border transition-all truncate text-center ${activeKb === 'left' ? 'border-teal-400 bg-teal-400/20 text-teal-200 ring-1 ring-teal-400/50' : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'}`}
+            className={`h-7 lg:h-8 min-w-[64px] sm:min-w-[76px] lg:min-w-[90px] px-2 lg:px-3 rounded-md font-mono text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${activeKb === 'left' ? 'border-teal-400 bg-teal-400/20 text-teal-200 ring-1 ring-teal-400/50' : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'}`}
             title="Tocar para editar primer miembro"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             {kbL || '—'}
           </button>
-          <span className="text-white/40 font-bold text-xs shrink-0">=</span>
+          <span className="text-white/40 font-bold text-xs lg:text-sm shrink-0">=</span>
           <button
             onClick={() => setActiveKb(activeKb === 'right' ? null : 'right')}
-            className={`h-7 min-w-[48px] sm:min-w-[64px] px-2 rounded-md font-mono text-[11px] font-bold border transition-all truncate text-center ${activeKb === 'right' ? 'border-teal-400 bg-teal-400/20 text-teal-200 ring-1 ring-teal-400/50' : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'}`}
+            className={`h-7 lg:h-8 min-w-[48px] sm:min-w-[64px] lg:min-w-[80px] px-2 lg:px-3 rounded-md font-mono text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${activeKb === 'right' ? 'border-teal-400 bg-teal-400/20 text-teal-200 ring-1 ring-teal-400/50' : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'}`}
             title="Tocar para editar segundo miembro"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
@@ -626,7 +626,7 @@ export default function BalanzaEcuacion2View() {
           </button>
           <button
             onClick={handleGenerate}
-            className="h-7 px-2 sm:px-2.5 rounded-md bg-teal-500 hover:bg-teal-400 text-white font-bold text-[11px] active:scale-95 transition-all shrink-0 flex items-center gap-1 shadow-sm"
+            className="h-7 lg:h-8 px-2 sm:px-2.5 lg:px-3.5 rounded-md bg-teal-500 hover:bg-teal-400 text-white font-bold text-[11px] lg:text-xs active:scale-95 transition-all shrink-0 flex items-center gap-1.5 shadow-sm"
             title="Generar balanza con esta ecuación"
           >
             <RefreshCw size={11} className={consolidating ? 'animate-spin' : ''} />
@@ -635,14 +635,14 @@ export default function BalanzaEcuacion2View() {
         </div>
 
         {/* Indicador de equilibrio */}
-        <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
+        <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] lg:text-[11px]">
           {balanced ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Equilibrada
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               {pendWL > pendWR ? 'Izq. pesa +' : 'Der. pesa +'}
             </span>
@@ -651,21 +651,21 @@ export default function BalanzaEcuacion2View() {
 
         {/* Teclado Virtual en Popover / Overlay elegante */}
         {activeKb && (
-          <div className="absolute left-2 sm:left-4 top-10 z-50 w-[270px] sm:w-[290px] bg-[#0c1529] p-2.5 rounded-xl border border-teal-500/30 shadow-2xl space-y-1.5 backdrop-blur-md">
-            <div className="flex items-center justify-between text-[11px] text-white/50 px-0.5">
+          <div className="absolute left-2 sm:left-4 top-10 lg:top-12 z-50 w-[270px] sm:w-[290px] lg:w-[320px] bg-[#0c1529] p-2.5 lg:p-3 rounded-xl border border-teal-500/30 shadow-2xl space-y-1.5 lg:space-y-2 backdrop-blur-md">
+            <div className="flex items-center justify-between text-[11px] lg:text-xs text-white/50 px-0.5">
               <span>Editando: <strong className="text-teal-300">{activeKb === 'left' ? '1° miembro' : '2° miembro'}</strong></span>
               <button onClick={() => setActiveKb(null)} className="text-white/40 hover:text-white p-0.5 text-xs">✕</button>
             </div>
-            <div className="text-center font-mono text-white text-xs py-1 px-2 bg-white/5 rounded border border-white/10 min-h-[26px] flex items-center justify-center font-bold tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="text-center font-mono text-white text-xs lg:text-sm py-1 px-2 bg-white/5 rounded border border-white/10 min-h-[26px] flex items-center justify-center font-bold tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {kbVal || '—'}
             </div>
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-5 gap-1 lg:gap-1.5">
               {KB_ROWS.flat().map((k, i) => {
                 const isOp = k === '+' || k === '−'
                 const isDel = k === '⌫'
                 const isClr = k === 'C'
                 const isOk = k === '✓'
-                let cls = 'h-7 rounded text-[11px] font-bold active:scale-95 transition-all flex items-center justify-center '
+                let cls = 'h-7 lg:h-8 rounded text-[11px] lg:text-xs font-bold active:scale-95 transition-all flex items-center justify-center '
                 if (isOk) cls += 'col-span-3 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/35'
                 else if (isDel) cls += 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/30'
                 else if (isClr) cls += 'bg-red-500/15 text-red-300/70 border border-red-400/20 hover:bg-red-500/25'
@@ -679,11 +679,11 @@ export default function BalanzaEcuacion2View() {
       </div>
 
       {/* ── Área de Trabajo Principal (Balanza + Estantes laterales) ── */}
-      <div className="flex-1 min-h-0 flex items-stretch overflow-hidden px-1 sm:px-2 py-1 gap-1 sm:gap-2" style={{ touchAction: 'none' }}>
+      <div className="flex-1 min-h-0 flex items-stretch overflow-hidden px-1 sm:px-2 lg:px-4 py-1 lg:py-2 gap-1 sm:gap-2 lg:gap-3" style={{ touchAction: 'none' }}>
         {/* Columna Izquierda: Fichas (+x, -x, +1, -1) */}
-        <aside className="w-[52px] sm:w-[60px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/5 rounded-xl">
-          <div className="w-full flex flex-col items-center gap-1.5">
-            <div className="text-[9px] font-black uppercase tracking-wider text-white/30 text-center">
+        <aside className="w-[52px] sm:w-[60px] lg:w-[68px] shrink-0 flex flex-col items-center justify-between py-1 lg:py-2 bg-white/[0.02] border border-white/5 rounded-xl">
+          <div className="w-full flex flex-col items-center gap-1.5 lg:gap-2">
+            <div className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-white/30 text-center">
               Fichas
             </div>
             {(['px', 'nx', 'p1', 'n1'] as TokType[]).map(tt => {
@@ -696,14 +696,14 @@ export default function BalanzaEcuacion2View() {
                 <button
                   key={tt}
                   onPointerDown={e => startDrag(tt, e)}
-                  className="flex flex-col items-center justify-center w-10 sm:w-11 h-10 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all cursor-grab active:cursor-grabbing shadow-sm"
+                  className="flex flex-col items-center justify-center w-10 sm:w-11 lg:w-12 h-10 lg:h-11 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all cursor-grab active:cursor-grabbing shadow-sm"
                   title={`Arrastrar ${d.label}`}
                 >
                   <svg width={sz} height={sz} viewBox={`0 0 ${sz} ${sz}`}>
                     <rect width={sz} height={sz} fill={fill} rx={2.5} />
                     {isVar && <text x={sz / 2} y={sz / 2 + 0.5} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={sz * 0.6} fontWeight="bold">x</text>}
                   </svg>
-                  <span className="text-[8px] font-bold text-white/50 leading-none mt-0.5">{d.label}</span>
+                  <span className="text-[8px] lg:text-[9px] font-bold text-white/50 leading-none mt-0.5">{d.label}</span>
                 </button>
               )
             })}
@@ -711,7 +711,7 @@ export default function BalanzaEcuacion2View() {
 
           <button
             onClick={clearPending}
-            className="text-[9px] text-white/40 hover:text-white py-1 px-1 rounded hover:bg-white/5 transition-colors"
+            className="text-[9px] lg:text-[10px] text-white/40 hover:text-white py-1 px-1 lg:px-2 rounded hover:bg-white/5 transition-colors"
             title="Limpiar fichas pendientes"
           >
             Limpiar
@@ -719,14 +719,14 @@ export default function BalanzaEcuacion2View() {
         </aside>
 
         {/* Centro: Balanza Interactiva */}
-        <main className="flex-1 min-w-0 flex flex-col items-center justify-between relative bg-gradient-to-b from-white/[0.01] to-white/[0.03] border border-white/5 rounded-xl px-1 sm:px-2 pt-1 pb-1 overflow-hidden">
+        <main className="flex-1 min-w-0 flex flex-col items-center justify-between relative bg-gradient-to-b from-white/[0.01] to-white/[0.03] border border-white/5 rounded-xl px-1 sm:px-2 lg:px-4 pt-1 lg:pt-2 pb-1 overflow-hidden">
           {/* Fila de ecuación superior */}
-          <div className="shrink-0 flex items-center justify-center gap-2 pt-0.5">
+          <div className="shrink-0 flex items-center justify-center gap-2 pt-0.5 lg:pt-1">
             <EqChips left={stL} right={stR} />
           </div>
 
-          {/* Contenedor central con la balanza pegada abajo hacia la leyenda */}
-          <div className="relative w-full max-w-[540px] flex-1 min-h-0 flex items-end justify-center pb-0">
+          {/* Contenedor central con la balanza pegada abajo hacia la leyenda en tablet y amplia en laptop */}
+          <div className="relative w-full max-w-[540px] lg:max-w-[760px] xl:max-w-[880px] flex-1 min-h-0 flex items-end justify-center pb-0">
             <div className={`w-full flex justify-center ${shakeB ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
               <ScaleSVG
                 angle={angle}
@@ -752,7 +752,7 @@ export default function BalanzaEcuacion2View() {
                 left: '2%',
                 top: '12%',
                 width: '34%',
-                height: '68%',
+                height: '70%',
                 borderRadius: 14,
                 border: hlL ? '2px dashed #38bdf8' : '1px dashed transparent',
                 backgroundColor: hlL ? 'rgba(56,189,248,0.12)' : 'transparent',
@@ -765,7 +765,7 @@ export default function BalanzaEcuacion2View() {
                 right: '2%',
                 top: '12%',
                 width: '34%',
-                height: '68%',
+                height: '70%',
                 borderRadius: 14,
                 border: hlR ? '2px dashed #38bdf8' : '1px dashed transparent',
                 backgroundColor: hlR ? 'rgba(56,189,248,0.12)' : 'transparent',
@@ -774,12 +774,12 @@ export default function BalanzaEcuacion2View() {
           </div>
 
           {/* Micro-leyenda compacta pegada a la base */}
-          <div className="shrink-0 flex items-center justify-center gap-3 text-[9px] text-white/35 pt-0 pb-0.5">
+          <div className="shrink-0 flex items-center justify-center gap-3 lg:gap-4 text-[9px] lg:text-[10px] text-white/35 pt-0 pb-0.5 lg:pb-1">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[2px]" style={{ background: BLU }} /> +x / +1
+              <span className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-[2px]" style={{ background: BLU }} /> +x / +1
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[2px]" style={{ background: RED }} /> −x / −1
+              <span className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-[2px]" style={{ background: RED }} /> −x / −1
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-sky-300/60 font-semibold">
               ×n multiplica
@@ -791,9 +791,9 @@ export default function BalanzaEcuacion2View() {
         </main>
 
         {/* Columna Derecha: Multiplicar / Dividir */}
-        <aside className="w-[52px] sm:w-[60px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/5 rounded-xl">
-          <div className="w-full flex flex-col items-center gap-1">
-            <div className="text-[9px] font-black uppercase tracking-wider text-sky-400/70 text-center">
+        <aside className="w-[52px] sm:w-[60px] lg:w-[68px] shrink-0 flex flex-col items-center justify-between py-1 lg:py-2 bg-white/[0.02] border border-white/5 rounded-xl">
+          <div className="w-full flex flex-col items-center gap-1 lg:gap-1.5">
+            <div className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-sky-400/70 text-center">
               Mult.
             </div>
             {SCALE_MULT.map(op => {
@@ -803,7 +803,7 @@ export default function BalanzaEcuacion2View() {
                 <button
                   key={op}
                   onPointerDown={e => startDragScale(op, e)}
-                  className={`w-10 sm:w-11 h-6 rounded-md text-[10px] font-bold transition-all active:scale-95 flex items-center justify-center cursor-grab active:cursor-grabbing ${active ? 'bg-sky-500/35 border-sky-400/60 text-sky-100 border shadow-sm' : 'bg-sky-500/10 text-sky-300/75 border border-sky-400/20 hover:bg-sky-500/20'}`}
+                  className={`w-10 sm:w-11 lg:w-12 h-6 lg:h-7 rounded-md text-[10px] lg:text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center cursor-grab active:cursor-grabbing ${active ? 'bg-sky-500/35 border-sky-400/60 text-sky-100 border shadow-sm' : 'bg-sky-500/10 text-sky-300/75 border border-sky-400/20 hover:bg-sky-500/20'}`}
                   title={`Arrastrar multiplicación por ${n}`}
                 >
                   ×{n}
@@ -811,9 +811,9 @@ export default function BalanzaEcuacion2View() {
               )
             })}
 
-            <div className="w-8 h-px bg-white/10 my-0.5" />
+            <div className="w-8 lg:w-10 h-px bg-white/10 my-0.5" />
 
-            <div className="text-[9px] font-black uppercase tracking-wider text-emerald-400/70 text-center">
+            <div className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-emerald-400/70 text-center">
               Div.
             </div>
             {SCALE_DIV.map(op => {
@@ -823,7 +823,7 @@ export default function BalanzaEcuacion2View() {
                 <button
                   key={op}
                   onPointerDown={e => startDragScale(op, e)}
-                  className={`w-10 sm:w-11 h-6 rounded-md text-[10px] font-bold transition-all active:scale-95 flex items-center justify-center cursor-grab active:cursor-grabbing ${active ? 'bg-emerald-500/35 border-emerald-400/60 text-emerald-100 border shadow-sm' : 'bg-emerald-500/10 text-emerald-300/75 border border-emerald-400/20 hover:bg-emerald-500/20'}`}
+                  className={`w-10 sm:w-11 lg:w-12 h-6 lg:h-7 rounded-md text-[10px] lg:text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center cursor-grab active:cursor-grabbing ${active ? 'bg-emerald-500/35 border-emerald-400/60 text-emerald-100 border shadow-sm' : 'bg-emerald-500/10 text-emerald-300/75 border border-emerald-400/20 hover:bg-emerald-500/20'}`}
                   title={`Arrastrar división entre ${n}`}
                 >
                   ÷{n}
@@ -834,24 +834,24 @@ export default function BalanzaEcuacion2View() {
         </aside>
       </div>
 
-      {/* ── Barra Inferior de Acción y Feedback (40px) ── */}
-      <footer className="h-10 shrink-0 border-t border-white/10 px-2 sm:px-3 bg-[#0a0f1d] flex items-center justify-between gap-2">
+      {/* ── Barra Inferior de Acción y Feedback (40px tablet / 48px laptop) ── */}
+      <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
         {/* Mensaje de estado / Feedback */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
           {fb.kind === 'victory' ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 lg:px-3.5 lg:py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[11px] lg:text-xs font-bold">
               <Sparkles size={13} className="text-emerald-300 shrink-0 animate-bounce" />
               <span className="truncate">{fb.msg}</span>
             </div>
           ) : (
-            <div className={`px-2 py-0.5 rounded-md border text-[10px] truncate max-w-full font-medium ${fbCls[fb.kind]} ${shakeM ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
+            <div className={`px-2 py-0.5 lg:px-3 lg:py-1 rounded-md border text-[10px] lg:text-[11px] truncate max-w-full font-medium ${fbCls[fb.kind]} ${shakeM ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
               {fb.msg}
             </div>
           )}
 
           {/* Resumen de operaciones pendientes en platillos */}
           {hasPending && (
-            <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] lg:text-[11px] font-mono px-2 py-0.5 lg:px-3 lg:py-1 rounded bg-white/5 border border-white/10 shrink-0">
               {(pendScaleL || pendScaleR) ? (
                 <>
                   <span className={pendScaleL ? 'text-sky-300 font-bold' : 'text-white/25'}>Izq: {pendScaleL ? fmtScale(pendScaleL) : '—'}</span>
@@ -874,7 +874,7 @@ export default function BalanzaEcuacion2View() {
           {hasPending && (
             <button
               onClick={clearPending}
-              className="h-7 px-2 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1"
+              className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white/5 border border-white/10 text-[10px] lg:text-[11px] text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1"
               title="Cancelar fichas u operaciones pendientes"
             >
               <RotateCcw size={12} />
@@ -885,7 +885,7 @@ export default function BalanzaEcuacion2View() {
           <button
             onClick={handleOperate}
             disabled={consolidating}
-            className={`h-7 px-3.5 rounded-lg text-white font-bold text-[11px] active:scale-95 shadow transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`h-7 lg:h-8 px-3.5 lg:px-5 rounded-lg text-white font-bold text-[11px] lg:text-xs active:scale-95 shadow transition-all flex items-center gap-1.5 shrink-0 ${
               hasPending
                 ? 'bg-blue-500 hover:bg-blue-400 ring-2 ring-blue-400/30 shadow-blue-500/25'
                 : 'bg-blue-600/70 hover:bg-blue-500/80 text-white/90'
