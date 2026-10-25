@@ -47,6 +47,7 @@ src/
     ├── HomeView.tsx           # Página principal (competencias)
     ├── CompetenciaView.tsx    # Temas de una competencia + buscador
     ├── GeoplanoView.tsx       # Geoplano configurable con retos (pantalla completa)
+    ├── AngulosView.tsx        # Explorador de ángulos: 6 modos interactivos (pantalla completa)
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -57,6 +58,8 @@ src/
     ├── GranjeroRioView.tsx    # Juego de lógica del granjero cruzando el río
     ├── MonedaFalsaView.tsx    # Juego de lógica con balanza y 9 monedas
     ├── RegletaFracionesView.tsx # Regleta de fracciones interactiva
+    ├── BalanzaEcuacionView.tsx # Balanza de ecuaciones de primer grado
+    ├── BalanzaEcuacion2View.tsx # Balanza de ecuaciones de primer grado 2
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -111,6 +114,16 @@ public/
 - **8 retos con validación automática**: cuadrado, rectángulo, triángulo, triángulo rectángulo, rectángulo de área 6, cuadrado de área 9, pentágono y figura cerrada de área 12
 - **Estado efímero**: al salir de la vista se pierde la figura (sin localStorage ni backend)
 - **Sin dependencias nuevas**: Canvas 2D + eventos de puntero, optimizado para tablets modestas
+
+### 1.2 📐 Ángulos (`AngulosView`)
+- **6 modos en una sola vista** (pestañas compactas bajo la cabecera): ángulo llano, ángulo recto, secantes, paralelas con secante, triángulo y cuadrilátero
+- **Ángulo llano (180°)**: agrega hasta 3 líneas desde el vértice (botón "+ Línea") para formar hasta 4 ángulos; **ángulo recto (90°)**: hasta 2 líneas y 3 ángulos; los ángulos se miden solos y siempre muestran su suma (Σ = 180° / 90°)
+- **Giro dinámico**: cada línea se gira arrastrando su punto (nunca el vértice, que está fijo) y todas las medidas se actualizan en vivo
+- **Secantes**: dos rectas cruzadas con 4 ángulos etiquetados (α, β); los opuestos son iguales y los adyacentes suman 180°
+- **Paralelas y secante**: 8 ángulos medidos; botones F / Z / C colorean las parejas de ángulos correspondientes, alternos internos e internos del mismo lado (suman 180°)
+- **Triángulo y cuadrilátero**: arrastra los vértices y los ángulos interiores se miden solos; la suma siempre es 180° y 360° (soporta cuadriláteros cóncavos)
+- **Interfaz compacta** según el estándar de tablets: botones h-6/h-7 en tablet y lg:h-8 en escritorio, medidas en el pie, ayuda contextual por modo
+- **Estado efímero**: al salir de la vista todo se reinicia; sin dependencias nuevas (Canvas 2D + pointer events)
 
 ### 2. 🌡️ Introducción a Enteros (`IntroEnterosView`)
 - **Termómetro interactivo** arrastrable (rango: -20°C a 30°C)
@@ -242,6 +255,7 @@ public/
 | HomeView | ✅ Completo | ~180 | Navegación, actualización PWA |
 | CompetenciaView | ✅ Completo | ~185 | Búsqueda de temas por competencia |
 | GeoplanoView | ✅ Completo | ~1022 | Canvas, ligas arrastrables, retos automáticos |
+| AngulosView | ✅ Completo | ~660 | Canvas, 6 modos, líneas y vértices arrastrables con medidas en vivo |
 | IntroEnterosView | ✅ Completo | ~671 | Arrastre, botones |
 | RectaNumericaView | ✅ Completo | ~843 | Dados, arrastre, juego por turnos |
 | SumaEnterosView | ✅ Completo | ~673 | Fichas arrastrables, cancelación |
@@ -252,6 +266,8 @@ public/
 | GranjeroRioView | ✅ Completo | ~580 | Drag & drop, bote SVG, lógica |
 | MonedaFalsaView | ✅ Completo | ~330 | Balanza, clasificación de monedas, lógica |
 | RegletaFracionesView | ✅ Completo | ~700 | Drag & drop, snap magnético, fracciones interactivas |
+| BalanzaEcuacionView | ✅ Completo | ~779 | Balanza interactiva, fichas algebraicas, operaciones |
+| BalanzaEcuacion2View | ✅ Completo | ~779 | Balanza interactiva, fichas algebraicas, operaciones |
 | FraccionesView | 🚧 Placeholder | ~29 | — |
 | DecimalesView | 🚧 Placeholder | ~29 | — |
 | PorcentajesView | 🚧 Placeholder | ~29 | — |
@@ -325,6 +341,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/` | `HomeView` | Página principal con las competencias |
 | `/competencia/:competencyId` | `CompetenciaView` | Temas de una competencia con buscador |
 | `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
+| `/angulos` | `AngulosView` | Explorador de ángulos con 6 modos (pantalla completa) |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

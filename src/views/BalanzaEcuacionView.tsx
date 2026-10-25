@@ -428,7 +428,7 @@ export default function BalanzaEcuacionView() {
     window.addEventListener('pointerup', onUp)
   }, [])
 
-  const computeCancellations = (oldTerms: Term[], newTerms: Term[], _prefix: string): string[] => {
+  const computeCancellations = (oldTerms: Term[], newTerms: Term[]): string[] => {
     const cancels: string[] = []
     for (const t of oldTerms) {
       const n = Math.min(Math.abs(Math.round(t.val)), 20)
@@ -537,8 +537,8 @@ export default function BalanzaEcuacionView() {
       const newL = simplify(allL)
       const newR = simplify(allR)
 
-      const leftCancels = computeCancellations(stL, newL, 'L')
-      const rightCancels = computeCancellations(stR, newR, 'R')
+      const leftCancels = computeCancellations(stL, newL)
+      const rightCancels = computeCancellations(stR, newR)
       const allCancels = [...leftCancels, ...rightCancels]
 
       if (allCancels.length > 0) {

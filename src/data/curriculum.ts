@@ -185,10 +185,12 @@ export const topics: Topic[] = [
 
     // ── Forma, movimiento y localización ─────────────────────────────────────
     { id: 'geoplano', competency: 'forma', path: '/geoplano', title: 'Geoplano', description: 'Figuras con ligas y retos', available: true },
+    { id: 'angulos', competency: 'forma', path: '/angulos', title: 'Ángulos', description: 'Mide y gira ángulos', available: true },
 
     // ── Regularidad, equivalencia y cambio ───────────────────────────────────
     { id: 'igualdad-balanza', competency: 'regularidad', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true },
     { id: 'balanza-ecuacion', competency: 'regularidad', path: '/balanza-ecuacion', title: 'Balanza de Ecuaciones', description: 'Resuelve ecuaciones de primer grado', available: true },
+    { id: 'balanza-ecuacion-2', competency: 'regularidad', path: '/balanza-ecuacion-2', title: 'Balanza de Ecuaciones 2', description: 'Resuelve ecuaciones de primer grado', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },

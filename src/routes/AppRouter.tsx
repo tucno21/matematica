@@ -21,7 +21,9 @@ import ConceptoFraccionView from '../views/ConceptoFraccionView'
 import FraccionConjuntoView from '../views/FraccionConjuntoView'
 import IgualdadBalanzaView from '../views/IgualdadBalanzaView'
 import BalanzaEcuacionView from '../views/BalanzaEcuacionView'
+import BalanzaEcuacion2View from '../views/BalanzaEcuacion2View'
 import GeoplanoView from '../views/GeoplanoView'
+import AngulosView from '../views/AngulosView'
 
 const router = createBrowserRouter([
     {
@@ -109,8 +111,16 @@ const router = createBrowserRouter([
         element: <Layout><BalanzaEcuacionView /></Layout>
     },
     {
+        path: '/balanza-ecuacion-2',
+        element: <BalanzaEcuacion2View />
+    },
+    {
         path: '/geoplano',
         element: <GeoplanoView />
+    },
+    {
+        path: '/angulos',
+        element: <AngulosView />
     }
 ])
 
