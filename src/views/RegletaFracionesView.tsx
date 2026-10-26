@@ -34,7 +34,9 @@ interface SnapTarget {
 interface FractionBarProps {
     fraction: Fraction;
     displayMode: DisplayMode;
+    barHeight: number;
     containerWidth: number;
+    zoom: number;
     onDragStart: () => void;
     onDrag: (pos: Position) => void;
     onDragStop: (pos: Position) => void;
@@ -48,20 +50,19 @@ interface GuideLinesProps {
     containerHeight: number;
     containerWidth: number;
     show: boolean;
+    rowHeight: number;
 }
 
-interface ToolbarProps {
-    displayMode: DisplayMode;
-    onDisplayMode: (mode: DisplayMode) => void;
-    onAdd: () => void;
-    onDelete: () => void;
-    onReset: () => void;
-    fractionCount: number;
-}
 
 interface RegletaFracionesCanvasProps {
     fractions: Fraction[];
     displayMode: DisplayMode;
+    rowHeight: number;
+    barHeight: number;
+    pan: Position;
+    zoom: number;
+    onPanChange: (pan: Position) => void;
+    onZoomToPoint: (targetZoom: number, clientX: number, clientY: number) => void;
     onDragStart: (id: string) => void;
     onDrag: (id: string, pos: Position) => void;
     onDragStop: (id: string, pos: Position) => void;
@@ -70,7 +71,6 @@ interface RegletaFracionesCanvasProps {
     draggingId: string | null;
     snapTargetMap: Record<string, SnapTarget | null>;
     onContainerWidth: (w: number) => void;
-    scrollWrapperRef: React.RefObject<HTMLDivElement | null>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -94,40 +94,42 @@ const COLORS: string[] = [
     'bg-violet-400',
 ];
 
-/** Height in px of each fraction bar row */
-const ROW_HEIGHT = 56;
+/** Height in px of each fraction bar row for desktop (>= 1024px) */
+const ROW_HEIGHT_DESKTOP = 56;
+/** Height in px of each fraction bar row for tablets and mobile (< 1024px) */
+const ROW_HEIGHT_TABLET = 34;
 
 /** Gap between bar and row boundary (top/bottom padding) */
-const BAR_GAP = 4;
-
-/** Actual bar height = ROW_HEIGHT - BAR_GAP (1 gap, bar sits flush top) */
-const BAR_HEIGHT = ROW_HEIGHT - BAR_GAP;
+const BAR_GAP = 3;
 
 /**
  * Width of fraction 1/1 as a percentage of container.
- * Reduced so users can move it horizontally.
+ * 50% ensures base-10 fractions (1/10 = 5%, 1/5 = 10%, 1/2 = 25%, 1/1 = 50%)
+ * align perfectly with the background grid columns.
  */
-const WHOLE_WIDTH_PERCENT = 52;
+const WHOLE_WIDTH_PERCENT = 50;
 
 /**
  * Snap thresholds — separate for each axis so diagonal drags
  * don't accidentally trigger snapping on the wrong axis.
  */
-const SNAP_THRESHOLD_MAIN = 24;   // along the joining axis
-const SNAP_THRESHOLD_CROSS = 20;  // perpendicular alignment tolerance
+const SNAP_THRESHOLD_MAIN = 22;   // along the joining axis
+const SNAP_THRESHOLD_CROSS = 18;  // perpendicular alignment tolerance
 
-const INITIAL_FRACTIONS: Fraction[] = [
-    { id: 'f1', numerator: 1, denominator: 1, color: 'bg-fuchsia-500', x: 0, y: 0 },
-    { id: 'f2', numerator: 1, denominator: 2, color: 'bg-lime-500', x: 0, y: ROW_HEIGHT },
-    { id: 'f3', numerator: 1, denominator: 3, color: 'bg-red-400', x: 0, y: ROW_HEIGHT * 2 },
-    { id: 'f4', numerator: 1, denominator: 4, color: 'bg-yellow-300', x: 0, y: ROW_HEIGHT * 3 },
-    { id: 'f5', numerator: 1, denominator: 5, color: 'bg-blue-400', x: 0, y: ROW_HEIGHT * 4 },
-    { id: 'f6', numerator: 1, denominator: 6, color: 'bg-pink-400', x: 0, y: ROW_HEIGHT * 5 },
-    { id: 'f7', numerator: 1, denominator: 7, color: 'bg-purple-400', x: 0, y: ROW_HEIGHT * 6 },
-    { id: 'f8', numerator: 1, denominator: 8, color: 'bg-green-400', x: 0, y: ROW_HEIGHT * 7 },
-    { id: 'f9', numerator: 1, denominator: 9, color: 'bg-cyan-400', x: 0, y: ROW_HEIGHT * 8 },
-    { id: 'f10', numerator: 1, denominator: 10, color: 'bg-amber-400', x: 0, y: ROW_HEIGHT * 9 },
-];
+function createInitialFractions(rowH: number): Fraction[] {
+    return [
+        { id: 'f1', numerator: 1, denominator: 1, color: 'bg-fuchsia-500', x: 0, y: 0 },
+        { id: 'f2', numerator: 1, denominator: 2, color: 'bg-lime-500', x: 0, y: rowH },
+        { id: 'f3', numerator: 1, denominator: 3, color: 'bg-red-400', x: 0, y: rowH * 2 },
+        { id: 'f4', numerator: 1, denominator: 4, color: 'bg-yellow-300', x: 0, y: rowH * 3 },
+        { id: 'f5', numerator: 1, denominator: 5, color: 'bg-blue-400', x: 0, y: rowH * 4 },
+        { id: 'f6', numerator: 1, denominator: 6, color: 'bg-pink-400', x: 0, y: rowH * 5 },
+        { id: 'f7', numerator: 1, denominator: 7, color: 'bg-purple-400', x: 0, y: rowH * 6 },
+        { id: 'f8', numerator: 1, denominator: 8, color: 'bg-green-400', x: 0, y: rowH * 7 },
+        { id: 'f9', numerator: 1, denominator: 9, color: 'bg-cyan-400', x: 0, y: rowH * 8 },
+        { id: 'f10', numerator: 1, denominator: 10, color: 'bg-amber-400', x: 0, y: rowH * 9 },
+    ];
+}
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +154,7 @@ function computeSnapTarget(
     dragged: Fraction,
     others: Fraction[],
     containerWidth: number,
+    rowHeight: number,
 ): SnapTarget | null {
     const dW = barPixelWidth(dragged.denominator, containerWidth);
 
@@ -191,15 +194,15 @@ function computeSnapTarget(
         const xDiff = Math.abs(dragged.x - other.x);   // cross axis for vertical snap
 
         if (xDiff <= SNAP_THRESHOLD_CROSS) {
-            // dragged snaps below other (dragged.y ≈ other.y + BAR_HEIGHT + BAR_GAP)
-            const gapBelow = Math.abs(dragged.y - (other.y + BAR_HEIGHT + BAR_GAP));
+            // dragged snaps below other (dragged.y ≈ other.y + rowHeight)
+            const gapBelow = Math.abs(dragged.y - (other.y + rowHeight));
             if (gapBelow <= SNAP_THRESHOLD_MAIN) {
                 const score = gapBelow + xDiff * 0.5;
                 if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'top' }; }
             }
 
-            // dragged snaps above other (dragged.y + BAR_HEIGHT + BAR_GAP ≈ other.y)
-            const gapAbove = Math.abs((dragged.y + BAR_HEIGHT + BAR_GAP) - other.y);
+            // dragged snaps above other (dragged.y + rowHeight ≈ other.y)
+            const gapAbove = Math.abs((dragged.y + rowHeight) - other.y);
             if (gapAbove <= SNAP_THRESHOLD_MAIN) {
                 const score = gapAbove + xDiff * 0.5;
                 if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'bottom' }; }
@@ -218,6 +221,7 @@ function snapPosition(
     target: Fraction,
     side: 'left' | 'right' | 'top' | 'bottom',
     containerWidth: number,
+    rowHeight: number,
 ): Position {
     const dW = barPixelWidth(dragged.denominator, containerWidth);
     const tW = barPixelWidth(target.denominator, containerWidth);
@@ -230,11 +234,11 @@ function snapPosition(
             // Place dragged immediately to the left of target — no gap
             return { x: target.x - dW, y: target.y };
         case 'top':
-            // Place dragged below target: target.y + BAR_HEIGHT + BAR_GAP
-            return { x: target.x, y: target.y + BAR_HEIGHT + BAR_GAP };
+            // Place dragged below target
+            return { x: target.x, y: target.y + rowHeight };
         case 'bottom':
             // Place dragged above target
-            return { x: target.x, y: target.y - BAR_HEIGHT - BAR_GAP };
+            return { x: target.x, y: target.y - rowHeight };
         default:
             return { x: dragged.x, y: dragged.y };
     }
@@ -320,6 +324,9 @@ function useElementSize(ref: React.RefObject<HTMLElement | null>): ContainerSize
 const FractionBar = React.memo(function FractionBar({
     fraction,
     displayMode,
+    barHeight,
+    containerWidth,
+    zoom,
     onDragStart,
     onDrag,
     onDragStop,
@@ -341,23 +348,21 @@ const FractionBar = React.memo(function FractionBar({
         };
     }, []);
 
-    const widthPct = fraction.denominator === 1
-        ? WHOLE_WIDTH_PERCENT
-        : WHOLE_WIDTH_PERCENT / fraction.denominator;
+    const barW = barPixelWidth(fraction.denominator, containerWidth);
 
     const renderValue = (): React.ReactNode => {
         const val = fraction.numerator / fraction.denominator;
         switch (displayMode) {
             case 'decimals':
-                return <span className="text-xs font-bold tabular-nums">{val.toFixed(2)}</span>;
+                return <span className="text-[10px] lg:text-xs font-bold tabular-nums">{val.toFixed(2)}</span>;
             case 'percentages':
-                return <span className="text-xs font-bold tabular-nums">{(val * 100).toFixed(0)}%</span>;
+                return <span className="text-[10px] lg:text-xs font-bold tabular-nums">{(val * 100).toFixed(0)}%</span>;
             default:
                 return (
                     <div className="flex flex-col items-center leading-none select-none gap-0.5">
-                        <span className="text-xs font-extrabold">{fraction.numerator}</span>
-                        <div className="w-3.5 border-t-2 border-gray-800" />
-                        <span className="text-xs font-extrabold">{fraction.denominator}</span>
+                        <span className="text-[10px] lg:text-xs font-extrabold">{fraction.numerator}</span>
+                        <div className="w-2.5 lg:w-3.5 border-t border-gray-800" />
+                        <span className="text-[10px] lg:text-xs font-extrabold">{fraction.denominator}</span>
                     </div>
                 );
         }
@@ -368,7 +373,7 @@ const FractionBar = React.memo(function FractionBar({
     return (
         <Draggable
             nodeRef={nodeRef}
-            bounds="parent"
+            scale={zoom}
             position={{ x: fraction.x, y: fraction.y }}
             onStart={() => {
                 onDragStart();
@@ -404,21 +409,23 @@ const FractionBar = React.memo(function FractionBar({
         >
             <div
                 ref={nodeRef}
+                data-bar="true"
                 title="Doble clic para duplicar · Mantén 3s para eliminar"
                 className={`
           absolute cursor-grab active:cursor-grabbing
           ${fraction.color}
           flex items-center justify-center
-          border-2 ${isLongPressing ? 'border-red-500 border-solid' : hasSnapTarget ? 'border-white border-dashed' : 'border-gray-700'}
+          border ${isLongPressing ? 'border-red-500 border-solid ring-1 ring-red-500' : hasSnapTarget ? 'border-white border-dashed ring-1 ring-white' : 'border-gray-800'}
           select-none touch-none
-          fraction-bar
+          fraction-bar rounded-none
           ${isSnapping ? 'snapping' : ''}
           ${isLongPressing ? 'long-pressing' : ''}
         `}
                 style={{
-                    width: `${widthPct}%`,
-                    height: `${BAR_HEIGHT}px`,
-                    minWidth: 28,
+                    width: `${barW}px`,
+                    height: `${barHeight}px`,
+                    minWidth: 22,
+                    borderRadius: 0,
                     zIndex: isSnapping || hasSnapTarget ? 40 : 1,
                     transition: isSnapping
                         ? 'left 0.18s cubic-bezier(.22,.68,0,1.2), top 0.18s cubic-bezier(.22,.68,0,1.2), box-shadow 0.15s'
@@ -429,11 +436,11 @@ const FractionBar = React.memo(function FractionBar({
             >
                 {renderValue()}
                 {hasSnapTarget && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full border border-blue-400 animate-pulse" />
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-none border border-blue-400 animate-pulse" />
                 )}
                 {isLongPressing && (
-                    <div className="absolute inset-0 bg-red-500/25 rounded-sm flex items-center justify-center pointer-events-none">
-                        <span className="text-[10px] font-bold text-red-800 bg-white/90 px-1.5 py-0.5 rounded-md shadow">No soltar para eliminar</span>
+                    <div className="absolute inset-0 bg-red-500/25 rounded-none flex items-center justify-center pointer-events-none" style={{ borderRadius: 0 }}>
+                        <span className="text-[9px] lg:text-[10px] font-bold text-red-800 bg-white/90 px-1 py-0.5 shadow" style={{ borderRadius: 0 }}>No soltar para eliminar</span>
                     </div>
                 )}
             </div>
@@ -444,17 +451,17 @@ const FractionBar = React.memo(function FractionBar({
 /**
  * Guide rule overlay shown while dragging.
  */
-function GuideLines({ containerHeight, containerWidth, show }: GuideLinesProps) {
+function GuideLines({ containerHeight, containerWidth, show, rowHeight }: GuideLinesProps) {
     if (!show || containerWidth === 0) return null;
     const hLines: React.ReactNode[] = [];
     const vLines: React.ReactNode[] = [];
-    const rows = Math.ceil(containerHeight / ROW_HEIGHT);
+    const rows = Math.ceil(containerHeight / rowHeight);
     for (let i = 1; i <= rows; i++) {
         hLines.push(
             <line
                 key={`h${i}`}
-                x1={0} y1={i * ROW_HEIGHT}
-                x2={containerWidth} y2={i * ROW_HEIGHT}
+                x1={0} y1={i * rowHeight}
+                x2={containerWidth} y2={i * rowHeight}
                 stroke="#93c5fd" strokeWidth="1" strokeDasharray="4 4" opacity="0.5"
             />
         );
@@ -482,93 +489,6 @@ function GuideLines({ containerHeight, containerWidth, show }: GuideLinesProps) 
     );
 }
 
-/**
- * Toolbar with all buttons in a single row.
- */
-function Toolbar({ displayMode, onDisplayMode, onAdd, onDelete, onReset, fractionCount }: ToolbarProps) {
-    const buttons: Array<{
-        key: string;
-        label: string;
-        cls: string;
-        action: () => void;
-        disabled?: boolean;
-        isMode?: boolean;
-        active?: boolean;
-    }> = [
-            {
-                key: 'fractions',
-                label: '½',
-                cls: 'bg-blue-500 hover:bg-blue-600',
-                action: () => onDisplayMode('fractions'),
-                isMode: true,
-                active: displayMode === 'fractions',
-            },
-            {
-                key: 'decimals',
-                label: '0.5',
-                cls: 'bg-emerald-500 hover:bg-emerald-600',
-                action: () => onDisplayMode('decimals'),
-                isMode: true,
-                active: displayMode === 'decimals',
-            },
-            {
-                key: 'percentages',
-                label: '50%',
-                cls: 'bg-yellow-500 hover:bg-yellow-600',
-                action: () => onDisplayMode('percentages'),
-                isMode: true,
-                active: displayMode === 'percentages',
-            },
-            {
-                key: 'add',
-                label: '＋',
-                cls: 'bg-purple-500 hover:bg-purple-600',
-                action: onAdd,
-            },
-            {
-                key: 'delete',
-                label: '－',
-                cls: 'bg-red-500 hover:bg-red-600',
-                action: onDelete,
-                disabled: fractionCount <= 1,
-            },
-            {
-                key: 'reset',
-                label: '↺',
-                cls: 'bg-gray-500 hover:bg-gray-600',
-                action: onReset,
-            },
-        ];
-
-    return (
-        <div className="flex gap-3 w-full mb-1">
-            {buttons.map(({ key, label, cls, action, disabled, isMode, active }) => (
-                <button
-                    key={key}
-                    onClick={action}
-                    disabled={disabled}
-                    aria-pressed={isMode ? active : undefined}
-                    title={
-                        key === 'fractions' ? 'Mostrar como fracción' :
-                            key === 'decimals' ? 'Mostrar como decimal' :
-                                key === 'percentages' ? 'Mostrar como porcentaje' :
-                                    key === 'add' ? 'Agregar fracción' :
-                                        key === 'delete' ? 'Eliminar última fracción' :
-                                            'Reiniciar'
-                    }
-                    className={`
-            flex-1 py-1.5 rounded-xl text-white font-bold text-sm
-            transition-all duration-150 ${cls}
-            ${active ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-100 shadow-md scale-[1.05]' : 'opacity-80'}
-            ${disabled ? 'opacity-30 cursor-not-allowed' : 'active:scale-95'}
-          `}
-                >
-                    {label}
-                </button>
-            ))}
-        </div>
-    );
-}
 
 /**
  * Canvas containing all fraction bars.
@@ -582,6 +502,12 @@ function Toolbar({ displayMode, onDisplayMode, onAdd, onDelete, onReset, fractio
 function RegletaFracionesCanvas({
     fractions,
     displayMode,
+    rowHeight,
+    barHeight,
+    pan,
+    zoom,
+    onPanChange,
+    onZoomToPoint,
     onDragStart,
     onDrag,
     onDragStop,
@@ -590,7 +516,6 @@ function RegletaFracionesCanvas({
     draggingId,
     snapTargetMap,
     onContainerWidth,
-    scrollWrapperRef,
 }: RegletaFracionesCanvasProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cW, height: cH } = useElementSize(containerRef);
@@ -600,121 +525,253 @@ function RegletaFracionesCanvas({
         if (cW > 0) onContainerWidth(cW);
     }, [cW, onContainerWidth]);
 
-    // ── Three-finger scroll ──────────────────────────────────────────────────
-    // Attach to the canvas itself so the gesture works anywhere inside it.
-    // When 3 fingers are detected we forward scroll to the wrapper and
-    // suppress the default behaviour so draggable doesn't also fire.
-    const threeFingerRef = useRef<{ startY: number; scrollStart: number } | null>(null);
-
+    // Rueda del ratón para zoom enfocado en el puntero
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
 
-        const onTouchStart = (e: TouchEvent) => {
-            if (e.touches.length === 3) {
-                const wrapper = scrollWrapperRef.current;
-                threeFingerRef.current = {
-                    startY: (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3,
-                    scrollStart: wrapper ? wrapper.scrollTop : 0,
-                };
-            } else {
-                threeFingerRef.current = null;
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.12 : 0.88;
+            onZoomToPoint(zoom * factor, e.clientX, e.clientY);
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        return () => el.removeEventListener('wheel', handleWheel);
+    }, [zoom, onZoomToPoint]);
+
+    // Gestión de pointers para Pan con 1 dedo o ratón, y Pinch-to-zoom con 2 dedos
+    const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const isPanningRef = useRef(false);
+    const panStartRef = useRef({ x: 0, y: 0, initialPanX: 0, initialPanY: 0 });
+    const pinchStartRef = useRef({ dist: 0, zoom: 1, midX: 0, midY: 0 });
+
+    const getDistance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        // Si el evento se originó en una barra de fracción interactiva, ignorar el pan del lienzo
+        if ((e.target as HTMLElement).closest('[data-bar]')) return;
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (activePointersRef.current.size >= 2) {
+            isPanningRef.current = false;
+            const pts = Array.from(activePointersRef.current.values());
+            pinchStartRef.current = {
+                dist: getDistance(pts[0], pts[1]),
+                zoom,
+                midX: (pts[0].x + pts[1].x) / 2,
+                midY: (pts[0].y + pts[1].y) / 2,
+            };
+        } else if (activePointersRef.current.size === 1) {
+            isPanningRef.current = true;
+            panStartRef.current = {
+                x: e.clientX,
+                y: e.clientY,
+                initialPanX: pan.x,
+                initialPanY: pan.y,
+            };
+        }
+
+        const onPointerMove = (ev: PointerEvent) => {
+            if (!activePointersRef.current.has(ev.pointerId)) return;
+            activePointersRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+
+            if (activePointersRef.current.size >= 2) {
+                const pts = Array.from(activePointersRef.current.values());
+                const curDist = getDistance(pts[0], pts[1]);
+                const midX = (pts[0].x + pts[1].x) / 2;
+                const midY = (pts[0].y + pts[1].y) / 2;
+
+                if (pinchStartRef.current.dist > 5) {
+                    const ratio = curDist / pinchStartRef.current.dist;
+                    onZoomToPoint(pinchStartRef.current.zoom * ratio, midX, midY);
+                }
+            } else if (isPanningRef.current) {
+                const dx = ev.clientX - panStartRef.current.x;
+                const dy = ev.clientY - panStartRef.current.y;
+                onPanChange({
+                    x: Math.round(panStartRef.current.initialPanX + dx),
+                    y: Math.round(panStartRef.current.initialPanY + dy),
+                });
             }
         };
 
-        const onTouchMove = (e: TouchEvent) => {
-            if (e.touches.length !== 3 || !threeFingerRef.current) return;
-            e.preventDefault(); // block drag
-            const currentY = (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3;
-            const delta = threeFingerRef.current.startY - currentY;
-            const wrapper = scrollWrapperRef.current;
-            if (wrapper) {
-                wrapper.scrollTop = threeFingerRef.current.scrollStart + delta;
+        const onPointerUp = (ev: PointerEvent) => {
+            activePointersRef.current.delete(ev.pointerId);
+            if (activePointersRef.current.size === 0) {
+                isPanningRef.current = false;
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+                window.removeEventListener('pointercancel', onPointerUp);
             }
         };
 
-        const onTouchEnd = (e: TouchEvent) => {
-            if (e.touches.length < 3) threeFingerRef.current = null;
-        };
-
-        el.addEventListener('touchstart', onTouchStart, { passive: true });
-        el.addEventListener('touchmove', onTouchMove, { passive: false });
-        el.addEventListener('touchend', onTouchEnd, { passive: true });
-        return () => {
-            el.removeEventListener('touchstart', onTouchStart);
-            el.removeEventListener('touchmove', onTouchMove);
-            el.removeEventListener('touchend', onTouchEnd);
-        };
-    }, [scrollWrapperRef]);
-    // ────────────────────────────────────────────────────────────────────────
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+    };
 
     const isDragging = draggingId !== null;
 
-    // Canvas must be at least as tall as the lowest bar so it's always reachable
-    const minCanvasHeight = fractions.reduce(
-        (max, f) => Math.max(max, f.y + ROW_HEIGHT + 24),
-        INITIAL_FRACTIONS.length * ROW_HEIGHT + 32,
-    );
+    // Dimensiones ampliadas del mundo virtual para que el usuario pueda explorar holgadamente
+    const worldW = Math.max(cW > 0 ? cW : 800, 1600);
+    const worldH = Math.max(cH > 0 ? cH : 600, 1800);
 
     return (
         <div
             ref={containerRef}
-            className="relative w-full rounded-2xl overflow-hidden bg-white border-2 border-gray-200"
+            onPointerDown={handlePointerDown}
+            className="relative w-full h-full rounded-xl lg:rounded-2xl overflow-hidden bg-white border border-gray-200 lg:border-2 cursor-grab active:cursor-grabbing select-none"
             style={{
                 touchAction: 'none',
-                // Fill the wrapper on large screens; grow for extra bars on small screens
-                height: '100%',
-                minHeight: minCanvasHeight,
             }}
         >
-            {/* Graph paper background */}
-            {cW > 0 && (
+            {/* Contenedor del mundo virtual transformado con Pan y Zoom */}
+            <div
+                className="absolute inset-0 origin-top-left pointer-events-none"
+                style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    width: worldW,
+                    height: worldH,
+                }}
+            >
+                {/* Cuadrícula milimetrada infinita en el mundo virtual */}
                 <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
                     <defs>
                         <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
                             <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
                         </pattern>
-                        <pattern id="grid" width={cW / 10} height={ROW_HEIGHT} patternUnits="userSpaceOnUse">
-                            <rect width={cW / 10} height={ROW_HEIGHT} fill="url(#smallGrid)" />
-                            <path d={`M ${cW / 10} 0 L 0 0 0 ${ROW_HEIGHT}`} fill="none" stroke="#d1d5db" strokeWidth="1" />
+                        <pattern id="grid" width={cW > 0 ? cW / 10 : 80} height={rowHeight} patternUnits="userSpaceOnUse">
+                            <rect width={cW > 0 ? cW / 10 : 80} height={rowHeight} fill="url(#smallGrid)" />
+                            <path d={`M ${cW > 0 ? cW / 10 : 80} 0 L 0 0 0 ${rowHeight}`} fill="none" stroke="#d1d5db" strokeWidth="1" />
                         </pattern>
                     </defs>
                     <rect width="100%" height="100%" fill="url(#grid)" />
                 </svg>
-            )}
 
-            <GuideLines containerHeight={cH} containerWidth={cW} show={isDragging} />
+                <GuideLines containerHeight={worldH} containerWidth={worldW} show={isDragging} rowHeight={rowHeight} />
 
-            {fractions.map((fraction) => {
-                const snap = snapTargetMap[fraction.id] ?? null;
-                const isActive = fraction.id === draggingId;
-                return (
-                    <FractionBar
-                        key={fraction.id}
-                        fraction={fraction}
-                        displayMode={displayMode}
-                        containerWidth={cW}
-                        onDragStart={() => onDragStart(fraction.id)}
-                        onDrag={(pos) => onDrag(fraction.id, pos)}
-                        onDragStop={(pos) => onDragStop(fraction.id, pos)}
-                        onDuplicate={() => onDuplicate(fraction, cW)}
-                        onLongPressDelete={() => onDeleteById(fraction.id)}
-                        snapTarget={snap}
-                        isSnapping={isActive && !!snap}
-                    />
-                );
-            })}
+                {/* Barras de fracciones */}
+                <div className="relative w-full h-full pointer-events-auto">
+                    {fractions.map((fraction) => {
+                        const snap = snapTargetMap[fraction.id] ?? null;
+                        const isActive = fraction.id === draggingId;
+                        return (
+                            <FractionBar
+                                key={fraction.id}
+                                fraction={fraction}
+                                displayMode={displayMode}
+                                barHeight={barHeight}
+                                containerWidth={cW > 0 ? cW : 800}
+                                zoom={zoom}
+                                onDragStart={() => onDragStart(fraction.id)}
+                                onDrag={(pos) => onDrag(fraction.id, pos)}
+                                onDragStop={(pos) => onDragStop(fraction.id, pos)}
+                                onDuplicate={() => onDuplicate(fraction, cW > 0 ? cW : 800)}
+                                onLongPressDelete={() => onDeleteById(fraction.id)}
+                                snapTarget={snap}
+                                isSnapping={isActive && !!snap}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+interface StoredFractionData {
+    fractions: Fraction[];
+    savedRowHeight: number;
+}
+
 const RegletaFraciones = (): React.ReactElement => {
-    const [fractions, setFractions] = useLocalStorage<Fraction[]>(
-        'regletaFraciones_v3_fractions',
-        INITIAL_FRACTIONS,
-    );
+    // Detect whether we are on desktop (>= 1024px) vs tablet/mobile (< 1024px)
+    const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth >= 1024;
+    });
+
+    useEffect(() => {
+        const checkSize = () => {
+            setIsDesktop(window.innerWidth >= 1024);
+        };
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
+    }, []);
+
+    const rowHeight = isDesktop ? ROW_HEIGHT_DESKTOP : ROW_HEIGHT_TABLET;
+    const barHeight = rowHeight - BAR_GAP;
+
+    const [fractions, setFractions] = useState<Fraction[]>(() => {
+        try {
+            const raw = localStorage.getItem('regletaFraciones_v5_data');
+            if (raw) {
+                const parsed = JSON.parse(raw) as StoredFractionData;
+                if (parsed && Array.isArray(parsed.fractions) && parsed.fractions.length > 0) {
+                    const savedH = parsed.savedRowHeight || (isDesktop ? ROW_HEIGHT_DESKTOP : ROW_HEIGHT_TABLET);
+                    if (savedH !== rowHeight && savedH > 0) {
+                        const ratio = rowHeight / savedH;
+                        return parsed.fractions.map((f) => ({
+                            ...f,
+                            y: Math.round(f.y * ratio),
+                        }));
+                    }
+                    return parsed.fractions;
+                }
+            }
+        } catch {
+            // fallback
+        }
+        return createInitialFractions(rowHeight);
+    });
+
+    // Escalar y sincronizar posiciones verticales cuando cambie la resolución o tamaño de pantalla
+    const prevRowHeightRef = useRef<number>(rowHeight);
+    useEffect(() => {
+        if (prevRowHeightRef.current !== rowHeight) {
+            const ratio = rowHeight / prevRowHeightRef.current;
+            setFractions((prev) =>
+                prev.map((f) => ({
+                    ...f,
+                    y: Math.round(f.y * ratio),
+                }))
+            );
+            prevRowHeightRef.current = rowHeight;
+        }
+    }, [rowHeight]);
+
+    // Persistir fracciones con el rowHeight actual
+    useEffect(() => {
+        try {
+            const dataToSave: StoredFractionData = {
+                fractions,
+                savedRowHeight: rowHeight,
+            };
+            localStorage.setItem('regletaFraciones_v5_data', JSON.stringify(dataToSave));
+        } catch {
+            // ignore
+        }
+    }, [fractions, rowHeight]);
+
+    // Limpieza de claves anteriores para prevenir desalineaciones por caché heredada
+    useEffect(() => {
+        try {
+            localStorage.removeItem('regletaFraciones_v4_fractions');
+            localStorage.removeItem('regletaFraciones_fractions');
+        } catch {
+            // ignore
+        }
+    }, []);
+
     const [displayMode, setDisplayMode] = useLocalStorage<DisplayMode>(
         'regletaFraciones_v3_mode',
         'fractions',
@@ -722,13 +779,51 @@ const RegletaFraciones = (): React.ReactElement => {
 
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
+    // Estado de Pan y Zoom del lienzo
+    const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState<number>(1);
+    const panRef = useRef<Position>({ x: 0, y: 0 });
+    const zoomRef = useRef<number>(1);
+    useEffect(() => {
+        panRef.current = pan;
+        zoomRef.current = zoom;
+    }, [pan, zoom]);
+
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+    // Zoom enfocado hacia el cursor o punto medio táctil
+    const handleZoomToPoint = useCallback((targetZoom: number, clientX: number, clientY: number) => {
+        if (!canvasContainerRef.current) return;
+        const rect = canvasContainerRef.current.getBoundingClientRect();
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+
+        const currentZoom = zoomRef.current;
+        const currentPan = panRef.current;
+        const nextZoom = Math.min(2.5, Math.max(0.6, Math.round(targetZoom * 100) / 100));
+        if (Math.abs(nextZoom - currentZoom) < 0.001) return;
+
+        const worldX = (px - currentPan.x) / currentZoom;
+        const worldY = (py - currentPan.y) / currentZoom;
+
+        const newPanX = Math.round(px - worldX * nextZoom);
+        const newPanY = Math.round(py - worldY * nextZoom);
+
+        setZoom(nextZoom);
+        setPan({ x: newPanX, y: newPanY });
+    }, []);
+
+    const resetView = useCallback(() => {
+        setPan({ x: 0, y: 0 });
+        setZoom(1);
+    }, []);
+
     /**
      * Live container width, updated whenever the canvas resizes.
      * Stored in a ref so drag handlers always read the current value
      * without needing to re-create callbacks.
      */
     const containerWidthRef = useRef<number>(0);
-    const scrollWrapperRef = useRef<HTMLDivElement>(null);
 
     const handleContainerWidth = useCallback((w: number) => {
         containerWidthRef.current = w;
@@ -750,10 +845,10 @@ const RegletaFraciones = (): React.ReactElement => {
             denominator: nextDenom,
             color: COLORS[(nextDenom - 1) % COLORS.length],
             x: 0,
-            y: lastY + ROW_HEIGHT,
+            y: lastY + rowHeight,
         };
         setFractions((prev) => [...prev, newF]);
-    }, [fractions, setFractions]);
+    }, [fractions, rowHeight, setFractions]);
 
     const deleteFraction = useCallback(() => {
         if (fractions.length <= 1) return;
@@ -774,9 +869,9 @@ const RegletaFraciones = (): React.ReactElement => {
     }, [setFractions]);
 
     const resetFractions = useCallback(() => {
-        setFractions(INITIAL_FRACTIONS);
+        setFractions(createInitialFractions(rowHeight));
         setSnapTargetMap({});
-    }, [setFractions]);
+    }, [rowHeight, setFractions]);
 
     const handleDragStart = useCallback((id: string) => {
         setDraggingId(id);
@@ -789,7 +884,7 @@ const RegletaFraciones = (): React.ReactElement => {
             if (!dragged) return prev;
             const cW = containerWidthRef.current;
             if (cW === 0) return prev;
-            const snap = computeSnapTarget({ ...dragged, ...pos }, prev, cW);
+            const snap = computeSnapTarget({ ...dragged, ...pos }, prev, cW, rowHeight);
             setSnapTargetMap((m) => {
                 // Avoid re-render if snap target hasn't changed
                 const existing = m[id];
@@ -798,7 +893,7 @@ const RegletaFraciones = (): React.ReactElement => {
             });
             return prev; // don't update positions during drag — Draggable handles it
         });
-    }, [setFractions]);
+    }, [rowHeight, setFractions]);
 
     const handleDragStop = useCallback((id: string, pos: Position) => {
         setDraggingId(null);
@@ -806,25 +901,25 @@ const RegletaFraciones = (): React.ReactElement => {
             const dragged = prev.find((f) => f.id === id);
             if (!dragged) return prev;
             const cW = containerWidthRef.current;
-            const snap = cW > 0 ? computeSnapTarget({ ...dragged, ...pos }, prev, cW) : null;
+            const snap = cW > 0 ? computeSnapTarget({ ...dragged, ...pos }, prev, cW, rowHeight) : null;
             let finalPos: Position = pos;
             if (snap) {
                 const target = prev.find((f) => f.id === snap.id);
                 if (target) {
-                    finalPos = snapPosition(dragged, target, snap.side, cW);
+                    finalPos = snapPosition(dragged, target, snap.side, cW, rowHeight);
                 }
             }
             setSnapTargetMap((m) => ({ ...m, [id]: null }));
             return prev.map((f) => (f.id === id ? { ...f, ...finalPos } : f));
         });
-    }, [setFractions]);
+    }, [rowHeight, setFractions]);
 
     const handleDuplicate = useCallback((fraction: Fraction, containerWidth: number) => {
         const pW = barPixelWidth(fraction.denominator, containerWidth);
         const maxX = containerWidth - pW;
         const candidateX = fraction.x + pW;
         const newX = candidateX <= maxX ? candidateX : 0;
-        const newY = candidateX <= maxX ? fraction.y : fraction.y + ROW_HEIGHT;
+        const newY = candidateX <= maxX ? fraction.y : fraction.y + rowHeight;
 
         const newF: Fraction = {
             ...fraction,
@@ -833,7 +928,7 @@ const RegletaFraciones = (): React.ReactElement => {
             y: newY,
         };
         setFractions((prev) => [...prev, newF]);
-    }, [setFractions]);
+    }, [rowHeight, setFractions]);
 
     const navigate = useNavigate();
     const [showHelp, setShowHelp] = useState(false);
@@ -856,17 +951,19 @@ const RegletaFraciones = (): React.ReactElement => {
         * { box-sizing: border-box; }
         html, body { margin: 0; height: 100%; overflow: hidden; }
         .fraction-bar {
+          border-radius: 0 !important;
+          border-width: 1px !important;
           will-change: transform;
           user-select: none;
           -webkit-user-select: none;
         }
         .fraction-bar:active {
-          box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+          box-shadow: 0 4px 14px rgba(0,0,0,0.22);
           z-index: 50 !important;
         }
         .snapping {
-          outline: 2.5px solid #3b82f6;
-          outline-offset: 2px;
+          outline: 1.5px solid #3b82f6;
+          outline-offset: 1px;
         }
         @keyframes popIn {
           0%   { opacity: 0; transform: scale(0.75) translateY(6px); }
@@ -883,58 +980,122 @@ const RegletaFraciones = (): React.ReactElement => {
         }
       `}</style>
 
-            {/* ── Header ── */}
-            <div className="relative flex items-center justify-center px-2 pt-2 pb-0.5 bg-gray-50 shrink-0">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="absolute left-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-600 text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
-                    title="Volver"
-                >
-                    ← Volver
-                </button>
+            {/* ── Cabecera unificada con título, modos de visualización y herramientas ── */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-gray-200/80 px-2 lg:px-4 bg-gray-50 select-none gap-1 sm:gap-2">
+                {/* Lado izquierdo: Volver + Título + Modos (½, 0.5, 50%) */}
+                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white border border-gray-300 text-gray-600 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all shrink-0 flex items-center gap-1"
+                        title="Volver"
+                    >
+                        <span>←</span>
+                        <span className="hidden sm:inline">Volver</span>
+                    </button>
 
-                <div className="text-center">
-                    <h1 className="text-base md:text-lg font-extrabold text-gray-800 leading-tight">
-                        Regleta de Fracciones
+                    <h1 className="text-xs sm:text-sm lg:text-base font-extrabold text-gray-800 whitespace-nowrap shrink-0">
+                        <span className="hidden sm:inline">Regleta de </span>Fracciones
                     </h1>
-                    <p className="text-gray-400 text-xs">
-                        Doble clic para duplicar · Mantén 3s para eliminar · 3 dedos para hacer scroll
-                    </p>
+
+                    {/* Botones de modo de visualización (½, 0.5, 50%) junto al título */}
+                    <div className="flex items-center bg-gray-200/80 p-0.5 rounded-lg shrink-0 gap-0.5">
+                        <button
+                            onClick={() => setDisplayMode('fractions')}
+                            className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
+                                displayMode === 'fractions'
+                                    ? 'bg-blue-500 text-white shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                            title="Mostrar como fracción"
+                        >
+                            ½
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode('decimals')}
+                            className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
+                                displayMode === 'decimals'
+                                    ? 'bg-emerald-500 text-white shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                            title="Mostrar como decimal"
+                        >
+                            0.5
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode('percentages')}
+                            className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
+                                displayMode === 'percentages'
+                                    ? 'bg-yellow-500 text-white shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                            title="Mostrar como porcentaje"
+                        >
+                            50%
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => setShowHelp(true)}
-                    className="absolute right-2 w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-600 text-sm font-bold flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
-                >
-                    ?
-                </button>
-            </div>
 
-            {/* ── Toolbar ── */}
-            <div className="px-2 pt-1 pb-1 bg-gray-50 shrink-0">
-                <Toolbar
-                    displayMode={displayMode}
-                    onDisplayMode={(m) => setDisplayMode(m)}
-                    onAdd={addFraction}
-                    onDelete={deleteFraction}
-                    onReset={resetFractions}
-                    fractionCount={fractions.length}
-                />
-            </div>
+                {/* Lado derecho: Acciones (+, -, ↺, Centrar, ?) */}
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <button
+                        onClick={addFraction}
+                        title="Agregar fracción"
+                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-lg bg-purple-500 text-white font-bold text-xs lg:text-sm flex items-center justify-center hover:bg-purple-600 active:scale-95 shadow-sm transition-all"
+                    >
+                        ＋
+                    </button>
+                    <button
+                        onClick={deleteFraction}
+                        disabled={fractions.length <= 1}
+                        title="Eliminar última fracción"
+                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-lg bg-red-500 text-white font-bold text-xs lg:text-sm flex items-center justify-center hover:bg-red-600 active:scale-95 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        －
+                    </button>
+                    <button
+                        onClick={resetFractions}
+                        title="Reiniciar barras iniciales"
+                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-lg bg-gray-500 text-white font-bold text-xs lg:text-sm flex items-center justify-center hover:bg-gray-600 active:scale-95 shadow-sm transition-all"
+                    >
+                        ↺
+                    </button>
 
-            {/* ── Canvas wrapper ─────────────────────────────────────────────────────
-                flex-1 + min-h-0 makes it fill all remaining vertical space.
-                overflow-y: auto  → no scroll on large screens (canvas fills 100%);
-                                    scroll appears only when minHeight > wrapper height.
-                The canvas receives the ref so three-finger touch can scroll it.
-            ── */}
+                    <div className="h-4 w-px bg-gray-300 mx-0.5" />
+
+                    <button
+                        onClick={resetView}
+                        title="Centrar vista del lienzo"
+                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all flex items-center gap-1"
+                    >
+                        <span>🎯</span>
+                        <span className="hidden md:inline">Centrar</span>
+                        <span className="text-[10px] text-gray-400 font-mono">({Math.round(zoom * 100)}%)</span>
+                    </button>
+
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        title="Ayuda"
+                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-white border border-gray-300 text-gray-600 text-xs lg:text-sm font-bold flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
+                    >
+                        ?
+                    </button>
+                </div>
+            </header>
+
+            {/* ── Canvas wrapper ── */}
             <div
-                ref={scrollWrapperRef}
-                className="flex-1 min-h-0 px-2 pb-2"
-                style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+                ref={canvasContainerRef}
+                className="flex-1 min-h-0 px-2 lg:px-4 pb-1.5 lg:pb-2 overflow-hidden"
             >
                 <RegletaFracionesCanvas
                     fractions={fractions}
                     displayMode={displayMode}
+                    rowHeight={rowHeight}
+                    barHeight={barHeight}
+                    pan={pan}
+                    zoom={zoom}
+                    onPanChange={setPan}
+                    onZoomToPoint={handleZoomToPoint}
                     onDragStart={handleDragStart}
                     onDrag={handleDrag}
                     onDragStop={handleDragStop}
@@ -943,13 +1104,15 @@ const RegletaFraciones = (): React.ReactElement => {
                     draggingId={draggingId}
                     snapTargetMap={snapTargetMap}
                     onContainerWidth={handleContainerWidth}
-                    scrollWrapperRef={scrollWrapperRef}
                 />
             </div>
 
             {/* ── Footer ── */}
-            <div className="text-center text-gray-400 text-xs pb-1.5 shrink-0">
-                {fractions.length} barra{fractions.length !== 1 ? 's' : ''} en la regleta
+            <div className="text-center text-gray-400 text-[10px] lg:text-xs py-0.5 lg:pb-1 shrink-0 flex items-center justify-center gap-2 sm:gap-3">
+                <span>{fractions.length} barra{fractions.length !== 1 ? 's' : ''} en la regleta</span>
+                <span>·</span>
+                <span className="font-mono text-gray-500">Zoom: {Math.round(zoom * 100)}%</span>
+                <span className="hidden sm:inline text-gray-400">· Arrastra el fondo para mover · Rueda o pellizca para zoom</span>
             </div>
 
             <ModalHelp
@@ -962,7 +1125,16 @@ const RegletaFraciones = (): React.ReactElement => {
             >
                 <ol className="space-y-3 text-gray-600 text-sm leading-relaxed list-decimal list-inside">
                     <li>
-                        <strong className="text-gray-800">Arrastra</strong> las barras de fracción para moverlas libremente dentro del lienzo.
+                        <strong className="text-gray-800">Arrastra libremente el fondo del lienzo</strong> con un dedo o el ratón para desplazarte y tener espacio infinito.
+                    </li>
+                    <li>
+                        Usa la <strong className="text-blue-500">rueda del ratón</strong> o haz <strong className="text-blue-500">pellizco con 2 dedos</strong> para acercar o alejar el zoom donde desees.
+                    </li>
+                    <li>
+                        Toca el botón <strong className="text-indigo-600">🎯 Centrar</strong> en la barra de herramientas para volver a la posición original en cualquier momento.
+                    </li>
+                    <li>
+                        <strong className="text-gray-800">Arrastra</strong> las barras de fracción desde su cuerpo para moverlas individualmente.
                     </li>
                     <li>
                         Las barras se <strong className="text-blue-500">acoplan magnéticamente</strong> cuando las acercas a otra barra.
@@ -977,13 +1149,7 @@ const RegletaFraciones = (): React.ReactElement => {
                         Usa los botones <strong className="text-purple-500">＋</strong> y <strong className="text-red-500">－</strong> para agregar o quitar fracciones.
                     </li>
                     <li>
-                        Cambia la vista entre <strong className="text-blue-500">fracción</strong>, <strong className="text-emerald-500">decimal</strong> y <strong className="text-yellow-500">porcentaje</strong> con los botones del modo.
-                    </li>
-                    <li>
-                        Compara visualmente el tamaño de las fracciones acomodándolas una debajo de otra.
-                    </li>
-                    <li>
-                        En pantallas táctiles, usa <strong className="text-gray-800">3 dedos</strong> para hacer scroll vertical dentro del lienzo sin mover las barras.
+                        Cambia la vista entre <strong className="text-blue-500">fracción</strong>, <strong className="text-emerald-500">decimal</strong> y <strong className="text-yellow-500">porcentaje</strong> con los botones de modo.
                     </li>
                 </ol>
             </ModalHelp>
