@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -8,8 +8,7 @@ import {
   Check,
   Merge,
   RotateCcw,
-  Divide,
-  Zap
+  Divide
 } from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
 
@@ -248,6 +247,27 @@ export default function PuenteEcuacionView() {
     } else set(p => p + key)
   }, [activeKb, kbL, kbR, loadEquation])
 
+  // Soporte de teclado físico (para laptops y computadoras)
+  useEffect(() => {
+    if (!activeKb) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveKb(null)
+      } else if (e.key === 'Enter') {
+        setActiveKb(null)
+        loadEquation(kbL, kbR)
+      } else if (e.key === 'Backspace') {
+        const set = activeKb === 'left' ? setKbL : setKbR
+        set(p => p.slice(0, -1))
+      } else if (/^[0-9xX+\-=]$/.test(e.key)) {
+        const set = activeKb === 'left' ? setKbL : setKbR
+        set(p => p + (e.key === '-' ? '−' : e.key.toLowerCase()))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeKb, kbL, kbR, loadEquation])
+
   // Deshacer movimiento
   const handleUndo = () => {
     if (history.length === 0 || crossingId || coeffDivState.stage === 'flying') return
@@ -437,6 +457,12 @@ export default function PuenteEcuacionView() {
     if (!board) return
 
     setHistory(prev => [...prev, cards])
+    setCards(prev => prev.map(c => {
+      if (c.hasVar && c.side === varSide) {
+        return { ...c, coeff: 1 }
+      }
+      return c
+    }))
 
     const boardRect = board.getBoundingClientRect()
     let startX = varSide === 'left' ? boardRect.width * 0.32 : boardRect.width * 0.68
@@ -570,7 +596,7 @@ export default function PuenteEcuacionView() {
       </header>
 
       {/* ── 2. Barra de Control con Selector y Teclado Virtual (36-42px) ── */}
-      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs overflow-x-auto">
+      <div className="relative shrink-0 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs">
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <span className="text-[10px] lg:text-[11px] text-white/40 font-semibold hidden sm:inline">Reto:</span>
           <select
@@ -591,12 +617,12 @@ export default function PuenteEcuacionView() {
           <button
             type="button"
             onClick={() => setActiveKb(activeKb === 'left' ? null : 'left')}
-            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${
+            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center cursor-pointer ${
               activeKb === 'left'
                 ? 'border-violet-400 bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/50'
                 : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'
             }`}
-            title="Tocar para editar 1° miembro"
+            title="Tocar para editar 1° miembro con teclado virtual"
           >
             {kbL || '0'}
           </button>
@@ -604,19 +630,19 @@ export default function PuenteEcuacionView() {
           <button
             type="button"
             onClick={() => setActiveKb(activeKb === 'right' ? null : 'right')}
-            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center ${
+            className={`h-7 lg:h-8 min-w-[56px] sm:min-w-[70px] lg:min-w-[84px] px-2 rounded-md font-mono text-[10px] sm:text-[11px] lg:text-xs font-bold border transition-all truncate text-center cursor-pointer ${
               activeKb === 'right'
                 ? 'border-violet-400 bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/50'
                 : 'border-white/10 bg-white/5 text-white/90 hover:bg-white/10'
             }`}
-            title="Tocar para editar 2° miembro"
+            title="Tocar para editar 2° miembro con teclado virtual"
           >
             {kbR || '0'}
           </button>
           <button
             type="button"
             onClick={() => loadEquation(kbL, kbR)}
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0 flex items-center gap-1"
+            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] sm:text-[11px] lg:text-xs active:scale-95 transition-all shadow-sm shrink-0 flex items-center gap-1 cursor-pointer"
             title="Cargar ecuación"
           >
             <RefreshCw size={11} />
@@ -629,7 +655,7 @@ export default function PuenteEcuacionView() {
           {history.length > 0 && (
             <button
               onClick={handleUndo}
-              className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+              className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer"
               title="Deshacer último movimiento"
             >
               <RotateCcw size={11} />
@@ -639,65 +665,13 @@ export default function PuenteEcuacionView() {
 
           <button
             onClick={() => loadEquation(kbL, kbR)}
-            className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+            className="h-7 lg:h-8 px-1.5 sm:px-2 rounded bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer"
             title="Reiniciar reto"
           >
             <RefreshCw size={11} />
             <span className="hidden sm:inline">Reiniciar</span>
           </button>
         </div>
-
-        {/* Teclado Virtual Popover */}
-        {activeKb && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setActiveKb(null)} />
-            <div className="absolute left-2 sm:left-24 top-9 sm:top-10 lg:top-12 z-50 w-[270px] sm:w-[290px] lg:w-[320px] bg-[#0c1529] p-2.5 lg:p-3 rounded-xl border border-violet-500/40 shadow-2xl space-y-1.5 backdrop-blur-md">
-              <div className="flex items-center justify-between text-[11px] text-white/50 px-0.5">
-                <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setActiveKb('left')}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${activeKb === 'left' ? 'bg-violet-600 text-white' : 'text-white/60'}`}
-                  >
-                    1° Miembro
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveKb('right')}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${activeKb === 'right' ? 'bg-violet-600 text-white' : 'text-white/60'}`}
-                  >
-                    2° Miembro
-                  </button>
-                </div>
-                <button type="button" onClick={() => setActiveKb(null)} className="text-white/40 hover:text-white p-0.5 text-xs font-bold">✕</button>
-              </div>
-
-              <div className="text-center font-mono text-white text-xs lg:text-sm py-1 px-2 bg-white/5 rounded border border-white/10 min-h-[28px] flex items-center justify-center font-bold tracking-wider">
-                {activeKb === 'left' ? kbL || '0' : kbR || '0'}
-              </div>
-
-              <div className="grid grid-cols-5 gap-1 lg:gap-1.5">
-                {KB_ROWS.flat().map((k, i) => {
-                  const isOp = k === '+' || k === '−'
-                  const isDel = k === '⌫'
-                  const isClr = k === 'C'
-                  const isOk = k === '✓'
-                  let cls = 'h-7 lg:h-8 rounded text-[11px] font-bold active:scale-95 transition-all flex items-center justify-center '
-                  if (isOk) cls += 'col-span-3 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30'
-                  else if (isDel) cls += 'bg-red-500/20 text-red-300 border border-red-400/30'
-                  else if (isClr) cls += 'bg-red-500/15 text-red-300/70 border border-red-400/20'
-                  else if (isOp) cls += 'bg-sky-500/20 text-sky-300 border border-sky-400/30'
-                  else cls += 'bg-white/10 text-white border border-white/10'
-                  return (
-                    <button key={`${k}-${i}`} type="button" className={cls} onClick={() => handleKb(k)}>
-                      {k}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
       {/* ── 3. Área de Trabajo Central: El Puente (flex-1 min-h-0) ── */}
@@ -764,18 +738,19 @@ export default function PuenteEcuacionView() {
                   <div className="flex items-center gap-1.5 p-2 rounded-xl bg-sky-950/40 border border-sky-400/30">
                     <button
                       onClick={e => launchCoeffDivision(e)}
-                      className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-base lg:text-xl border-2 border-violet-300 shadow-xl shadow-violet-500/40 animate-pulse ring-2 ring-violet-400 flex flex-col items-center active:scale-95 transition-all"
+                      className="h-11 sm:h-13 lg:h-14 px-4 sm:px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-xl lg:text-2xl border-2 border-violet-300 shadow-xl shadow-violet-500/40 animate-pulse ring-2 ring-violet-400 flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                       title={`Tocar para pasar el ${currentA} dividiendo al otro lado`}
                     >
                       <span>{currentA}</span>
-                      <span className="text-[8px] lg:text-[9px] text-amber-200 font-bold flex items-center gap-0.5">
-                        × multiplica <Zap size={9} />
-                      </span>
                     </button>
-                    <span className="text-white/40 font-mono font-bold text-lg">·</span>
-                    <span className="font-mono font-black text-2xl lg:text-3xl text-sky-300 px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+                    <span className="text-white/40 font-mono font-bold text-xl">·</span>
+                    <span className="h-11 sm:h-13 lg:h-14 px-4 sm:px-5 rounded-xl font-mono font-black text-2xl lg:text-3xl text-sky-300 bg-white/5 border border-white/10 flex items-center justify-center">
                       x
                     </span>
+                  </div>
+                ) : varSide === 'left' && coeffDivState.stage !== 'idle' ? (
+                  <div className="h-11 sm:h-13 lg:h-14 px-5 sm:px-6 rounded-xl border-2 border-sky-400 bg-sky-500/25 text-sky-200 flex items-center justify-center font-mono font-black text-2xl lg:text-3xl shadow-lg ring-2 ring-sky-400/30">
+                    x
                   </div>
                 ) : (
                   leftTerms.map(term => {
@@ -863,16 +838,19 @@ export default function PuenteEcuacionView() {
                   <div className="flex items-center gap-1.5 p-2 rounded-xl bg-teal-950/40 border border-teal-400/30">
                     <button
                       onClick={e => launchCoeffDivision(e)}
-                      className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-base lg:text-xl border-2 border-violet-300 shadow-xl animate-pulse ring-2 ring-violet-400 flex flex-col items-center active:scale-95 transition-all"
+                      className="h-11 sm:h-13 lg:h-14 px-4 sm:px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-xl lg:text-2xl border-2 border-violet-300 shadow-xl shadow-violet-500/40 animate-pulse ring-2 ring-violet-400 flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                       title={`Tocar para pasar el ${currentA} dividiendo al otro lado`}
                     >
                       <span>{currentA}</span>
-                      <span className="text-[8px] text-amber-200 font-bold">× multiplica</span>
                     </button>
-                    <span className="text-white/40 font-mono font-bold text-lg">·</span>
-                    <span className="font-mono font-black text-2xl lg:text-3xl text-sky-300 px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+                    <span className="text-white/40 font-mono font-bold text-xl">·</span>
+                    <span className="h-11 sm:h-13 lg:h-14 px-4 sm:px-5 rounded-xl font-mono font-black text-2xl lg:text-3xl text-sky-300 bg-white/5 border border-white/10 flex items-center justify-center">
                       x
                     </span>
+                  </div>
+                ) : varSide === 'right' && coeffDivState.stage === 'flying' ? (
+                  <div className="h-11 sm:h-13 lg:h-14 px-5 sm:px-6 rounded-xl border-2 border-sky-400 bg-sky-500/25 text-sky-200 flex items-center justify-center font-mono font-black text-2xl lg:text-3xl shadow-lg ring-2 ring-sky-400/30">
+                    x
                   </div>
                 ) : (
                   rightTerms.map(term => {
@@ -962,7 +940,7 @@ export default function PuenteEcuacionView() {
                   <span>{coeffDivState.isFlipped ? `÷ ${coeffDivState.coeff}` : `× ${coeffDivState.coeff}`}</span>
                 </div>
                 <span className="text-[8px] font-bold uppercase tracking-tighter text-amber-100">
-                  {coeffDivState.isAtApex ? '⚡ × pasa a ÷' : coeffDivState.isFlipped ? 'Pasa a dividir' : 'Multiplicando'}
+                  {coeffDivState.isAtApex ? '⚡ × pasa a ÷' : coeffDivState.isFlipped ? 'Pasa a dividir' : 'Despejando factor'}
                 </span>
               </div>
             </div>
@@ -1027,6 +1005,71 @@ export default function PuenteEcuacionView() {
           )}
         </div>
       </footer>
+
+      {/* ── Teclado Virtual Flotante (Overlay Global z-50) ── */}
+      {activeKb && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-14 px-2 pointer-events-auto">
+          {/* Backdrop para cerrar al hacer clic afuera */}
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setActiveKb(null)} />
+
+          <div className="relative z-10 w-[275px] sm:w-[300px] lg:w-[330px] bg-[#0c1529] p-2.5 lg:p-3 rounded-2xl border border-violet-500/50 shadow-2xl space-y-1.5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between text-[11px] text-white/50 px-0.5">
+              <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setActiveKb('left')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    activeKb === 'left' ? 'bg-violet-600 text-white shadow-sm' : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  1° Miembro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveKb('right')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    activeKb === 'right' ? 'bg-violet-600 text-white shadow-sm' : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  2° Miembro
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveKb(null)}
+                className="text-white/40 hover:text-white p-0.5 text-xs font-bold cursor-pointer"
+                title="Cerrar teclado"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="text-center font-mono text-white text-xs lg:text-sm py-1 px-2 bg-white/5 rounded border border-white/10 min-h-[28px] flex items-center justify-center font-bold tracking-wider">
+              {activeKb === 'left' ? kbL || '0' : kbR || '0'}
+            </div>
+
+            <div className="grid grid-cols-5 gap-1 lg:gap-1.5">
+              {KB_ROWS.flat().map((k, i) => {
+                const isOp = k === '+' || k === '−'
+                const isDel = k === '⌫'
+                const isClr = k === 'C'
+                const isOk = k === '✓'
+                let cls = 'h-7 lg:h-8 rounded text-[11px] font-bold active:scale-95 transition-all flex items-center justify-center cursor-pointer '
+                if (isOk) cls += 'col-span-3 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/35'
+                else if (isDel) cls += 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/30'
+                else if (isClr) cls += 'bg-red-500/15 text-red-300/70 border border-red-400/20 hover:bg-red-500/25'
+                else if (isOp) cls += 'bg-sky-500/20 text-sky-300 border border-sky-400/30 hover:bg-sky-500/30'
+                else cls += 'bg-white/10 text-white border border-white/10 hover:bg-white/15'
+                return (
+                  <button key={`${k}-${i}`} type="button" className={cls} onClick={() => handleKb(k)}>
+                    {k}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal de Ayuda ── */}
       <ModalHelp
