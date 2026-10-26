@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
 
@@ -17,44 +17,89 @@ interface Chip {
     flipped: boolean;
 }
 
+interface PresetCase {
+    id: string;
+    label: string;
+    equation: string;
+    minuend: { sign: "positive" | "negative"; count: number };
+    subtrahend: { sign: "positive" | "negative"; count: number };
+    description: string;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
-const CHIP_SIZE = 50;
-const SNAP_DISTANCE = 68;
+const CHIP_SIZE = 44;
+const SNAP_DISTANCE = 62;
+
+const PRESET_CASES: PresetCase[] = [
+    {
+        id: "c1",
+        label: "Caso 1",
+        equation: "(+5) − (+2)",
+        minuend: { sign: "positive", count: 5 },
+        subtrahend: { sign: "positive", count: 2 },
+        description: "Resta directa: (+5) + (−2) = +3",
+    },
+    {
+        id: "c2",
+        label: "Caso 2",
+        equation: "(+3) − (−2)",
+        minuend: { sign: "positive", count: 3 },
+        subtrahend: { sign: "negative", count: 2 },
+        description: "Restar un negativo suma: (+3) + (+2) = +5",
+    },
+    {
+        id: "c3",
+        label: "Caso 3",
+        equation: "(−3) − (+2)",
+        minuend: { sign: "negative", count: 3 },
+        subtrahend: { sign: "positive", count: 2 },
+        description: "Acumular negativos: (−3) + (−2) = −5",
+    },
+    {
+        id: "c4",
+        label: "Caso 4",
+        equation: "(−2) − (−5)",
+        minuend: { sign: "negative", count: 2 },
+        subtrahend: { sign: "negative", count: 5 },
+        description: "Gana el opuesto positivo: (−2) + (+5) = +3",
+    },
+    {
+        id: "c5",
+        label: "Caso 5",
+        equation: "(+4) − (+4)",
+        minuend: { sign: "positive", count: 4 },
+        subtrahend: { sign: "positive", count: 4 },
+        description: "Resta de iguales: (+4) + (−4) = 0",
+    },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-/** Place chips in one half of the area (left=minuend, right=subtrahend) */
 function buildSideChips(
     color: ChipColor,
     count: number,
     isSubtrahend: boolean,
     areaW: number,
-    areaH: number,
+    areaH: number
 ): Chip[] {
     if (count === 0) return [];
     const halfW = areaW / 2;
-
-    // Define the available area for this group
     const startX = isSubtrahend ? halfW : 0;
     const availableWidth = halfW;
 
-    // Calculate grid layout
-    const cols = Math.max(1, Math.ceil(Math.sqrt(count * 1.4)));
-    const cellW = Math.max(CHIP_SIZE + 12, (availableWidth - 12) / cols);
-    const cellH = Math.max(CHIP_SIZE + 12, cellW);
+    const cols = Math.max(1, Math.ceil(Math.sqrt(count * 1.3)));
+    const cellW = Math.max(CHIP_SIZE + 8, (availableWidth - 8) / cols);
+    const cellH = Math.max(CHIP_SIZE + 8, cellW);
 
     return Array.from({ length: count }, (_, idx) => {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
-        const jx = (Math.random() - 0.5) * 12;
-        const jy = (Math.random() - 0.5) * 12;
+        const jx = (Math.random() - 0.5) * 8;
+        const jy = (Math.random() - 0.5) * 8;
 
-        // Calculate position relative to the start of this half
         const relativeX = 6 + col * cellW + cellW / 2 - CHIP_SIZE / 2 + jx;
         const absoluteX = startX + relativeX;
-
-        // Constrain within this half's boundaries
         const minX = startX + 4;
         const maxX = startX + availableWidth - CHIP_SIZE - 4;
 
@@ -62,8 +107,7 @@ function buildSideChips(
             id: uid(),
             color,
             x: Math.max(minX, Math.min(maxX, absoluteX)),
-            y: Math.max(4, Math.min(areaH - CHIP_SIZE - 4,
-                row * cellH + cellH / 2 - CHIP_SIZE / 2 + jy)),
+            y: Math.max(4, Math.min(areaH - CHIP_SIZE - 4, row * cellH + cellH / 2 - CHIP_SIZE / 2 + jy)),
             exploding: false,
             exploded: false,
             isSubtrahend,
@@ -72,9 +116,14 @@ function buildSideChips(
     });
 }
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 const TOKEN = {
     blue: {
+        bg: "bg-blue-500/10",
+        border: "border-blue-500/25",
+        text: "text-blue-300",
+        dot: "bg-blue-500",
+        btn: "bg-blue-500 hover:bg-blue-400",
         chipGrad: "from-blue-400 to-blue-600",
         chipShadow: "shadow-blue-500/40",
         chipBorder: "border-blue-300/30",
@@ -82,6 +131,11 @@ const TOKEN = {
         particle: "#60a5fa",
     },
     red: {
+        bg: "bg-red-500/10",
+        border: "border-red-500/25",
+        text: "text-red-300",
+        dot: "bg-red-500",
+        btn: "bg-red-500 hover:bg-red-400",
         chipGrad: "from-red-400 to-red-600",
         chipShadow: "shadow-red-500/40",
         chipBorder: "border-red-300/30",
@@ -90,167 +144,19 @@ const TOKEN = {
     },
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SignToggle({ value, onChange }: { value: "positive" | "negative"; onChange: (v: "positive" | "negative") => void }) {
-    return (
-        <div className="flex rounded-xl overflow-hidden border border-white/10 shrink-0">
-            <button onClick={() => onChange("positive")}
-                className={`px-3 py-1.5 text-xs font-black transition-all duration-200
-          ${value === "positive" ? "bg-blue-500/20 text-blue-300" : "bg-transparent text-white/35 hover:text-white/55"}`}>+</button>
-            <button onClick={() => onChange("negative")}
-                className={`px-3 py-1.5 text-xs font-black transition-all duration-200
-          ${value === "negative" ? "bg-red-500/20 text-red-300" : "bg-transparent text-white/35 hover:text-white/55"}`}>−</button>
-        </div>
-    );
-}
-
-function NumberInputCard({ label, sublabel, sign, count, onSignChange, onCountChange }: {
-    label: string; sublabel: string;
-    sign: "positive" | "negative"; count: number;
-    onSignChange: (v: "positive" | "negative") => void;
-    onCountChange: (v: number) => void;
-    accentColor: "blue" | "orange";
-}) {
-    // Colores basados en el signo (+ = azul, - = rojo)
-    const signColor: ChipColor = sign === "positive" ? "blue" : "red";
-
-    const colorMap = {
-        blue: { text: "text-blue-300", bg: "bg-blue-500/10", border: "border-blue-500/25", dot: "bg-blue-500", btn: "bg-blue-500 hover:bg-blue-400" },
-        red: { text: "text-red-300", bg: "bg-red-500/10", border: "border-red-500/25", dot: "bg-red-500", btn: "bg-red-500 hover:bg-red-400" },
-    };
-    const c = colorMap[signColor];
-    const t = TOKEN[signColor];
-
-    return (
-        <div className={`rounded-2xl border ${c.border} ${c.bg} p-4 flex flex-col gap-3 transition-colors duration-300`}>
-            {/* Row 1: label + color toggle */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${c.dot}`} />
-                    <div>
-                        <span className="text-[11px] font-black tracking-widest text-white/40 uppercase">{label}</span>
-                        <p className="text-[10px] text-white/25">{sublabel}</p>
-                    </div>
-                </div>
-                <SignToggle value={sign} onChange={onSignChange} />
-            </div>
-
-            {/* Row 2: mini chip dots + counter controls */}
-            <div className="flex items-center justify-between gap-3">
-                {/* Mini chip preview */}
-                <div className="flex flex-wrap gap-1.5 flex-1 min-h-7 content-center">
-                    {count === 0 ? (
-                        <span className="text-white/20 text-xs italic">Sin fichas aún</span>
-                    ) : (
-                        Array.from({ length: Math.min(count, 10) }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-5 h-5 rounded-full bg-linear-to-br ${t.chipGrad} flex items-center justify-center shadow-sm`}
-                            >
-                                <span className="text-white text-[8px] font-black leading-none">
-                                    {sign === "positive" ? "+" : "−"}
-                                </span>
-                            </div>
-                        ))
-                    )}
-                    {count > 10 && <span className={`text-xs font-bold ${c.text} opacity-60`}>+{count - 10}</span>}
-                </div>
-
-                {/* Counter */}
-                <div className="flex items-center gap-2 shrink-0">
-                    <button
-                        className={`w-9 h-9 rounded-xl ${c.btn} active:scale-90 text-white text-xl font-black shadow transition-all duration-100 disabled:opacity-20 disabled:cursor-not-allowed`}
-                        onClick={() => onCountChange(Math.max(0, count - 1))}
-                        disabled={count === 0}
-                    >−</button>
-                    <span className={`w-8 text-center text-2xl font-black tabular-nums ${c.text}`}>
-                        {count}
-                    </span>
-                    <button
-                        className={`w-9 h-9 rounded-xl ${c.btn} active:scale-90 text-white text-xl font-black shadow transition-all duration-100 disabled:opacity-20 disabled:cursor-not-allowed`}
-                        onClick={() => onCountChange(Math.min(9, count + 1))}
-                        disabled={count === 9}
-                    >+</button>
-                </div>
-            </div>
-
-            {/* Row 3: summary label */}
-            {count > 0 && (
-                <p className={`text-xs font-semibold ${c.text} opacity-60 leading-none`}>
-                    {count} ficha{count !== 1 ? "s" : ""} {sign === "positive" ? "positiva" : "negativa"}{count !== 1 ? "s" : ""} ({sign === "positive" ? "+1" : "−1"})
-                </p>
-            )}
-        </div>
-    );
-}
-
-function ExplosionParticles({ color }: { color: ChipColor }) {
-    return (
-        <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: 8 }, (_, i) => (
-                <div key={i} className="absolute w-2 h-2 rounded-full animate-particle"
-                    style={{ background: TOKEN[color].particle, left: "50%", top: "50%", "--angle": `${i * 45}deg` } as React.CSSProperties} />
-            ))}
-        </div>
-    );
-}
-
-function ChipEl({ chip, dragging, onPointerDown, onDoubleClick, isFlipping, canDrag }: {
-    chip: Chip; dragging: boolean;
-    onPointerDown: (e: React.PointerEvent, id: string) => void;
-    onDoubleClick: (id: string) => void;
-    isFlipping: boolean;
-    canDrag: boolean;
-}) {
-    if (chip.exploded) return null;
-    const t = TOKEN[chip.color];
-    const isFlippable = !canDrag && chip.isSubtrahend && !chip.flipped && !chip.exploded;
-
-    return (
-        <div
-            className={`absolute select-none
-        ${chip.exploding ? "animate-explode" : ""}
-        ${isFlipping ? "animate-flip" : ""}
-        ${dragging ? "scale-125 z-50" : ""}
-        ${!dragging && canDrag ? "z-10 hover:scale-110 cursor-grab active:cursor-grabbing" : ""}
-        ${!dragging && !canDrag && isFlippable ? "z-10 cursor-pointer hover:scale-110 pulse-hint" : ""}
-        ${!dragging && !canDrag && !isFlippable ? "z-10" : ""}
-      `}
-            style={{ width: CHIP_SIZE, height: CHIP_SIZE, left: chip.x, top: chip.y, touchAction: "none" }}
-            onPointerDown={(e) => onPointerDown(e, chip.id)}
-            onDoubleClick={() => onDoubleClick(chip.id)}
-        >
-            <div className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-lg ${t.chipShadow} flex items-center justify-center relative`}>
-                <span className="text-white font-black text-[14px] leading-none select-none">{t.sign}</span>
-                {chip.isSubtrahend && !chip.flipped && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border border-amber-200 flex items-center justify-center">
-                        <span className="text-[7px] font-black text-amber-900">S</span>
-                    </div>
-                )}
-                {chip.isSubtrahend && chip.flipped && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border border-emerald-200 flex items-center justify-center">
-                        <span className="text-[7px] font-black text-emerald-900">✓</span>
-                    </div>
-                )}
-            </div>
-            {chip.exploding && <ExplosionParticles color={chip.color} />}
-        </div>
-    );
-}
-
-// ─── Main View ────────────────────────────────────────────────────────────────
 export default function RestaEnterosView() {
     const navigate = useNavigate();
 
-    // Minuendo: positive by default. Sustraendo: NEGATIVE (red) by default.
+    // Inputs setup
     const [minuendSign, setMinuendSign] = useState<"positive" | "negative">("positive");
-    const [minuendValue, setMinuendValue] = useState(0);
-    const [subtrahendSign, setSubtrahendSign] = useState<"positive" | "negative">("negative");
-    const [subtrahendValue, setSubtrahendValue] = useState(0);
+    const [minuendValue, setMinuendValue] = useState<number>(5);
+    const [subtrahendSign, setSubtrahendSign] = useState<"positive" | "negative">("positive");
+    const [subtrahendValue, setSubtrahendValue] = useState<number>(2);
 
+    const [activePreset, setActivePreset] = useState<string | null>("c1");
+
+    // Phase management
     const [phase, setPhase] = useState<Phase>("setup");
-    const areaRef = useRef<HTMLDivElement>(null);
     const [chips, setChips] = useState<Chip[]>([]);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
@@ -259,7 +165,9 @@ export default function RestaEnterosView() {
     const [resultValue, setResultValue] = useState(0);
     const [showHelp, setShowHelp] = useState(false);
 
-    // ── Computed ──────────────────────────────────────────────────────────────
+    const areaRef = useRef<HTMLDivElement>(null);
+
+    // ── Computed Values ───────────────────────────────────────────────────────
     const minuendActual = minuendSign === "positive" ? minuendValue : -minuendValue;
     const subtrahendActual = subtrahendSign === "positive" ? subtrahendValue : -subtrahendValue;
     const oppositeOfSubtrahend = -subtrahendActual;
@@ -276,115 +184,130 @@ export default function RestaEnterosView() {
     const remainingChips = chips.filter((c) => !c.exploded);
 
     const subtrahendChips = chips.filter((c) => c.isSubtrahend);
-    const flippedCount = subtrahendChips.filter((c) => c.flipped).length;
-    const allSubtrahendFlipped = subtrahendChips.length === 0 || flippedCount === subtrahendChips.length;
+    const unflippedSubtrahendCount = subtrahendChips.filter((c) => !c.flipped).length;
+    const allSubtrahendFlipped = subtrahendChips.length === 0 || unflippedSubtrahendCount === 0;
 
-    const resultBigColor = resultValue > 0 ? "text-blue-400" : resultValue < 0 ? "text-red-400" : "text-purple-400";
-    const resultTextColor = resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-purple-300";
+    const formatNum = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+    const formatExpr = (n: number) => (n >= 0 ? `(+${n})` : `(${n})`);
 
-    const formatNum = (n: number) => n >= 0 ? `+${n}` : `${n}`;
-    const formatExpr = (n: number) => n >= 0 ? `(+${n})` : `(${n})`;
-
-    // ── Setup → Flip ──────────────────────────────────────────────────────────
-    const handleGenerate = () => {
-        // Cambiar a la fase flip primero para que el área se renderice
-        setPhase("flip");
-        // Las fichas se generarán en el useEffect cuando el área esté disponible
+    // ── Presets ───────────────────────────────────────────────────────────────
+    const applyPreset = (preset: PresetCase) => {
+        setMinuendSign(preset.minuend.sign);
+        setMinuendValue(preset.minuend.count);
+        setSubtrahendSign(preset.subtrahend.sign);
+        setSubtrahendValue(preset.subtrahend.count);
+        setActivePreset(preset.id);
     };
 
-    // ── Generar fichas después de que el área esté disponible en la fase flip ───────
+    const handleRandomCase = () => {
+        const signs: ("positive" | "negative")[] = ["positive", "negative"];
+        const mSign = signs[Math.floor(Math.random() * 2)];
+        const sSign = signs[Math.floor(Math.random() * 2)];
+        const mVal = Math.floor(Math.random() * 6) + 1;
+        const sVal = Math.floor(Math.random() * 6) + 1;
+
+        setMinuendSign(mSign);
+        setMinuendValue(mVal);
+        setSubtrahendSign(sSign);
+        setSubtrahendValue(sVal);
+        setActivePreset(null);
+    };
+
+    // ── Generate Fichas (Setup -> Flip) ───────────────────────────────────────
+    const handleGenerate = () => {
+        if (!canGenerate) return;
+        setPhase("flip");
+    };
+
     useEffect(() => {
         if (phase === "flip" && chips.length === 0 && (minuendValue > 0 || subtrahendValue > 0)) {
-            // Esperar un poco para que el DOM se actualice
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 const rect = areaRef.current?.getBoundingClientRect();
-                const w = rect?.width ?? Math.min(window.innerWidth - 24, 520);
-                const h = rect?.height ?? Math.max(300, window.innerHeight - 320);
+                const w = rect?.width ?? 480;
+                const h = rect?.height ?? 300;
 
-                console.log('Área:', { w, h });
-                console.log('Minuendo:', { color: minuendColor, count: Math.abs(minuendActual), isSubtrahend: false });
-                console.log('Sustraendo:', { color: subtrahendColor, count: Math.abs(subtrahendActual), isSubtrahend: true });
-
-                const minuendChips = buildSideChips(minuendColor, Math.abs(minuendActual), false, w, h);
-                const subtrahendChips = buildSideChips(subtrahendColor, Math.abs(subtrahendActual), true, w, h);
-
-                console.log('Fichas minuendo:', minuendChips.map(c => ({ id: c.id, x: c.x, isSubtrahend: c.isSubtrahend })));
-                console.log('Fichas sustraendo:', subtrahendChips.map(c => ({ id: c.id, x: c.x, isSubtrahend: c.isSubtrahend })));
-
-                const built = [...minuendChips, ...subtrahendChips];
-                setChips(built);
-            }, 100);
+                const mChips = buildSideChips(minuendColor, Math.abs(minuendActual), false, w, h);
+                const sChips = buildSideChips(subtrahendColor, Math.abs(subtrahendActual), true, w, h);
+                setChips([...mChips, ...sChips]);
+            }, 80);
+            return () => clearTimeout(timer);
         }
     }, [phase, minuendValue, subtrahendValue, minuendColor, subtrahendColor, minuendActual, subtrahendActual, chips.length]);
 
-    // ── Double-click: flip single subtrahend chip ─────────────────────────────
+    // ── Flip single subtrahend chip ───────────────────────────────────────────
     const handleSingleFlip = useCallback((id: string) => {
         const chip = chips.find((c) => c.id === id);
         if (!chip || !chip.isSubtrahend || chip.flipped || chip.exploded) return;
 
         setFlippingIds((prev) => new Set(prev).add(id));
         setTimeout(() => {
-            setChips((prev) => prev.map((c) =>
-                c.id === id ? { ...c, color: c.color === "blue" ? "red" : "blue", flipped: true } : c
-            ));
+            setChips((prev) =>
+                prev.map((c) =>
+                    c.id === id ? { ...c, color: c.color === "blue" ? "red" : "blue", flipped: true } : c
+                )
+            );
             setTimeout(() => {
-                setFlippingIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
-            }, 175);
-        }, 175);
+                setFlippingIds((prev) => {
+                    const n = new Set(prev);
+                    n.delete(id);
+                    return n;
+                });
+            }, 180);
+        }, 180);
     }, [chips]);
 
-    // ── Auto transition to play phase when all subtrahend chips are flipped ───────
-    useEffect(() => {
-        if (phase === "flip" && allSubtrahendFlipped && flippingIds.size === 0) {
-            // Esperar un poco antes de transicionar para dar tiempo a la animación
-            const timer = setTimeout(() => {
-                setPhase("play");
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [phase, allSubtrahendFlipped, flippingIds.size]);
-
-    // ── Button: flip ALL remaining subtrahend chips ───────────────────────────
+    // ── Flip all subtrahend chips ─────────────────────────────────────────────
     const handleFlipAll = async () => {
         const toFlip = chips.filter((c) => c.isSubtrahend && !c.flipped && !c.exploded);
         for (const chip of toFlip) {
             setFlippingIds((prev) => new Set(prev).add(chip.id));
-            await new Promise((r) => setTimeout(r, 175));
-            setChips((prev) => prev.map((c) =>
-                c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue", flipped: true } : c
-            ));
-            await new Promise((r) => setTimeout(r, 100));
-            setFlippingIds((prev) => { const n = new Set(prev); n.delete(chip.id); return n; });
-            await new Promise((r) => setTimeout(r, 60));
+            await new Promise((r) => setTimeout(r, 140));
+            setChips((prev) =>
+                prev.map((c) =>
+                    c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue", flipped: true } : c
+                )
+            );
+            await new Promise((r) => setTimeout(r, 80));
+            setFlippingIds((prev) => {
+                const n = new Set(prev);
+                n.delete(chip.id);
+                return n;
+            });
+            await new Promise((r) => setTimeout(r, 40));
         }
     };
 
-    // ── Game-end detection ─────────────────────────────────────────────────────
+    // Auto transition to play phase when all are flipped
     useEffect(() => {
-        if (phase !== "play" || chips.length === 0) return;
-        const active = chips.filter((c) => !c.exploded && !c.exploding);
-        if (active.length === 0 && chips.every((c) => !c.exploding)) {
-            const t = setTimeout(() => { setResultValue(0); setPhase("result"); }, 600);
-            return () => clearTimeout(t);
+        if (phase === "flip" && allSubtrahendFlipped && chips.length > 0 && flippingIds.size === 0) {
+            const timer = setTimeout(() => {
+                setPhase("play");
+            }, 450);
+            return () => clearTimeout(timer);
         }
-    }, [chips, phase]);
+    }, [phase, allSubtrahendFlipped, chips.length, flippingIds.size]);
 
-    const handleShowResult = () => {
-        const active = chips.filter((c) => !c.exploded && !c.exploding);
-        const b = active.filter((c) => c.color === "blue").length;
-        const r = active.filter((c) => c.color === "red").length;
-        setResultValue(b - r);
-        setPhase("result");
-    };
+    // ── Pair explosion & drag in Play phase ────────────────────────────────────
+    const explodePair = useCallback((id1: string, id2: string) => {
+        setChips((prev) =>
+            prev.map((c) => (c.id === id1 || c.id === id2 ? { ...c, exploding: true } : c))
+        );
+        setTimeout(() => {
+            setChips((prev) =>
+                prev.map((c) => (c.id === id1 || c.id === id2 ? { ...c, exploding: false, exploded: true } : c))
+            );
+        }, 420);
+    }, []);
 
-    // ── Drag (play phase only) ────────────────────────────────────────────────
     const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
         if (phase !== "play") return;
-        e.currentTarget.setPointerCapture(e.pointerId);
         const chip = chips.find((c) => c.id === id);
         if (!chip || chip.exploded || chip.exploding) return;
+
+        e.currentTarget.setPointerCapture(e.pointerId);
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
+
         dragOffset.current = { x: e.clientX - rect.left - chip.x, y: e.clientY - rect.top - chip.y };
         setDraggingId(id);
     }, [chips, phase]);
@@ -393,19 +316,19 @@ export default function RestaEnterosView() {
         if (!draggingId) return;
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
-        setChips((prev) => prev.map((c) => c.id === draggingId ? {
-            ...c,
-            x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
-            y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
-        } : c));
-    }, [draggingId]);
 
-    const explodePair = useCallback((id1: string, id2: string) => {
-        setChips((prev) => prev.map((c) => c.id === id1 || c.id === id2 ? { ...c, exploding: true } : c));
-        setTimeout(() => {
-            setChips((prev) => prev.map((c) => c.id === id1 || c.id === id2 ? { ...c, exploding: false, exploded: true } : c));
-        }, 480);
-    }, []);
+        setChips((prev) =>
+            prev.map((c) =>
+                c.id === draggingId
+                    ? {
+                        ...c,
+                        x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
+                        y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
+                    }
+                    : c
+            )
+        );
+    }, [draggingId]);
 
     const handlePointerUp = useCallback(() => {
         if (!draggingId) return;
@@ -419,7 +342,10 @@ export default function RestaEnterosView() {
                     return { chip: c, dist: Math.sqrt(dx * dx + dy * dy) };
                 })
                 .sort((a, b) => a.dist - b.dist)[0];
-            if (opposite && opposite.dist < SNAP_DISTANCE) explodePair(draggingId, opposite.chip.id);
+
+            if (opposite && opposite.dist < SNAP_DISTANCE) {
+                explodePair(draggingId, opposite.chip.id);
+            }
         }
         setDraggingId(null);
     }, [draggingId, chips, explodePair]);
@@ -432,465 +358,820 @@ export default function RestaEnterosView() {
         const reds = cur.filter((c) => c.color === "red");
         for (let i = 0; i < Math.min(blues.length, reds.length); i++) {
             explodePair(blues[i].id, reds[i].id);
-            await new Promise((r) => setTimeout(r, 340));
+            await new Promise((r) => setTimeout(r, 320));
         }
         setAutoCancelling(false);
     };
 
+    // ── Check game-end in Play phase ──────────────────────────────────────────
+    useEffect(() => {
+        if (phase !== "play" || chips.length === 0) return;
+        const active = chips.filter((c) => !c.exploded && !c.exploding);
+        if (active.length === 0 && chips.every((c) => !c.exploding)) {
+            const timer = setTimeout(() => {
+                setResultValue(0);
+                setPhase("result");
+            }, 550);
+            return () => clearTimeout(timer);
+        }
+    }, [chips, phase]);
+
+    const handleShowResult = () => {
+        const active = chips.filter((c) => !c.exploded && !c.exploding);
+        const b = active.filter((c) => c.color === "blue").length;
+        const r = active.filter((c) => c.color === "red").length;
+        setResultValue(b - r);
+        setPhase("result");
+    };
+
     // ── Reset ─────────────────────────────────────────────────────────────────
     const handleReset = () => {
-        setMinuendSign("positive"); setMinuendValue(0);
-        setSubtrahendSign("negative"); setSubtrahendValue(0);
-        setChips([]); setDraggingId(null);
-        setAutoCancelling(false); setFlippingIds(new Set());
+        setChips([]);
+        setDraggingId(null);
+        setAutoCancelling(false);
+        setFlippingIds(new Set());
         setPhase("setup");
     };
 
     const getResultText = () => {
-        if (resultValue === 0) return "¡Los pares se cancelaron perfectamente! El resultado es cero.";
-        if (resultValue > 0) return `Sobran ${resultValue} ficha${resultValue !== 1 ? "s" : ""} positiva${resultValue !== 1 ? "s" : ""}. El resultado es +${resultValue}.`;
+        if (resultValue === 0) return "¡Equilibrio perfecto! Todos los pares se anularon y el resultado es 0.";
+        if (resultValue > 0)
+            return `Sobran ${resultValue} ficha${resultValue !== 1 ? "s" : ""} positiva${resultValue !== 1 ? "s" : ""}. El resultado es +${resultValue}.`;
         return `Sobran ${Math.abs(resultValue)} ficha${Math.abs(resultValue) !== 1 ? "s" : ""} negativa${Math.abs(resultValue) !== 1 ? "s" : ""}. El resultado es ${resultValue}.`;
     };
 
-    const phaseList: Phase[] = ["setup", "flip", "play", "result"];
+    const phaseLabels: Record<Phase, string> = {
+        setup: "1. Planteo",
+        flip: "2. Opuesto",
+        play: "3. Anulación",
+        result: "4. Resultado",
+    };
+    const phaseKeys: Phase[] = ["setup", "flip", "play", "result"];
 
-    // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white flex flex-col" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        @keyframes explode {
-          0%   { transform: scale(1);   opacity: 1; }
-          45%  { transform: scale(1.7); opacity: 0.7; }
-          100% { transform: scale(0);   opacity: 0; }
-        }
-        .animate-explode { animation: explode 0.48s ease-out forwards; }
-        @keyframes particle {
-          0%   { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0);     opacity: 1; }
-          100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(-44px); opacity: 0; }
-        }
-        .animate-particle { animation: particle 0.48s ease-out forwards; }
-        @keyframes floatChip {
-          0%,100% { transform: translateY(0) rotate(-4deg); }
-          50%      { transform: translateY(-10px) rotate(4deg); }
-        }
-        .animate-float { animation: floatChip 2.6s ease-in-out infinite; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .anim-up  { animation: fadeUp 0.42s ease-out both; }
-        @keyframes popIn {
-          0%   { transform: scale(0.72); opacity: 0; }
-          70%  { transform: scale(1.06); }
-          100% { transform: scale(1);    opacity: 1; }
-        }
-        .anim-pop { animation: popIn 0.38s ease-out both; }
-        @keyframes glowTeal {
-          0%,100% { box-shadow: 0 0 18px rgba(20,184,166,.35); }
-          50%      { box-shadow: 0 0 36px rgba(20,184,166,.7); }
-        }
-        .glow-teal { animation: glowTeal 2.2s ease-in-out infinite; }
-        @keyframes glowAmber {
-          0%,100% { box-shadow: 0 0 18px rgba(245,158,11,.35); }
-          50%      { box-shadow: 0 0 36px rgba(245,158,11,.7); }
-        }
-        .glow-amber { animation: glowAmber 2.2s ease-in-out infinite; }
-        @keyframes flipChip {
-          0%   { transform: scaleX(1) scale(1.1); }
-          50%  { transform: scaleX(0) scale(1.3); }
-          100% { transform: scaleX(1) scale(1); }
-        }
-        .animate-flip { animation: flipChip 0.35s ease-in-out; }
-        @keyframes pulse-hint {
-          0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-          50%      { box-shadow: 0 0 0 7px rgba(251,191,36,0.22); }
-        }
-        .pulse-hint { animation: pulse-hint 1.8s ease-in-out infinite; }
-      `}</style>
+                @keyframes explode {
+                    0%   { transform: scale(1);   opacity: 1; }
+                    45%  { transform: scale(1.6); opacity: 0.7; }
+                    100% { transform: scale(0);   opacity: 0; }
+                }
+                .animate-explode { animation: explode 0.45s ease-out forwards; }
+                @keyframes particle {
+                    0%   { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0); opacity: 1; }
+                    100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(-40px); opacity: 0; }
+                }
+                .animate-particle { animation: particle 0.45s ease-out forwards; }
+                @keyframes floatChip {
+                    0%, 100% { transform: translateY(0) rotate(-3deg); }
+                    50%      { transform: translateY(-6px) rotate(3deg); }
+                }
+                .animate-float { animation: floatChip 2.4s ease-in-out infinite; }
+                @keyframes flipChip {
+                    0%   { transform: scaleX(1) scale(1.05); }
+                    50%  { transform: scaleX(0) scale(1.25); }
+                    100% { transform: scaleX(1) scale(1); }
+                }
+                .animate-flip { animation: flipChip 0.36s ease-in-out; }
+            `}</style>
 
-            {/* ── Top bar ── */}
-            <header className="flex items-center gap-3 px-4 pt-4 pb-2 shrink-0">
-                <button onClick={() => navigate(-1)}
-                    className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-xl px-3 py-2 text-sm font-bold border border-white/10 shrink-0 active:scale-95">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="hidden sm:inline">Volver</span>
-                </button>
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">Resta de Enteros</h1>
-                    <p className="text-[10px] text-white/30 font-semibold">Suma el opuesto del sustraendo</p>
+            {/* 1. Header (34-44px) */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        title="Volver"
+                    >
+                        <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white truncate">
+                        Resta de Números Enteros
+                    </h1>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    {phaseList.map((p, i) => (
-                        <div key={p} className={`h-1.5 rounded-full transition-all duration-300
-              ${phase === p ? "w-5 bg-teal-400" : phaseList.indexOf(phase) > i ? "w-2.5 bg-white/25" : "w-2.5 bg-white/8"}`} />
-                    ))}
+
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <div className="hidden xs:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-white/60">
+                        {phaseKeys.map((p, idx) => (
+                            <span
+                                key={p}
+                                className={`px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                                    phase === p ? "bg-teal-500/30 text-teal-300" : "opacity-40"
+                                }`}
+                            >
+                                {idx + 1}
+                            </span>
+                        ))}
+                        <span className="font-semibold ml-1 text-white/80">{phaseLabels[phase]}</span>
+                    </div>
+
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        title="Ayuda didáctica"
                     >
                         ?
                     </button>
                 </div>
             </header>
 
-            {/* ══════════════════ SETUP ══════════════════ */}
-            {phase === "setup" && (
-                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto">
-                    <div className="flex-1 flex flex-col gap-4">
-                        <div className="text-center anim-up pt-1">
-                            <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Construye la resta</p>
-                            <p className="text-white/45 text-sm whitespace-nowrap">
-                                Ingresa los dos números ·{" "}
-                                <span className="text-teal-400 font-bold">Restar = sumar el opuesto</span>
+            {/* 2. Barra de Casos de Aprendizaje (Pills de retos predefinidos) */}
+            <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline mr-1">
+                        Casos:
+                    </span>
+                    {PRESET_CASES.map((preset) => {
+                        const isSelected = activePreset === preset.id && phase === "setup";
+                        return (
+                            <button
+                                key={preset.id}
+                                onClick={() => {
+                                    applyPreset(preset);
+                                    if (phase !== "setup") handleReset();
+                                }}
+                                className={`px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold transition-all shrink-0 border ${
+                                    isSelected
+                                        ? "bg-teal-500/25 border-teal-400/50 text-teal-200 shadow-xs"
+                                        : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                                title={preset.description}
+                            >
+                                {preset.label}: <span className="opacity-90">{preset.equation}</span>
+                            </button>
+                        );
+                    })}
+                    <button
+                        onClick={() => {
+                            handleRandomCase();
+                            if (phase !== "setup") handleReset();
+                        }}
+                        className="px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold bg-white/5 border border-white/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/40 transition-all shrink-0 active:scale-95"
+                        title="Generar caso aleatorio"
+                    >
+                        🎲 Aleatorio
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                    {phase === "setup" && (
+                        <div className="flex items-center gap-1 text-[11px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                            <span className={minuendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                {formatExpr(minuendActual)}
+                            </span>
+                            <span className="text-white/40">−</span>
+                            <span className={subtrahendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                {formatExpr(subtrahendActual)}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 3. Área Central de Trabajo (Fases) */}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-1 sm:p-2 lg:p-3 overflow-hidden">
+                {/* ── FASE 1: SETUP ── */}
+                {phase === "setup" && (
+                    <div className="w-full max-w-[620px] flex flex-col justify-center gap-2 lg:gap-3 flex-1 min-h-0">
+                        {/* Concept pill */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-2.5 py-1 text-center shrink-0">
+                            <p className="text-[11px] lg:text-xs text-teal-300 font-bold">
+                                💡 Regla pedagógica: <span className="underline font-black">Restar es sumar el opuesto</span>
+                            </p>
+                            <p className="text-[10px] text-white/50 leading-tight">
+                                Transforma <span className="text-white font-mono">a − b</span> en <span className="text-teal-300 font-mono">a + (−b)</span> volteando las fichas del sustraendo.
                             </p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-stretch gap-2 anim-up" style={{ animationDelay: "0.05s" }}>
-                            <div className="flex-1">
-                                <NumberInputCard
-                                    label="Minuendo" sublabel="El número del que se resta"
-                                    sign={minuendSign} count={minuendValue}
-                                    onSignChange={setMinuendSign} onCountChange={setMinuendValue}
-                                    accentColor="blue" />
+                        {/* Two Columns Grid for Minuend and Subtrahend */}
+                        <div className="grid grid-cols-2 gap-2 lg:gap-3 shrink-0">
+                            {/* Minuendo */}
+                            <div className={`rounded-xl border ${minuendSign === "positive" ? TOKEN.blue.border : TOKEN.red.border} ${minuendSign === "positive" ? TOKEN.blue.bg : TOKEN.red.bg} p-2 sm:p-2.5 flex flex-col justify-between`}>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                        <div className={`w-2 h-2 rounded-full ${minuendSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/70 truncate">
+                                            Minuendo
+                                        </span>
+                                    </div>
+                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                        <button
+                                            onClick={() => { setMinuendSign("positive"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${minuendSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            +
+                                        </button>
+                                        <button
+                                            onClick={() => { setMinuendSign("negative"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${minuendSign === "negative" ? "bg-red-500/30 text-red-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            −
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Preview Dots */}
+                                <div className="flex flex-wrap gap-1 min-h-[26px] items-center content-center py-1">
+                                    {minuendValue === 0 ? (
+                                        <span className="text-white/20 text-[10px] italic">0 fichas</span>
+                                    ) : (
+                                        Array.from({ length: minuendValue }).map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className={`w-4 h-4 lg:w-5 lg:h-5 rounded-full bg-linear-to-br ${minuendSign === "positive" ? TOKEN.blue.chipGrad : TOKEN.red.chipGrad} flex items-center justify-center shadow-xs`}
+                                            >
+                                                <span className="text-[8px] font-black leading-none">
+                                                    {minuendSign === "positive" ? "+" : "−"}
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Controls */}
+                                <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                                    <span className="text-[10px] text-white/50">Cantidad:</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => { setMinuendValue((v) => Math.max(0, v - 1)); setActivePreset(null); }}
+                                            disabled={minuendValue === 0}
+                                            className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="w-5 text-center font-mono font-bold text-sm">
+                                            {minuendValue}
+                                        </span>
+                                        <button
+                                            onClick={() => { setMinuendValue((v) => Math.min(8, v + 1)); setActivePreset(null); }}
+                                            disabled={minuendValue === 8}
+                                            className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-center shrink-0 sm:w-8 py-1">
-                                <span className="text-white/30 text-3xl font-black">−</span>
-                            </div>
+                            {/* Sustraendo */}
+                            <div className={`rounded-xl border ${subtrahendSign === "positive" ? TOKEN.blue.border : TOKEN.red.border} ${subtrahendSign === "positive" ? TOKEN.blue.bg : TOKEN.red.bg} p-2 sm:p-2.5 flex flex-col justify-between`}>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                        <div className={`w-2 h-2 rounded-full ${subtrahendSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-300/80 truncate">
+                                            Sustraendo (S)
+                                        </span>
+                                    </div>
+                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                        <button
+                                            onClick={() => { setSubtrahendSign("positive"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${subtrahendSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            +
+                                        </button>
+                                        <button
+                                            onClick={() => { setSubtrahendSign("negative"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${subtrahendSign === "negative" ? "bg-red-500/30 text-red-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            −
+                                        </button>
+                                    </div>
+                                </div>
 
-                            <div className="flex-1" style={{ animationDelay: "0.1s" }}>
-                                <NumberInputCard
-                                    label="Sustraendo" sublabel="El número que se resta"
-                                    sign={subtrahendSign} count={subtrahendValue}
-                                    onSignChange={setSubtrahendSign} onCountChange={setSubtrahendValue}
-                                    accentColor="orange" />
+                                {/* Preview Dots */}
+                                <div className="flex flex-wrap gap-1 min-h-[26px] items-center content-center py-1">
+                                    {subtrahendValue === 0 ? (
+                                        <span className="text-white/20 text-[10px] italic">0 fichas</span>
+                                    ) : (
+                                        Array.from({ length: subtrahendValue }).map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className={`w-4 h-4 lg:w-5 lg:h-5 rounded-full bg-linear-to-br ${subtrahendSign === "positive" ? TOKEN.blue.chipGrad : TOKEN.red.chipGrad} flex items-center justify-center shadow-xs relative`}
+                                            >
+                                                <span className="text-[8px] font-black leading-none">
+                                                    {subtrahendSign === "positive" ? "+" : "−"}
+                                                </span>
+                                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 text-[6px] text-amber-950 font-black flex items-center justify-center leading-none">
+                                                    S
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Controls */}
+                                <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                                    <span className="text-[10px] text-white/50">Cantidad:</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => { setSubtrahendValue((v) => Math.max(0, v - 1)); setActivePreset(null); }}
+                                            disabled={subtrahendValue === 0}
+                                            className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="w-5 text-center font-mono font-bold text-sm">
+                                            {subtrahendValue}
+                                        </span>
+                                        <button
+                                            onClick={() => { setSubtrahendValue((v) => Math.min(8, v + 1)); setActivePreset(null); }}
+                                            disabled={subtrahendValue === 8}
+                                            className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {canGenerate && (
-                            <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
-                                <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">La clave</p>
-                                <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
-                                    <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
-                                    <span className="text-white/30">−</span>
-                                    <span className={subtrahendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(subtrahendActual)}</span>
-                                </div>
+                        {/* Equation summary card */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs shrink-0">
+                            <span className="text-white/40 text-[10px]">Operación:</span>
+                            <div className="flex items-center gap-1 font-mono font-bold text-sm">
+                                <span className={minuendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(minuendActual)}
+                                </span>
+                                <span className="text-white/40">−</span>
+                                <span className={subtrahendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(subtrahendActual)}
+                                </span>
+                                <span className="text-white/40">→</span>
+                                <span className="text-teal-300 font-bold">
+                                    {formatExpr(minuendActual)} + {formatExpr(oppositeOfSubtrahend)}
+                                </span>
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    <div className="anim-up pt-4" style={{ animationDelay: "0.24s" }}>
+                        {/* Big Generate Button */}
                         <button
                             disabled={!canGenerate}
                             onClick={handleGenerate}
-                            className={`w-full py-4 rounded-2xl text-base font-black transition-all duration-200
-                ${canGenerate
-                                ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
-                                : "bg-white/6 text-white/20 cursor-not-allowed"
-                            }`}>
-                            Generar Fichas ✨
+                            className={`w-full h-8 lg:h-9 rounded-xl text-xs lg:text-sm font-black transition-all shrink-0 ${
+                                canGenerate
+                                    ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-98 cursor-pointer"
+                                    : "bg-white/5 text-white/25 cursor-not-allowed"
+                            }`}
+                        >
+                            Generar Fichas y Voltear Sustraendo ✨
                         </button>
                     </div>
-                </main>
-            )}
+                )}
 
-            {/* ══════════════════ FLIP ══════════════════
-           Left = minuend (static)   Right = subtrahend (double-click to flip)
-           Button = flip all remaining (shortcut)
-           Once all flipped → "Continuar" button appears
-      ════════════════════════════════════════════ */}
-            {phase === "flip" && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    {/* Instruction banner */}
-                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl px-3 py-2.5 shrink-0 anim-up">
-                        <div className="flex items-center gap-2.5">
-                            <span className="text-xl shrink-0">🔄</span>
-                            <div>
-                                <p className="text-amber-300 font-black text-xs">Paso 1: Voltea las fichas del sustraendo</p>
-                                <p className="text-amber-200/55 text-[11px] leading-snug mt-0.5">
-                                    <span className="text-amber-400 font-bold">Doble clic</span> en cada ficha{" "}
-                                    <span className="text-amber-400 font-bold">S</span> para cambiarla al opuesto.
-                                    Usa el botón para voltear todas de golpe.
+                {/* ── FASE 2: FLIP (Opuesto del Sustraendo) ── */}
+                {phase === "flip" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        {/* Top prompt bar */}
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded-xl shrink-0 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm">🔄</span>
+                                <p className="text-[11px] text-amber-200 truncate">
+                                    Toca las fichas <span className="font-bold text-amber-400">[S]</span> para invertirlas a su opuesto aditivo
                                 </p>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Transformation reminder — no result */}
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0 flex-wrap">
-                        <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
-                        <span className="text-white/30">−</span>
-                        <span className={subtrahendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(subtrahendActual)}</span>
-                    </div>
-
-                    {/* Zone labels */}
-                    <div className="flex gap-2 shrink-0">
-                        <div className="flex-1 bg-blue-500/8 border border-blue-500/20 rounded-xl px-2 py-1.5 flex items-center justify-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-blue-500/60" />
-                            <span className="text-blue-300/55 text-[10px] font-black uppercase tracking-widest">Minuendo</span>
-                        </div>
-                        <div className="flex-1 bg-amber-500/8 border border-amber-500/20 rounded-xl px-2 py-1.5 flex items-center justify-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-amber-400/60" />
-                            <span className="text-amber-300/55 text-[10px] font-black uppercase tracking-widest">Sustraendo</span>
-                        </div>
-                    </div>
-
-                    {/* Chip area with center divider */}
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                    >
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }} />
-
-                        {/* Center divider line */}
-                        <div className="absolute top-2 bottom-2 left-1/2 w-px bg-white/10" style={{ transform: "translateX(-0.5px)" }}>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#080c18] border border-white/10 rounded-full w-7 h-7 flex items-center justify-center">
-                                <span className="text-white/25 text-base font-black">−</span>
-                            </div>
-                        </div>
-
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                dragging={false}
-                                onPointerDown={() => { }}
-                                onDoubleClick={handleSingleFlip}
-                                isFlipping={flippingIds.has(chip.id)}
-                                canDrag={false}
-                            />
-                        ))}
-
-                        {/* Double-click hint on right side */}
-                        {!allSubtrahendFlipped && subtrahendChips.filter(c => !c.flipped).length > 0 && (
-                            <div className="absolute bottom-3 right-3 pointer-events-none">
-                                <div className="bg-amber-500/15 border border-amber-400/30 rounded-xl px-2.5 py-1.5">
-                                    <p className="text-amber-300/70 text-[10px] font-bold">2× clic para voltear</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Button */}
-                    {!allSubtrahendFlipped && (
-                        <div className="shrink-0">
-                            <button onClick={handleFlipAll}
-                                className="w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.98] glow-amber">
-                                🔄 Voltear todas
-                            </button>
-                        </div>
-                    )}
-                </main>
-            )}
-
-            {/* ══════════════════ PLAY ══════════════════
-           Chips freely mixed — drag to cancel pairs
-      ════════════════════════════════════════════ */}
-            {phase === "play" && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl px-3 py-2 shrink-0 anim-up">
-                        <p className="text-teal-300 font-black text-xs text-center">
-                            Paso 2: Cancela los pares · Arrastra +1 sobre −1
-                        </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 bg-white/4 border border-white/8 rounded-2xl px-4 py-2.5 shrink-0">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/60 shrink-0" />
-                            <span className="text-blue-300 font-black text-lg tabular-nums">{liveBlue}</span>
-                            <span className="text-white/25 text-xs hidden sm:inline">positivas</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/60 shrink-0" />
-                            <span className="text-red-300 font-black text-lg tabular-nums">{liveRed}</span>
-                            <span className="text-white/25 text-xs hidden sm:inline">negativas</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <span className="text-white/35 text-xs">
-                            <span className="font-bold text-white/55">{liveBlue + liveRed}</span> fichas
-                        </span>
-                        {hasPairs && (
-                            <>
-                                <div className="w-px h-4 bg-white/10" />
-                                <span className="text-amber-400/80 text-xs font-bold">
-                                    {Math.min(liveBlue, liveRed)} par{Math.min(liveBlue, liveRed) !== 1 ? "es" : ""}
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] font-mono text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">
+                                    Faltan: {unflippedSubtrahendCount}
                                 </span>
-                            </>
-                        )}
-                    </div>
+                                {!allSubtrahendFlipped && (
+                                    <button
+                                        onClick={handleFlipAll}
+                                        className="h-6 px-2 text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-md transition-all active:scale-95 shadow-xs"
+                                    >
+                                        Voltear todas ⚡
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                    >
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }} />
+                        {/* Zone Labels */}
+                        <div className="grid grid-cols-2 gap-1.5 shrink-0 mb-1 text-[10px] font-bold uppercase tracking-wider text-center">
+                            <div className="bg-blue-500/10 border border-blue-500/20 py-0.5 rounded-lg text-blue-300/80">
+                                Minuendo (Conservar)
+                            </div>
+                            <div className="bg-amber-500/10 border border-amber-500/20 py-0.5 rounded-lg text-amber-300/80">
+                                Sustraendo (Invertir al Opuesto)
+                            </div>
+                        </div>
 
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                dragging={draggingId === chip.id}
-                                onPointerDown={handlePointerDown}
-                                onDoubleClick={() => { }}
-                                isFlipping={false}
-                                canDrag={true}
+                        {/* Interactive Board */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                        >
+                            {/* Grid Dots */}
+                            <div
+                                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                                style={{
+                                    backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+                                    backgroundSize: "24px 24px",
+                                }}
                             />
-                        ))}
 
-                        {!hasPairs && liveBlue + liveRed > 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="bg-black/75 backdrop-blur-md rounded-2xl px-5 py-3 text-center anim-up border border-white/10">
-                                    <p className="text-white font-bold text-sm">✅ No quedan más pares</p>
-                                    <p className="text-white/40 text-xs mt-0.5">Pulsa para ver el resultado</p>
-                                </div>
+                            {/* Center separator line */}
+                            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10 -translate-x-1/2 pointer-events-none flex items-center justify-center">
+                                <span className="bg-[#080c18] border border-white/10 px-1.5 py-0.5 rounded-full text-[10px] font-black text-white/40">
+                                    −
+                                </span>
                             </div>
-                        )}
-                    </div>
 
-                    <p className="text-center text-white/20 text-[11px] shrink-0">
-                        Arrastra +1 sobre −1 para cancelarlos
-                    </p>
+                            {/* Chips */}
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                const isFlipping = flippingIds.has(chip.id);
+                                const isFlippable = chip.isSubtrahend && !chip.flipped;
 
-                    <button
-                        disabled={hasPairs ? autoCancelling : false}
-                        onClick={hasPairs ? handleAutoCancel : handleShowResult}
-                        className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
-              ${hasPairs && !autoCancelling
-                                ? "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.98]"
-                                : "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 hover:scale-[1.01] active:scale-[0.98]"
-                            }`}>
-                        {hasPairs
-                            ? (autoCancelling ? "⚡ Cancelando pares…" : "⚡ Cancelar todos automáticamente")
-                            : "✅ Ver resultado"
-                        }
-                    </button>
-                </main>
-            )}
-
-            {/* ══════════════════ RESULT ══════════════════ */}
-            {phase === "result" && (
-                <main className="flex-1 flex flex-col items-center justify-center gap-5 px-4 py-6 overflow-y-auto">
-                    <div className="flex flex-wrap justify-center gap-2.5 min-h-14 items-center anim-up max-w-xs">
-                        {remainingChips.length === 0
-                            ? <div className="text-5xl animate-float">⚖️</div>
-                            : remainingChips.slice(0, 16).map((c, i) => (
-                                <div key={c.id}
-                                    className={`w-11 h-11 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-sm shadow-lg animate-float
-                    ${c.color === "blue" ? "from-blue-400 to-blue-600 shadow-blue-500/40" : "from-red-400 to-red-600 shadow-red-500/40"}`}
-                                    style={{ animationDelay: `${i * 0.1}s` }}>
-                                    {c.color === "blue" ? "+1" : "−1"}
-                                </div>
-                            ))
-                        }
-                        {remainingChips.length > 16 && <span className="text-white/30 text-xs font-bold">+{remainingChips.length - 16}</span>}
-                    </div>
-
-                    <div className="text-center anim-up anim-pop" style={{ animationDelay: "0.1s" }}>
-                        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest mb-1">Resultado</p>
-                        <div className={`text-[72px] sm:text-8xl font-black tabular-nums leading-none ${resultBigColor} drop-shadow-2xl`}>
-                            {resultValue > 0 ? `+${resultValue}` : resultValue}
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        onClick={() => isFlippable && handleSingleFlip(chip.id)}
+                                        className={`absolute select-none transition-transform duration-100 ${
+                                            isFlipping ? "animate-flip z-30" : ""
+                                        } ${isFlippable ? "cursor-pointer hover:scale-110 active:scale-95 z-20" : "z-10"}`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center relative`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                            {chip.isSubtrahend && !chip.flipped && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border border-amber-200 flex items-center justify-center shadow-xs">
+                                                    <span className="text-[7px] font-black text-amber-950">S</span>
+                                                </div>
+                                            )}
+                                            {chip.isSubtrahend && chip.flipped && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border border-emerald-200 flex items-center justify-center shadow-xs">
+                                                    <span className="text-[7px] font-black text-emerald-950">✓</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
+                )}
 
-                    <div className="anim-up bg-white/4 border border-white/8 rounded-2xl px-5 py-4 max-w-xs w-full text-center" style={{ animationDelay: "0.2s" }}>
-                        <p className={`font-bold text-sm leading-relaxed ${resultTextColor}`}>{getResultText()}</p>
-                        {resultValue === 0 && <p className="text-purple-300/50 text-xs mt-1.5">¡Perfecto equilibrio! 🎉</p>}
-                    </div>
-
-                    {/* Step recap */}
-                    <div className="anim-up bg-teal-500/8 border border-teal-500/20 rounded-2xl px-4 py-3 max-w-xs w-full" style={{ animationDelay: "0.26s" }}>
-                        <p className="text-teal-400/60 text-[10px] font-black uppercase tracking-widest mb-2 text-center">Lo que aprendimos</p>
-                        <div className="flex flex-col gap-1.5 text-sm font-bold text-center">
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
-                                <span className="text-white/30">−</span>
-                                <span className={subtrahendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(subtrahendActual)}</span>
+                {/* ── FASE 3: PLAY (Anulación de Pares) ── */}
+                {phase === "play" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        {/* Status bar */}
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                                    <span className="font-bold text-blue-300 font-mono text-xs">{liveBlue}</span>
+                                    <span className="text-white/40 text-[10px]">positivas</span>
+                                </div>
+                                <div className="w-px h-3 bg-white/10" />
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                                    <span className="font-bold text-red-300 font-mono text-xs">{liveRed}</span>
+                                    <span className="text-white/40 text-[10px]">negativas</span>
+                                </div>
                             </div>
-                            <span className="text-teal-400/50 text-xs">↓ sumar el opuesto del sustraendo</span>
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={minuendActual >= 0 ? "text-blue-300" : "text-red-300"}>{formatExpr(minuendActual)}</span>
-                                <span className="text-white/30">+</span>
+
+                            <div className="flex items-center gap-2">
+                                {hasPairs ? (
+                                    <span className="text-amber-400 text-[10px] font-bold">
+                                        ⚡ {Math.min(liveBlue, liveRed)} par{Math.min(liveBlue, liveRed) > 1 ? "es" : ""} por anular
+                                    </span>
+                                ) : (
+                                    <span className="text-emerald-400 text-[10px] font-bold">
+                                        ✅ No quedan más pares
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Interactive Drag Arena */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                        >
+                            {/* Grid Dots */}
+                            <div
+                                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                                style={{
+                                    backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+                                    backgroundSize: "24px 24px",
+                                }}
+                            />
+
+                            {/* Chips */}
+                            {chips.map((chip) => {
+                                if (chip.exploded) return null;
+                                const t = TOKEN[chip.color];
+                                const isDragging = draggingId === chip.id;
+
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        onPointerDown={(e) => handlePointerDown(e, chip.id)}
+                                        className={`absolute select-none ${
+                                            chip.exploding ? "animate-explode z-40" : ""
+                                        } ${isDragging ? "scale-125 z-50 shadow-2xl cursor-grabbing" : "z-20 cursor-grab hover:scale-105"}`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center relative`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                        {chip.exploding && (
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                {Array.from({ length: 8 }).map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="absolute w-1.5 h-1.5 rounded-full animate-particle"
+                                                        style={{
+                                                            background: t.particle,
+                                                            left: "50%",
+                                                            top: "50%",
+                                                            ["--angle" as string]: `${i * 45}deg`,
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── FASE 4: RESULTADO ── */}
+                {phase === "result" && (
+                    <div className="w-full max-w-[560px] flex flex-col items-center justify-center gap-2 lg:gap-3 flex-1 min-h-0 text-center py-1">
+                        {/* Remaining chips row */}
+                        <div className="flex flex-wrap justify-center gap-1.5 min-h-[36px] items-center max-w-sm">
+                            {remainingChips.length === 0 ? (
+                                <div className="text-3xl lg:text-4xl animate-bounce">⚖️</div>
+                            ) : (
+                                remainingChips.slice(0, 16).map((c, i) => (
+                                    <div
+                                        key={c.id}
+                                        className={`w-8 h-8 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-[11px] shadow-md animate-float ${
+                                            c.color === "blue"
+                                                ? "from-blue-400 to-blue-600 shadow-blue-500/40"
+                                                : "from-red-400 to-red-600 shadow-red-500/40"
+                                        }`}
+                                        style={{ animationDelay: `${i * 0.08}s` }}
+                                    >
+                                        {c.color === "blue" ? "+1" : "−1"}
+                                    </div>
+                                ))
+                            )}
+                            {remainingChips.length > 16 && (
+                                <span className="text-white/40 text-xs font-bold font-mono">
+                                    +{remainingChips.length - 16}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Result number */}
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40 block mb-0.5">
+                                Resultado Final
+                            </span>
+                            <div
+                                className={`text-4xl lg:text-6xl font-black font-mono leading-none ${
+                                    resultValue > 0
+                                        ? "text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]"
+                                        : resultValue < 0
+                                        ? "text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]"
+                                        : "text-slate-300 drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]"
+                                }`}
+                            >
+                                {resultValue > 0 ? `+${resultValue}` : resultValue}
+                            </div>
+                        </div>
+
+                        {/* Feedback text badge */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 max-w-sm w-full">
+                            <p
+                                className={`font-bold text-xs ${
+                                    resultValue > 0
+                                        ? "text-blue-300"
+                                        : resultValue < 0
+                                        ? "text-red-300"
+                                        : "text-slate-300"
+                                }`}
+                            >
+                                {getResultText()}
+                            </p>
+                        </div>
+
+                        {/* Mathematical transformation recap */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-3 py-2 max-w-sm w-full text-[11px] font-mono">
+                            <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1 text-center font-sans">
+                                Transformación paso a paso
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 font-bold">
+                                <span className={minuendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(minuendActual)}
+                                </span>
+                                <span className="text-white/40">−</span>
+                                <span className={subtrahendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(subtrahendActual)}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-teal-400/80 my-0.5 text-center font-sans">
+                                ↓ sumar el opuesto del sustraendo
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 font-bold">
+                                <span className={minuendActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(minuendActual)}
+                                </span>
+                                <span className="text-white/40">+</span>
                                 <span className="text-teal-300">{formatExpr(oppositeOfSubtrahend)}</span>
-                                <span className="text-white/30">=</span>
-                                <span className={resultBigColor}>{formatNum(resultValue)}</span>
+                                <span className="text-white/40">=</span>
+                                <span
+                                    className={
+                                        resultValue > 0
+                                            ? "text-blue-400"
+                                            : resultValue < 0
+                                            ? "text-red-400"
+                                            : "text-slate-300"
+                                    }
+                                >
+                                    {formatNum(resultValue)}
+                                </span>
                             </div>
                         </div>
+
+                        {/* New Exercise button */}
+                        <button
+                            onClick={handleReset}
+                            className="h-8 lg:h-9 px-4 rounded-xl text-xs lg:text-sm font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-95 transition-all cursor-pointer"
+                        >
+                            Nuevo Ejercicio 🔄
+                        </button>
                     </div>
+                )}
+            </div>
 
-                    <button onClick={handleReset}
-                        className="px-8 py-3.5 rounded-2xl text-base font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-105 active:scale-95 transition-all duration-200 glow-teal anim-up"
-                        style={{ animationDelay: "0.34s" }}>
-                        Nuevo Ejercicio 🔄
-                    </button>
-                </main>
-            )}
+            {/* 4. Barra Inferior de Acción y Feedback (40-48px) */}
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {phase === "setup" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Configura el minuendo y sustraendo o elige un caso de la barra superior.
+                        </p>
+                    )}
+                    {phase === "flip" && (
+                        <p className="text-[10px] lg:text-[11px] text-amber-300/80 truncate">
+                            {allSubtrahendFlipped
+                                ? "¡Listo! Todas las fichas del sustraendo fueron invertidas a su opuesto."
+                                : "Voltea las fichas tocándolas una a una o presiona el botón."}
+                        </p>
+                    )}
+                    {phase === "play" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            {hasPairs
+                                ? "Arrastra una ficha azul sobre una roja (o viceversa) para anular el par."
+                                : "¡Todos los pares fueron anulados!"}
+                        </p>
+                    )}
+                    {phase === "result" && (
+                        <p className="text-[10px] lg:text-[11px] text-emerald-400/90 truncate font-semibold">
+                            Resta completada exitosamente.
+                        </p>
+                    )}
+                </div>
 
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {phase === "setup" && (
+                        <button
+                            disabled={!canGenerate}
+                            onClick={handleGenerate}
+                            className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
+                                canGenerate
+                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                            }`}
+                        >
+                            Comenzar →
+                        </button>
+                    )}
+
+                    {phase === "flip" && (
+                        <button
+                            onClick={() => setPhase("play")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            {allSubtrahendFlipped ? "Pasar a Anular →" : "Saltar volteo →"}
+                        </button>
+                    )}
+
+                    {phase === "play" && (
+                        <>
+                            {hasPairs ? (
+                                <button
+                                    disabled={autoCancelling}
+                                    onClick={handleAutoCancel}
+                                    className="h-7 px-2.5 lg:h-8 lg:px-3.5 text-[11px] lg:text-xs font-bold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {autoCancelling ? "Anulando…" : "⚡ Anular automáticamente"}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleShowResult}
+                                    className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                                >
+                                    Ver Resultado ✅
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {phase === "result" && (
+                        <button
+                            onClick={handleReset}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Nuevo Reto 🔄
+                        </button>
+                    )}
+                </div>
+            </footer>
+
+            {/* Modal de Ayuda */}
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
-                title="¿Cómo restar enteros con fichas?"
+                title="¿Cómo restar números enteros?"
                 bgColor="#080c18"
                 buttonColor="bg-teal-500 hover:bg-teal-400"
             >
-                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                <div className="space-y-3 text-white/80 text-xs leading-relaxed">
+                    <div className="rounded-lg p-2.5 bg-teal-500/10 border border-teal-500/20">
+                        <p className="font-bold text-teal-300 mb-1">💡 La Regla de Oro</p>
+                        <p className="text-white/70">
+                            Restar un número equivale a <strong>sumar su opuesto</strong>:
+                            <br />
+                            <span className="font-mono text-teal-200 text-sm font-bold">
+                                a − b = a + (−b)
+                            </span>
+                        </p>
+                    </div>
+
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Configura</p>
-                        <ol className="space-y-2 list-decimal list-inside">
-                            <li>En el <strong className="text-white">Minuendo</strong> elige el signo (+/−) y la cantidad de fichas.</li>
-                            <li>En el <strong className="text-white">Sustraendo</strong> haz lo mismo con el número que se resta.</li>
-                            <li>Presiona <strong className="text-white">Generar Fichas ✨</strong>.</li>
+                        <p className="font-bold text-white/40 uppercase tracking-wider text-[10px] mb-1">
+                            Pasos del método interactivo:
+                        </p>
+                        <ol className="space-y-1.5 list-decimal list-inside text-white/70">
+                            <li>
+                                <strong className="text-white">1. Planteo:</strong> Ingresa el minuendo y el sustraendo o escoge uno de los casos pedagógicos.
+                            </li>
+                            <li>
+                                <strong className="text-white">2. Invertir al Opuesto:</strong> Toca cada ficha del sustraendo (con marca <span className="text-amber-400 font-bold">S</span>) para voltearla. Una ficha azul (+1) pasa a ser roja (−1) y viceversa.
+                            </li>
+                            <li>
+                                <strong className="text-white">3. Anulación de Pares:</strong> Arrastra una ficha positiva (+1) sobre una negativa (−1). Ambas se anulan al formar un par cero.
+                            </li>
+                            <li>
+                                <strong className="text-white">4. Resultado:</strong> Cuenta las fichas que sobrevivieron.
+                            </li>
                         </ol>
                     </div>
 
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Voltea el sustraendo</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li>Las fichas del sustraendo tienen una marca <strong className="text-amber-400">S</strong>. Haz <strong className="text-white">doble clic</strong> en cada una para voltearla (cambia al opuesto).</li>
-                            <li>O presiona <strong className="text-amber-400">🔄 Voltear todas</strong> para hacerlo de golpe.</li>
-                            <li>Al voltear, una ficha <span className="text-blue-400 font-bold">+1</span> se vuelve <span className="text-red-400 font-bold">−1</span> y viceversa.</li>
-                        </ul>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Cancela pares</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li><strong className="text-white">Arrastra</strong> una ficha azul sobre una roja (o viceversa) para cancelar el par.</li>
-                            <li>O presiona <strong className="text-amber-400">⚡ Cancelar todos automáticamente</strong>.</li>
-                            <li>Cuando no queden pares, pulsa <strong className="text-teal-400">✅ Ver resultado</strong>.</li>
-                        </ul>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 4 — Resultado</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li>Se muestra el <strong className="text-white">valor final</strong>: positivo, negativo o cero.</li>
-                            <li>Presiona <strong className="text-white">Nuevo Ejercicio 🔄</strong> para practicar de nuevo.</li>
-                        </ul>
-                    </div>
-
-                    <div className="rounded-xl p-3" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)" }}>
-                        <p className="text-xs font-bold mb-1 text-teal-400">💡 Idea clave</p>
-                        <p className="text-xs text-white/60">Restar es lo mismo que <strong className="text-teal-400">sumar el opuesto</strong>. Al voltear las fichas del sustraendo conviertes la resta en una suma, y luego cancelas pares como siempre.</p>
+                    <div className="rounded-lg p-2 bg-white/5 border border-white/10 text-[11px]">
+                        <span className="font-bold text-white">Convención de colores:</span>
+                        <div className="flex items-center gap-3 mt-1">
+                            <span className="text-blue-300 flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" /> Positivos (+1)
+                            </span>
+                            <span className="text-red-300 flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Negativos (−1)
+                            </span>
+                            <span className="text-slate-300 flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block" /> Cero (0)
+                            </span>
+                        </div>
                     </div>
                 </div>
             </ModalHelp>

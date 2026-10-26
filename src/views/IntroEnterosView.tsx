@@ -1,12 +1,9 @@
-import { useState, useRef, useCallback, useEffect, type CSSProperties } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN_TEMP = -20;
 const MAX_TEMP = 30;
-const BULB_D = 56;   // bulb diameter px
-const STEM_H = 300;  // draggable stem height px
-const THERMO_H = STEM_H + BULB_D;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface TempColor {
@@ -32,9 +29,10 @@ type FactKey = "positive" | "zero" | "negative";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getTempColor = (temp: number): TempColor => {
-    if (temp > 0) return { primary: "#ff6b6b", secondary: "#ff4444", glow: "rgba(255,100,100,0.4)" };
-    if (temp < 0) return { primary: "#74b9ff", secondary: "#0984e3", glow: "rgba(100,160,255,0.4)" };
-    return { primary: "#a8a8b3", secondary: "#636e72", glow: "rgba(168,168,179,0.4)" };
+    // Convención matemática escolar: Positivos en AZUL, Negativos en ROJO, Cero neutro en GRIS
+    if (temp > 0) return { primary: "#60a5fa", secondary: "#2563eb", glow: "rgba(96,165,250,0.35)" };
+    if (temp < 0) return { primary: "#f87171", secondary: "#dc2626", glow: "rgba(248,113,113,0.35)" };
+    return { primary: "#cbd5e1", secondary: "#94a3b8", glow: "rgba(203,213,225,0.3)" };
 };
 
 const getFactKey = (temp: number): FactKey => {
@@ -43,33 +41,33 @@ const getFactKey = (temp: number): FactKey => {
     return "zero";
 };
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Educational Facts ────────────────────────────────────────────────────────
 const FACTS: Record<FactKey, string[]> = {
     positive: [
         "Temperatura sobre 0°C → número positivo (+)",
-        "Los números positivos se escriben con + o sin signo",
-        "Ejemplo: +15°C es quince grados sobre cero",
+        "Los positivos se escriben con + o sin signo (+15 = 15)",
+        "¡Más arriba estés de 0, mayor es el número!",
     ],
     zero: [
         "0°C es el punto de congelación del agua",
-        "El cero no es positivo ni negativo",
+        "El cero no es positivo ni negativo: es neutro",
         "¡El cero es el origen de la recta numérica!",
     ],
     negative: [
         "Temperatura bajo 0°C → número negativo (−)",
-        "Los números negativos siempre llevan el signo −",
-        "Ejemplo: −8°C es ocho grados BAJO cero",
+        "Los negativos SIEMPRE llevan el signo menos (−)",
+        "Ejemplo: −8°C significa 8 grados bajo cero",
     ],
 };
 
 const LEGEND_ITEMS = [
-    { color: "#ff6b6b", label: "Positivo (+)", sub: "mayor que 0" },
-    { color: "#a8a8b3", label: "Cero (0)", sub: "origen" },
-    { color: "#74b9ff", label: "Negativo (−)", sub: "menor que 0" },
+    { color: "#60a5fa", label: "Positivo (+)", sub: "> 0" },
+    { color: "#cbd5e1", label: "Cero (0)", sub: "origen" },
+    { color: "#f87171", label: "Negativo (−)", sub: "< 0" },
 ] as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function TermometroEnteros() {
+export default function IntroEnterosView(): React.ReactElement {
     const navigate = useNavigate();
 
     const [temperature, setTemperature] = useState<number>(15);
@@ -81,7 +79,7 @@ export default function TermometroEnteros() {
     const colors: TempColor = getTempColor(temperature);
     const range: number = MAX_TEMP - MIN_TEMP;
     const factKey: FactKey = getFactKey(temperature);
-    const fillPct: number = ((temperature - MIN_TEMP) / range) * 100;
+    const fillPct: number = Math.max(0, Math.min(100, ((temperature - MIN_TEMP) / range) * 100));
 
     const currentFacts: string[] = FACTS[factKey];
 
@@ -92,35 +90,20 @@ export default function TermometroEnteros() {
                 ? { text: "NEGATIVO", sign: "−", sub: "Menor que cero" }
                 : { text: "CERO", sign: "0", sub: "Punto de congelación" };
 
-    // ── Reset fact index when sign changes ──
-    useEffect(() => { setFactIdx(0); }, [factKey]);
-
-    // ── Rotate facts ──
+    // ── Rotate facts periodically, resetting smoothly on factKey change ──
     useEffect(() => {
-        const id = setInterval(
-            () => setFactIdx(i => (i + 1) % currentFacts.length),
-            3200,
-        );
+        const id = setInterval(() => {
+            setFactIdx((i) => (i + 1) % currentFacts.length);
+        }, 3600);
         return () => clearInterval(id);
     }, [factKey, currentFacts.length]);
 
-    // ── Drag: compute temperature from pointer Y inside the stem ──
-    const tempFromMouseEvent = useCallback(
-        (e: MouseEvent | React.MouseEvent): number | undefined => {
+    // ── Drag interaction via Pointer Events ──
+    const tempFromPointerY = useCallback(
+        (clientY: number): number | undefined => {
             if (!stemRef.current) return undefined;
             const rect = stemRef.current.getBoundingClientRect();
-            const ratio = 1 - (e.clientY - rect.top) / rect.height;
-            const clamped = Math.max(0, Math.min(1, ratio));
-            return Math.round(clamped * range + MIN_TEMP);
-        },
-        [range],
-    );
-
-    const tempFromTouchEvent = useCallback(
-        (e: TouchEvent | React.TouchEvent): number | undefined => {
-            if (!stemRef.current) return undefined;
-            const rect = stemRef.current.getBoundingClientRect();
-            const clientY = e.touches[0].clientY;
+            if (rect.height <= 0) return undefined;
             const ratio = 1 - (clientY - rect.top) / rect.height;
             const clamped = Math.max(0, Math.min(1, ratio));
             return Math.round(clamped * range + MIN_TEMP);
@@ -128,52 +111,38 @@ export default function TermometroEnteros() {
         [range],
     );
 
-    const handleStemMouseDown = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>): void => {
+    const handlePointerDown = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>): void => {
+            e.currentTarget.setPointerCapture(e.pointerId);
             setDragging(true);
-            const t = tempFromMouseEvent(e);
+            const t = tempFromPointerY(e.clientY);
             if (t !== undefined) setTemperature(t);
         },
-        [tempFromMouseEvent],
+        [tempFromPointerY],
     );
 
-    const handleStemTouchStart = useCallback(
-        (e: React.TouchEvent<HTMLDivElement>): void => {
-            setDragging(true);
-            const t = tempFromTouchEvent(e);
+    const handlePointerMove = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>): void => {
+            if (!dragging) return;
+            const t = tempFromPointerY(e.clientY);
             if (t !== undefined) setTemperature(t);
         },
-        [tempFromTouchEvent],
+        [dragging, tempFromPointerY],
     );
 
-    // ── Global move / up listeners while dragging ──
-    useEffect(() => {
-        if (!dragging) return;
+    const handlePointerUp = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>): void => {
+            try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+            } catch {
+                // ignore
+            }
+            setDragging(false);
+        },
+        [],
+    );
 
-        const onMouseMove = (e: MouseEvent): void => {
-            const t = tempFromMouseEvent(e);
-            if (t !== undefined) setTemperature(t);
-        };
-        const onTouchMove = (e: TouchEvent): void => {
-            const t = tempFromTouchEvent(e);
-            if (t !== undefined) setTemperature(t);
-        };
-        const onUp = (): void => setDragging(false);
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onUp);
-        window.addEventListener("touchmove", onTouchMove, { passive: true });
-        window.addEventListener("touchend", onUp);
-
-        return () => {
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onUp);
-            window.removeEventListener("touchmove", onTouchMove);
-            window.removeEventListener("touchend", onUp);
-        };
-    }, [dragging, tempFromMouseEvent, tempFromTouchEvent]);
-
-    // ── Build tick marks ──
+    // ── Graduated ticks ──
     const ticks: TickMark[] = [];
     for (let t = MIN_TEMP; t <= MAX_TEMP; t += 5) {
         ticks.push({
@@ -184,490 +153,292 @@ export default function TermometroEnteros() {
         });
     }
 
-    // ─── Inline style helpers (avoids repeating long objects) ─────────────────
-    const blobStyle = (pos: CSSProperties): CSSProperties => ({
-        position: "fixed",
-        borderRadius: "50%",
-        pointerEvents: "none",
-        filter: "blur(40px)",
-        background: `radial-gradient(circle, ${colors.glow} 0%, transparent 70%)`,
-        transition: "background 0.8s ease",
-        ...pos,
-    });
-
-    // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                background: "linear-gradient(135deg, #0d0d1a 0%, #0a1628 50%, #0d0d1a 100%)",
-                fontFamily: "'Outfit', sans-serif",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "24px 16px",
-                position: "relative",
-                overflow: "hidden",
-            }}
-        >
-            {/* ── Global styles + keyframes ── */}
+        <div className="flex h-dvh flex-col justify-between overflow-hidden bg-[#090d1a] text-white select-none relative font-sans">
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-
-        @keyframes fadeSlide {
-          0%   { opacity: 0; transform: translateY(6px);  }
-          10%  { opacity: 1; transform: translateY(0);    }
-          85%  { opacity: 1; transform: translateY(0);    }
-          100% { opacity: 0; transform: translateY(-6px); }
-        }
         @keyframes pulseGlow {
-          0%, 100% { opacity: 0.6; transform: scale(1);    }
-          50%      { opacity: 1;   transform: scale(1.08); }
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50%      { opacity: 1; transform: scale(1.08); }
         }
-        .fact-anim   { animation: fadeSlide  3.2s ease-in-out forwards; }
-        .bulb-pulse  { animation: pulseGlow  2s   ease-in-out infinite; }
-        .stem-track  { cursor: ns-resize; user-select: none; -webkit-user-select: none; touch-action: none; }
-        .number-display { font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: -2px; }
-        ::-webkit-scrollbar { display: none; }
+        @keyframes fadeSlide {
+          0%   { opacity: 0; transform: translateY(4px); }
+          15%  { opacity: 1; transform: translateY(0); }
+          85%  { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-4px); }
+        }
+        .fact-anim { animation: fadeSlide 3.6s ease-in-out forwards; }
+        .number-display { font-family: 'Space Mono', monospace; }
       `}</style>
 
-            {/* ── Ambient blobs ── */}
-            <div style={blobStyle({ top: "10%", left: "-10%", width: "40vw", height: "40vw", opacity: 0.5 })} />
-            <div style={blobStyle({ bottom: "5%", right: "-5%", width: "30vw", height: "30vw", opacity: 0.3, filter: "blur(60px)" })} />
-
-            {/* ── Header: back button + title ── */}
+            {/* ── Ambient Background Glows ── */}
             <div
-                className="w-full z-10"
-                style={{ maxWidth: 640, marginBottom: 32 }}
-            >
-                <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 shrink-0"
-                        style={{
-                            background: "rgba(255,255,255,0.07)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "rgba(255,255,255,0.6)",
-                            cursor: "pointer",
-                            fontFamily: "'Outfit', sans-serif",
-                        }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-                            e.currentTarget.style.color = "#fff";
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-                            e.currentTarget.style.color = "rgba(255,255,255,0.6)";
-                        }}
-                    >
-                        <svg
-                            width="16" height="16" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor"
-                            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                        >
-                            <path d="M15 19l-7-7 7-7" />
-                        </svg>
-                        <span className="hidden sm:inline">Volver</span>
-                    </button>
+                className="fixed top-[-10%] left-[-10%] w-[45vw] h-[45vw] rounded-full pointer-events-none blur-[70px] transition-all duration-700 opacity-40"
+                style={{ background: colors.glow }}
+            />
+            <div
+                className="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full pointer-events-none blur-[80px] transition-all duration-700 opacity-25"
+                style={{ background: colors.glow }}
+            />
 
-                    <div className="flex-1 text-center">
-                        <p
-                            className="text-xs font-bold tracking-widest uppercase mb-0.5"
-                            style={{ color: "rgba(255,255,255,0.3)" }}
-                        >
-                            Números Enteros
-                        </p>
-                        <h1
-                            className="font-black m-0 leading-tight"
-                            style={{ color: "#fff", fontSize: "clamp(16px,3vw,24px)" }}
-                        >
-                            El Termómetro de los{" "}
-                            <span style={{ color: colors.primary, transition: "color 0.5s ease" }}>
-                                Enteros
-                            </span>
-                        </h1>
-                    </div>
+            {/* ── 1. Header (36-44px) ── */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0d1424] z-20">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white/10 hover:bg-white/15 active:scale-95 text-white/80 hover:text-white text-[11px] lg:text-xs font-semibold transition-all flex items-center gap-1 border border-white/10"
+                    title="Volver"
+                >
+                    <span>←</span>
+                    <span className="hidden sm:inline">Volver</span>
+                </button>
 
-                    <div className="shrink-0" style={{ width: 56 }} />
+                <div className="text-center px-1">
+                    <span className="text-[9px] uppercase tracking-widest text-white/40 block font-bold leading-none">
+                        Números Enteros
+                    </span>
+                    <h1 className="text-xs sm:text-sm lg:text-base font-extrabold text-white leading-tight">
+                        El Termómetro de los <span style={{ color: colors.primary }}>Enteros</span>
+                    </h1>
                 </div>
-            </div>
 
-            {/* ── Main card ── */}
-            <div
-                className="flex items-center z-10 w-full"
-                style={{
-                    maxWidth: 640,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 28,
-                    padding: "28px 24px",
-                    gap: "clamp(24px,5vw,56px)",
-                    backdropFilter: "blur(20px)",
-                    boxShadow: `0 0 80px ${colors.glow}`,
-                    transition: "box-shadow 0.8s ease",
-                }}
-            >
-                {/* ════ THERMOMETER COLUMN ════ */}
-                <div className="flex flex-col items-center shrink-0 px-4">
+                {/* Badge de temperatura en cabecera */}
+                <div
+                    className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white/5 border border-white/10 text-[11px] lg:text-xs font-mono font-bold flex items-center justify-center tabular-nums"
+                    style={{ color: colors.primary }}
+                >
+                    {temperature > 0 ? `+${temperature}` : temperature}°C
+                </div>
+            </header>
 
-                    {/* ▲ Up button */}
-                    <button
-                        type="button"
-                        onClick={() => setTemperature(t => Math.min(MAX_TEMP, t + 1))}
-                        disabled={temperature >= MAX_TEMP}
-                        className="flex items-center justify-center rounded-full mb-2.5 transition-all active:scale-90"
-                        style={{
-                            width: 40,
-                            height: 40,
-                            background: "rgba(255,255,255,0.07)",
-                            border: "1px solid rgba(255,255,255,0.15)",
-                            color: "#fff",
-                            cursor: "pointer",
-                            fontSize: 18,
-                            fontWeight: 900,
-                            opacity: temperature >= MAX_TEMP ? 0.25 : 1,
-                        }}
-                    >
-                        ▲
-                    </button>
+            {/* ── 2. Área Central (Sin scroll en tablets ni laptops) ── */}
+            <main className="flex-1 min-h-0 flex items-center justify-center p-1.5 sm:p-3 lg:p-6 z-10 overflow-hidden">
+                <div
+                    className="flex items-center w-full max-w-[560px] lg:max-w-[700px] bg-white/[0.04] border border-white/10 rounded-2xl lg:rounded-3xl p-2 sm:p-4 lg:p-6 gap-2 sm:gap-6 lg:gap-8 backdrop-blur-xl shadow-2xl transition-all duration-500"
+                    style={{
+                        boxShadow: `0 0 40px ${colors.glow}`,
+                    }}
+                >
+                    {/* ════ COLUMNA TERMÓMETRO ════ */}
+                    <div className="flex flex-col items-center shrink-0 pl-1 sm:pl-2 pr-2">
+                        {/* Botón ▲ Aumentar */}
+                        <button
+                            type="button"
+                            onClick={() => setTemperature((t) => Math.min(MAX_TEMP, t + 1))}
+                            disabled={temperature >= MAX_TEMP}
+                            className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center border border-white/15 shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mb-1"
+                            title="Aumentar temperatura (+1°C)"
+                        >
+                            ▲
+                        </button>
 
-                    <div
-                        className="relative shrink-0"
-                        style={{ width: 80, height: THERMO_H }}
-                    >
-                        {/* Tick marks */}
-                        {ticks.map(({ t, pct, isMajor, isZero }: TickMark) => {
-                            const bottomPx: number = BULB_D + (pct / 100) * STEM_H;
-                            return (
-                                <div
-                                    key={t}
-                                    className="absolute flex items-center"
-                                    style={{
-                                        right: "50%",
-                                        bottom: bottomPx,
-                                        transform: "translateY(50%)",
-                                        gap: 3,
-                                        paddingRight: 22,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            fontFamily: "'Space Mono', monospace",
-                                            fontSize: isZero ? 11 : 10,
-                                            fontWeight: isZero ? 700 : 400,
-                                            color: isZero
-                                                ? "#fff"
-                                                : isMajor
-                                                    ? "rgba(255,255,255,0.55)"
-                                                    : "rgba(255,255,255,0.25)",
-                                            whiteSpace: "nowrap",
-                                        }}
-                                    >
-                                        {t > 0 ? `+${t}` : t}°
-                                    </span>
+                        {/* Contenedor del Termómetro y Escala Graduada */}
+                        <div className="relative flex items-center justify-center">
+                            {/* Escala de Ticks a la izquierda del tubo */}
+                            <div className="relative h-[170px] sm:h-[200px] lg:h-[270px] w-12 sm:w-14 shrink-0">
+                                {ticks.map(({ t, pct, isMajor, isZero }) => (
                                     <div
+                                        key={t}
+                                        className="absolute right-1 flex items-center gap-1 -translate-y-1/2 pointer-events-none"
+                                        style={{ bottom: `${pct}%` }}
+                                    >
+                                        <span
+                                            className={`font-mono text-[9px] sm:text-[10px] tabular-nums whitespace-nowrap ${
+                                                isZero
+                                                    ? "text-white font-bold"
+                                                    : isMajor
+                                                    ? "text-white/60 font-semibold"
+                                                    : "text-white/25"
+                                            }`}
+                                        >
+                                            {t > 0 ? `+${t}` : t}°
+                                        </span>
+                                        <div
+                                            className={`rounded-full ${
+                                                isZero
+                                                    ? "w-3 h-[2px] bg-white"
+                                                    : isMajor
+                                                    ? "w-2 h-[1.5px] bg-white/50"
+                                                    : "w-1 h-[1px] bg-white/20"
+                                            }`}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Tubo de cristal y bulbo inferior */}
+                            <div className="relative flex flex-col items-center">
+                                {/* Tubo vertical (Stem) */}
+                                <div
+                                    ref={stemRef}
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    onPointerCancel={handlePointerUp}
+                                    className="relative w-5 sm:w-6 lg:w-7 h-[170px] sm:h-[200px] lg:h-[270px] rounded-t-full bg-white/10 border-x border-t border-white/20 overflow-visible cursor-ns-resize touch-none select-none"
+                                    style={{ touchAction: "none" }}
+                                    title="Arrastra verticalmente para cambiar la temperatura"
+                                >
+                                    {/* Contenedor interior del líquido con overflow hidden */}
+                                    <div className="absolute inset-0 rounded-t-full overflow-hidden pointer-events-none">
+                                        {/* Líquido coloreado */}
+                                        <div
+                                            className="absolute bottom-0 left-0 right-0 transition-all duration-150"
+                                            style={{
+                                                height: `${fillPct}%`,
+                                                background: `linear-gradient(to top, ${colors.secondary}, ${colors.primary})`,
+                                            }}
+                                        />
+                                        {/* Reflejo de cristal */}
+                                        <div className="absolute top-0 left-1 w-1 h-full bg-white/20 rounded-full pointer-events-none" />
+                                    </div>
+
+                                    {/* Indicador / Manija de arrastre sobre el líquido */}
+                                    <div
+                                        className="absolute left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white pointer-events-none shadow-md z-10 transition-all duration-150"
                                         style={{
-                                            width: isZero ? 14 : isMajor ? 10 : 6,
-                                            height: isZero ? 2 : 1,
-                                            background: isZero
-                                                ? "#fff"
-                                                : isMajor
-                                                    ? "rgba(255,255,255,0.4)"
-                                                    : "rgba(255,255,255,0.15)",
-                                            borderRadius: 2,
+                                            bottom: `${fillPct}%`,
+                                            background: `radial-gradient(circle at 35% 35%, ${colors.primary}, ${colors.secondary})`,
+                                            boxShadow: `0 0 10px ${colors.glow}`,
                                         }}
                                     />
                                 </div>
-                            );
-                        })}
 
-                        {/* Stem tube */}
-                        <div
-                            className="absolute overflow-hidden"
-                            style={{
-                                bottom: BULB_D - 2,   // 2 px overlap with bulb → seamless join
-                                left: "50%",
-                                transform: "translateX(-50%)",
-                                width: 26,
-                                height: STEM_H + 2,
-                                borderRadius: "13px 13px 0 0",
-                                background: "rgba(255,255,255,0.07)",
-                                border: "1.5px solid rgba(255,255,255,0.12)",
-                                borderBottom: "none",
-                            }}
-                        >
-                            {/* Liquid fill */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: `${fillPct}%`,
-                                    background: `linear-gradient(to top, ${colors.secondary}, ${colors.primary})`,
-                                    transition: "height 0.15s ease, background 0.6s ease",
-                                }}
-                            />
-                            {/* Glass shine */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 4,
-                                    width: 4,
-                                    height: "100%",
-                                    background: "rgba(255,255,255,0.15)",
-                                    borderRadius: 4,
-                                    pointerEvents: "none",
-                                }}
-                            />
-                        </div>
-
-                        {/* Drag handle — always at the top of the liquid fill */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                left: "50%",
-                                bottom: BULB_D + (fillPct / 100) * STEM_H,
-                                transform: "translate(-50%, 50%)",
-                                width: dragging ? 22 : 18,
-                                height: dragging ? 22 : 18,
-                                borderRadius: "50%",
-                                background: `radial-gradient(circle at 35% 35%, ${colors.primary}, ${colors.secondary})`,
-                                border: "2.5px solid rgba(255,255,255,0.9)",
-                                boxShadow: `0 0 14px ${colors.glow}, 0 2px 8px rgba(0,0,0,0.4)`,
-                                transition: "bottom 0.15s ease, width 0.15s, height 0.15s, background 0.6s, box-shadow 0.6s",
-                                zIndex: 5,
-                                pointerEvents: "none",
-                            }}
-                        />
-
-                        {/* Invisible drag capture overlay on stem */}
-                        <div
-                            ref={stemRef}
-                            className="stem-track absolute"
-                            onMouseDown={handleStemMouseDown}
-                            onTouchStart={handleStemTouchStart}
-                            style={{
-                                bottom: BULB_D,
-                                left: "50%",
-                                transform: "translateX(-50%)",
-                                width: 40,
-                                height: STEM_H,
-                                zIndex: 10,
-                                borderRadius: 20,
-                            }}
-                        />
-                    </div>
-
-                    {/* ▼ Down button */}
-                    <button
-                        type="button"
-                        onClick={() => setTemperature(t => Math.max(MIN_TEMP, t - 1))}
-                        disabled={temperature <= MIN_TEMP}
-                        className="flex items-center justify-center rounded-full transition-all active:scale-90"
-                        style={{
-                            width: 40,
-                            height: 40,
-                            background: "rgba(255,255,255,0.07)",
-                            border: "1px solid rgba(255,255,255,0.15)",
-                            color: "#fff",
-                            cursor: "pointer",
-                            fontSize: 18,
-                            fontWeight: 900,
-                            opacity: temperature <= MIN_TEMP ? 0.25 : 1,
-                            marginTop: "-30px", // Pull button closer to thermometer bulb
-                            position: "relative",
-                            zIndex: 15, // Ensure button is above drag track
-                        }}
-                    >
-                        ▼
-                    </button>
-                </div>
-
-                {/* ════ INFO PANEL ════ */}
-                <div className="flex flex-col flex-1 min-w-0">
-
-                    {/* Big temperature display */}
-                    <div style={{ marginBottom: 20 }}>
-                        <div
-                            className="number-display"
-                            style={{
-                                fontSize: "clamp(52px,10vw,72px)",
-                                color: colors.primary,
-                                transition: "color 0.5s ease",
-                                lineHeight: 1,
-                                marginBottom: 4,
-                            }}
-                        >
-                            {temperature > 0 ? `+${temperature}` : temperature}°C
-                        </div>
-
-                        {/* Type badge */}
-                        <div
-                            className="inline-flex items-center gap-2 rounded-full"
-                            style={{
-                                padding: "5px 14px",
-                                background: `${colors.primary}22`,
-                                border: `1px solid ${colors.primary}44`,
-                                transition: "all 0.5s ease",
-                            }}
-                        >
-                            <span
-                                style={{
-                                    fontFamily: "'Space Mono', monospace",
-                                    fontSize: 22,
-                                    fontWeight: 700,
-                                    color: colors.primary,
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {typeLabel.sign}
-                            </span>
-                            <span
-                                className="font-extrabold text-white"
-                                style={{ fontSize: 13, letterSpacing: "0.1em" }}
-                            >
-                                {typeLabel.text}
-                            </span>
-                        </div>
-
-                        <p
-                            className="font-medium"
-                            style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 6 }}
-                        >
-                            {typeLabel.sub}
-                        </p>
-                    </div>
-
-                    {/* Mini number line */}
-                    <div
-                        className="rounded-2xl mb-4"
-                        style={{
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.07)",
-                            padding: "12px 14px",
-                        }}
-                    >
-                        <p
-                            className="font-bold uppercase tracking-widest mb-2"
-                            style={{ color: "rgba(255,255,255,0.35)", fontSize: 10 }}
-                        >
-                            Recta numérica
-                        </p>
-                        <div className="relative" style={{ height: 36 }}>
-                            {/* Axis */}
-                            <div
-                                className="absolute rounded-full"
-                                style={{
-                                    top: "50%",
-                                    left: 0,
-                                    right: 0,
-                                    height: 2,
-                                    background: "rgba(255,255,255,0.15)",
-                                    transform: "translateY(-50%)",
-                                }}
-                            />
-                            {/* Zero tick */}
-                            <div
-                                className="absolute rounded-sm"
-                                style={{
-                                    top: "50%",
-                                    left: `${((0 - MIN_TEMP) / range) * 100}%`,
-                                    transform: "translate(-50%, -50%)",
-                                    width: 2,
-                                    height: 16,
-                                    background: "rgba(255,255,255,0.5)",
-                                }}
-                            />
-                            {/* Labels */}
-                            {([-20, -10, 0, 10, 20, 30] as number[]).map(v => (
-                                <span
-                                    key={v}
-                                    className="absolute font-bold select-none"
+                                {/* Bulbo inferior redondo */}
+                                <div
+                                    className="relative w-9 h-9 sm:w-11 sm:h-11 lg:w-13 lg:h-13 -mt-2 rounded-full border border-white/20 flex items-center justify-center shadow-lg transition-all duration-500 z-10"
                                     style={{
-                                        top: "calc(50% + 12px)",
-                                        left: `${((v - MIN_TEMP) / range) * 100}%`,
-                                        transform: "translateX(-50%)",
-                                        fontSize: 9,
-                                        color: v === 0 ? "#fff" : "rgba(255,255,255,0.35)",
-                                        fontFamily: "'Space Mono', monospace",
+                                        background: `radial-gradient(circle at 35% 35%, ${colors.primary}, ${colors.secondary})`,
+                                        boxShadow: `0 0 16px ${colors.glow}`,
                                     }}
                                 >
-                                    {v}
-                                </span>
-                            ))}
-                            {/* Active dot */}
-                            <div
-                                className="absolute rounded-full border-2 border-white"
-                                style={{
-                                    top: "50%",
-                                    left: `${((temperature - MIN_TEMP) / range) * 100}%`,
-                                    transform: "translate(-50%, -50%)",
-                                    width: 14,
-                                    height: 14,
-                                    background: colors.primary,
-                                    boxShadow: `0 0 10px ${colors.glow}`,
-                                    transition: "left 0.2s ease, background 0.5s ease, box-shadow 0.5s",
-                                    zIndex: 2,
-                                }}
-                            />
+                                    {/* Reflejo curvo del bulbo */}
+                                    <div className="absolute top-1.5 left-2 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-white/30 pointer-events-none" />
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Botón ▼ Disminuir */}
+                        <button
+                            type="button"
+                            onClick={() => setTemperature((t) => Math.max(MIN_TEMP, t - 1))}
+                            disabled={temperature <= MIN_TEMP}
+                            className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center border border-white/15 shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mt-1"
+                            title="Disminuir temperatura (−1°C)"
+                        >
+                            ▼
+                        </button>
                     </div>
 
-                    {/* Fact card */}
-                    <div
-                        className="flex items-center rounded-2xl overflow-hidden"
-                        style={{
-                            minHeight: 68,
-                            padding: "12px 14px",
-                            background: `${colors.primary}11`,
-                            border: `1px solid ${colors.primary}30`,
-                            transition: "background 0.6s, border-color 0.6s",
-                        }}
-                    >
-                        <p
-                            key={`${factIdx}-${factKey}`}
-                            className="fact-anim m-0 font-medium leading-relaxed"
-                            style={{ color: "rgba(255,255,255,0.82)", fontSize: 13 }}
+                    {/* ════ PANEL DE INFORMACIÓN Y RECTA ════ */}
+                    <div className="flex flex-col flex-1 min-w-0 justify-center py-1">
+                        {/* Display de temperatura */}
+                        <div className="mb-2 sm:mb-3">
+                            <div
+                                className="number-display text-4xl sm:text-5xl lg:text-6xl font-black tabular-nums leading-none tracking-tight transition-colors duration-500"
+                                style={{ color: colors.primary }}
+                            >
+                                {temperature > 0 ? `+${temperature}` : temperature}°C
+                            </div>
+
+                            {/* Badge de clasificación */}
+                            <div className="flex items-center gap-2 mt-1 sm:mt-1.5">
+                                <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-black tracking-wide border transition-all duration-500"
+                                    style={{
+                                        background: `${colors.primary}20`,
+                                        borderColor: `${colors.primary}50`,
+                                        color: colors.primary,
+                                    }}
+                                >
+                                    <span className="font-mono text-sm leading-none">{typeLabel.sign}</span>
+                                    <span>{typeLabel.text}</span>
+                                </span>
+                                <span className="text-[11px] sm:text-xs text-white/50 font-medium truncate">
+                                    {typeLabel.sub}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Mini Recta Numérica Interactiva */}
+                        <div className="rounded-xl bg-white/[0.05] border border-white/10 p-2 sm:p-2.5 mb-2 sm:mb-2.5">
+                            <div className="flex items-center justify-between text-[9px] uppercase tracking-wider font-bold text-white/40 mb-1">
+                                <span>Recta numérica</span>
+                                <span className="font-mono font-semibold" style={{ color: colors.primary }}>
+                                    {temperature > 0 ? `+${temperature}` : temperature}
+                                </span>
+                            </div>
+
+                            <div className="relative h-6 sm:h-7 flex items-center">
+                                {/* Eje horizontal */}
+                                <div className="absolute left-0 right-0 h-[2px] bg-white/20 rounded-full" />
+
+                                {/* Marca cero destacada */}
+                                <div
+                                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-3.5 bg-white/60 rounded-full"
+                                    style={{ left: `${((0 - MIN_TEMP) / range) * 100}%` }}
+                                />
+
+                                {/* Etiquetas numéricas fijas */}
+                                {([-20, -10, 0, 10, 20, 30] as number[]).map((v) => (
+                                    <span
+                                        key={v}
+                                        className={`absolute top-4 -translate-x-1/2 text-[8px] sm:text-[9px] font-mono select-none ${
+                                            v === 0 ? "text-white font-bold" : "text-white/40"
+                                        }`}
+                                        style={{ left: `${((v - MIN_TEMP) / range) * 100}%` }}
+                                    >
+                                        {v}
+                                    </span>
+                                ))}
+
+                                {/* Punto activo sincronizado */}
+                                <div
+                                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white shadow-md transition-all duration-150 z-10"
+                                    style={{
+                                        left: `${fillPct}%`,
+                                        background: colors.primary,
+                                        boxShadow: `0 0 10px ${colors.glow}`,
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tarjeta de Hechos y Curiosidades Didácticas */}
+                        <div
+                            className="flex items-center rounded-xl p-2 sm:p-2.5 min-h-[46px] sm:min-h-[52px] border transition-all duration-500"
+                            style={{
+                                background: `${colors.primary}12`,
+                                borderColor: `${colors.primary}30`,
+                            }}
                         >
-                            💡 {currentFacts[factIdx]}
-                        </p>
+                            <p
+                                key={`${factIdx}-${factKey}`}
+                                className="fact-anim m-0 text-xs sm:text-[13px] text-white/90 font-medium leading-snug"
+                            >
+                                💡 {currentFacts[factIdx]}
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </main>
 
-            {/* ── Bottom legend ── */}
-            <div className="flex flex-wrap gap-5 mt-6 z-10 justify-center">
-                {LEGEND_ITEMS.map(({ color, label, sub }) => (
-                    <div key={label} className="flex items-center gap-2">
-                        <div
-                            className="rounded-full shrink-0"
-                            style={{ width: 10, height: 10, background: color }}
-                        />
-                        <div>
-                            <span className="text-xs font-bold text-white">{label}</span>
-                            <span
-                                className="text-xs ml-1"
-                                style={{ color: "rgba(255,255,255,0.35)" }}
-                            >
-                                {sub}
-                            </span>
+            {/* ── 3. Footer / Leyenda (32-36px) ── */}
+            <footer className="h-8 sm:h-9 shrink-0 border-t border-white/10 px-2 lg:px-4 bg-[#0d1424] flex items-center justify-between text-[10px] sm:text-[11px] text-white/50 z-20">
+                {/* Leyenda interactiva */}
+                <div className="flex items-center gap-3 sm:gap-4">
+                    {LEGEND_ITEMS.map(({ color, label, sub }) => (
+                        <div key={label} className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="font-bold text-white/80">{label}</span>
+                            <span className="hidden sm:inline text-white/40">{sub}</span>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
 
-            {/* ── Hint ── */}
-            <p
-                className="text-center mt-4 z-10"
-                style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}
-            >
-                Arrastra el termómetro · Usa los botones ▲▼ · O haz clic en el tubo
-            </p>
+                {/* Micro-indicación */}
+                <span className="hidden md:inline text-white/30 truncate">
+                    Arrastra el termómetro · Usa ▲▼ · O toca el tubo
+                </span>
+            </footer>
         </div>
     );
 }

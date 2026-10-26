@@ -41,7 +41,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/intro-enteros',
-        element: <Layout><IntroEnterosView /></Layout>
+        element: <IntroEnterosView />
     },
     {
         path: '/recta-numerica',
@@ -49,11 +49,11 @@ const router = createBrowserRouter([
     },
     {
         path: '/suma-enteros',
-        element: <Layout><SumaEnterosView /></Layout>
+        element: <SumaEnterosView />
     },
     {
         path: '/resta-enteros',
-        element: <Layout><RestaEnterosView /></Layout>
+        element: <RestaEnterosView />
     },
     {
         path: '/producto-enteros',
