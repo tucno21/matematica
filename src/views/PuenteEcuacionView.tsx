@@ -27,49 +27,92 @@ interface BridgePreset {
 }
 
 const BRIDGE_PRESETS: BridgePreset[] = [
+  // ── NIVEL 1: Despejes directos de 1 paso ──
+  {
+    label: 'x + 5 = 12',
+    leftExpr: 'x + 5',
+    rightExpr: '12',
+    desc: 'Nivel 1 (Básico): Trasponer +5 al segundo miembro restando (12 − 5 = 7)'
+  },
+  {
+    label: 'x - 4 = 9',
+    leftExpr: 'x - 4',
+    rightExpr: '9',
+    desc: 'Nivel 1 (Básico): Trasponer −4 al segundo miembro sumando (9 + 4 = 13)'
+  },
   {
     label: '3x = 12',
     leftExpr: '3x',
     rightExpr: '12',
-    desc: 'Caso clave: el factor 3 que multiplica pasa al otro lado dividiendo'
+    desc: 'Nivel 1 (Básico): El factor 3 que multiplica pasa al otro lado dividiendo'
   },
   {
-    label: '3x + 5 = 14',
-    leftExpr: '3x + 5',
-    rightExpr: '14',
-    desc: 'Trasponer +5 al segundo miembro y luego despejar el factor 3'
+    label: 'x / 3 = 2',
+    leftExpr: 'x / 3',
+    rightExpr: '2',
+    desc: 'Nivel 1 (Básico): El divisor 3 pasa al otro lado multiplicando (2 × 3 = 6)'
   },
+
+  // ── NIVEL 2: Ecuaciones lineales de 2 pasos (ax + b = c) ──
+  {
+    label: '2x + 5 = 13',
+    leftExpr: '2x + 5',
+    rightExpr: '13',
+    desc: 'Nivel 2 (Intermedio): Trasponer +5 restando y luego despejar el factor 2'
+  },
+  {
+    label: '3x - 4 = 11',
+    leftExpr: '3x - 4',
+    rightExpr: '11',
+    desc: 'Nivel 2 (Intermedio): Trasponer −4 sumando y luego pasar el 3 dividiendo'
+  },
+  {
+    label: '(x - 6) / 4 = 3',
+    leftExpr: '(x - 6) / 4',
+    rightExpr: '3',
+    desc: 'Nivel 2 (Fracción): El divisor 4 pasa multiplicando y luego el −6 pasa sumando'
+  },
+
+  // ── NIVEL 3: Variables en ambos miembros (ax + b = cx + d) ──
   {
     label: '4x - 2 = 2x + 8',
     leftExpr: '4x - 2',
     rightExpr: '2x + 8',
-    desc: 'Variables y números en ambos miembros: trasponer y fusionar'
+    desc: 'Nivel 3 (Avanzado): Agrupar variables a un lado y números al otro, fusionar y despejar'
   },
   {
     label: '5x + 3 = 2x + 15',
     leftExpr: '5x + 3',
     rightExpr: '2x + 15',
-    desc: 'Trasponer 2x a la izquierda y 3 a la derecha hasta llegar a 3x = 12'
-  },
-  {
-    label: '2x + 7 = 19',
-    leftExpr: '2x + 7',
-    rightExpr: '19',
-    desc: 'Trasponer +7 restando y pasar el 2 dividiendo'
+    desc: 'Nivel 3 (Avanzado): Trasponer 2x y 3, fusionar términos y despejar factor'
   },
   {
     label: '6x - 4 = 3x + 11',
     leftExpr: '6x - 4',
     rightExpr: '3x + 11',
-    desc: 'Términos negativos trasponiendo a positivos (+)'
+    desc: 'Nivel 3 (Avanzado): Trasponer términos con signos negativos, fusionar y despejar'
+  },
+
+  // ── NIVEL 4: Ecuaciones compuestas con fracción ((ax + b) / c = d) ──
+  {
+    label: '(3x + 1) / 2 = 8',
+    leftExpr: '(3x + 1) / 2',
+    rightExpr: '8',
+    desc: 'Nivel 4 (Experto): El divisor 2 pasa multiplicando al 8 para liberar 3x + 1'
+  },
+  {
+    label: '(2x - 5) / 3 = 7',
+    leftExpr: '(2x - 5) / 3',
+    rightExpr: '7',
+    desc: 'Nivel 4 (Experto): El divisor 3 pasa multiplicando al 7, luego trasponer el −5 y despejar el factor 2'
   }
 ]
 
 const KB_ROWS = [
   ['1', '2', '3', 'x', '⌫'],
-  ['4', '5', '6', '2x', '+'],
-  ['7', '8', '9', '3x', '−'],
-  ['0', 'C', '✓'],
+  ['4', '5', '6', '+', '−'],
+  ['7', '8', '9', '(', ')'],
+  ['C', '0', '/', '✓'],
 ]
 
 // Parsea expresiones a tarjetas de términos
@@ -109,6 +152,33 @@ function parseExprToCards(expr: string, side: 'left' | 'right'): TermCard[] {
   return list
 }
 
+// Parsea un miembro completo detectando denominadores como (2x-5)/3 o x/3
+function parseMember(expr: string, side: 'left' | 'right'): { terms: TermCard[]; denom: number } {
+  let clean = expr.replace(/\s+/g, '').replace(/−/g, '-').replace(/X/g, 'x')
+  let denom = 1
+  if (!clean) return { terms: [], denom: 1 }
+
+  // Detecta división del miembro: ej. (2x-5)/3, (x)/3, x/3, 12/3
+  const divMatch = clean.match(/^(?:\((.+)\)|([^(]+))\s*\/\s*(\d+)$/)
+  if (divMatch) {
+    const numExpr = divMatch[1] || divMatch[2]
+    const parsedDenom = parseInt(divMatch[3], 10)
+    if (!isNaN(parsedDenom) && parsedDenom > 0) {
+      denom = parsedDenom
+      clean = numExpr
+    }
+  }
+
+  const terms = parseExprToCards(clean, side)
+  return { terms, denom }
+}
+
+interface HistorySnapshot {
+  cards: TermCard[]
+  denomL: number
+  denomR: number
+}
+
 export default function PuenteEcuacionView() {
   const nav = useNavigate()
   const [showHelp, setShowHelp] = useState(false)
@@ -119,17 +189,21 @@ export default function PuenteEcuacionView() {
   const [kbR, setKbR] = useState(BRIDGE_PRESETS[0].rightExpr)
   const [activeKb, setActiveKb] = useState<'left' | 'right' | null>(null)
 
+  // Denominadores de cada miembro (1 = sin fracción)
+  const [denomL, setDenomL] = useState<number>(() => parseMember(BRIDGE_PRESETS[0].leftExpr, 'left').denom)
+  const [denomR, setDenomR] = useState<number>(() => parseMember(BRIDGE_PRESETS[0].rightExpr, 'right').denom)
+
   // Referencia al contenedor de la mesa para cálculo de coordenadas del puente
   const boardRef = useRef<HTMLDivElement>(null)
 
   // Tarjetas en el tapete
   const [cards, setCards] = useState<TermCard[]>(() => [
-    ...parseExprToCards(BRIDGE_PRESETS[0].leftExpr, 'left'),
-    ...parseExprToCards(BRIDGE_PRESETS[0].rightExpr, 'right'),
+    ...parseMember(BRIDGE_PRESETS[0].leftExpr, 'left').terms,
+    ...parseMember(BRIDGE_PRESETS[0].rightExpr, 'right').terms,
   ])
 
   // Historial para deshacer
-  const [history, setHistory] = useState<TermCard[][]>([])
+  const [history, setHistory] = useState<HistorySnapshot[]>([])
 
   // Estado del vuelo parabólico de un término (+ <-> -)
   const [flyingToken, setFlyingToken] = useState<{
@@ -143,6 +217,17 @@ export default function PuenteEcuacionView() {
 
   // ID del término que está volando (para ocultarlo de la mesa durante el salto)
   const [crossingId, setCrossingId] = useState<string | null>(null)
+
+  // Estado del vuelo parabólico de un denominador (÷ D -> × D al otro miembro)
+  const [flyingDenom, setFlyingDenom] = useState<{
+    value: number
+    fromSide: 'left' | 'right'
+    toSide: 'left' | 'right'
+    x: number
+    y: number
+    isAtApex: boolean
+    isFlipped: boolean
+  } | null>(null)
 
   // Estado del vuelo parabólico del coeficiente (ax = b -> x = b/a)
   const [coeffDivState, setCoeffDivState] = useState<{
@@ -178,18 +263,20 @@ export default function PuenteEcuacionView() {
   const rightTerms = cards.filter(c => c.side === 'right')
 
   const isAlreadySolved =
-    (leftTerms.length === 1 &&
+    denomL === 1 &&
+    denomR === 1 &&
+    ((leftTerms.length === 1 &&
       leftTerms[0].hasVar &&
       leftTerms[0].coeff === 1 &&
       rightTerms.length === 1 &&
       !rightTerms[0].hasVar &&
       coeffDivState.stage === 'idle') ||
-    (rightTerms.length === 1 &&
-      rightTerms[0].hasVar &&
-      rightTerms[0].coeff === 1 &&
-      leftTerms.length === 1 &&
-      !leftTerms[0].hasVar &&
-      coeffDivState.stage === 'idle')
+      (rightTerms.length === 1 &&
+        rightTerms[0].hasVar &&
+        rightTerms[0].coeff === 1 &&
+        leftTerms.length === 1 &&
+        !leftTerms[0].hasVar &&
+        coeffDivState.stage === 'idle'))
 
   const solved = solvedState || isAlreadySolved
   const finalX =
@@ -203,6 +290,7 @@ export default function PuenteEcuacionView() {
   const loadEquation = useCallback((lExpr: string, rExpr: string, desc?: string) => {
     setCrossingId(null)
     setFlyingToken(null)
+    setFlyingDenom(null)
     setCoeffDivState({
       stage: 'idle',
       coeff: 0,
@@ -220,9 +308,11 @@ export default function PuenteEcuacionView() {
     setHistory([])
     setActiveKb(null)
 
-    const lCards = parseExprToCards(lExpr, 'left')
-    const rCards = parseExprToCards(rExpr, 'right')
-    setCards([...lCards, ...rCards])
+    const lParsed = parseMember(lExpr, 'left')
+    const rParsed = parseMember(rExpr, 'right')
+    setDenomL(lParsed.denom)
+    setDenomR(rParsed.denom)
+    setCards([...lParsed.terms, ...rParsed.terms])
     setFbMsg(desc || `Ecuación cargada: ${lExpr} = ${rExpr}`)
   }, [])
 
@@ -259,7 +349,7 @@ export default function PuenteEcuacionView() {
       } else if (e.key === 'Backspace') {
         const set = activeKb === 'left' ? setKbL : setKbR
         set(p => p.slice(0, -1))
-      } else if (/^[0-9xX+\-=]$/.test(e.key)) {
+      } else if (/^[0-9xX+\-=/()]$/.test(e.key)) {
         const set = activeKb === 'left' ? setKbL : setKbR
         set(p => p + (e.key === '-' ? '−' : e.key.toLowerCase()))
       }
@@ -270,9 +360,11 @@ export default function PuenteEcuacionView() {
 
   // Deshacer movimiento
   const handleUndo = () => {
-    if (history.length === 0 || crossingId || coeffDivState.stage === 'flying') return
+    if (history.length === 0 || crossingId || !!flyingDenom || coeffDivState.stage === 'flying') return
     const prev = history[history.length - 1]
-    setCards(prev)
+    setCards(prev.cards)
+    setDenomL(prev.denomL)
+    setDenomR(prev.denomR)
     setHistory(h => h.slice(0, -1))
     setCoeffDivState({
       stage: 'idle',
@@ -293,7 +385,14 @@ export default function PuenteEcuacionView() {
 
   // ── 1. MOVIMIENTO PARABÓLICO SUAVE PARA TÉRMINOS (+ <-> -) ──
   const crossBridgeParabolic = (card: TermCard, event: React.MouseEvent<HTMLDivElement>) => {
-    if (solved || crossingId || coeffDivState.stage !== 'idle') return
+    if (solved || crossingId || !!flyingDenom || coeffDivState.stage !== 'idle') return
+
+    // Si el miembro tiene denominador, se debe despejar primero el divisor
+    const hasDenomOnSide = (card.side === 'left' && denomL > 1) || (card.side === 'right' && denomR > 1)
+    if (hasDenomOnSide) {
+      setFbMsg(`⚠️ Primero debes pasar el divisor ÷ ${card.side === 'left' ? denomL : denomR} al otro miembro para liberar los términos del numerador.`)
+      return
+    }
 
     const board = boardRef.current
     if (!board) return
@@ -321,25 +420,47 @@ export default function PuenteEcuacionView() {
       : `${flippedCoeff > 0 ? '+' : ''}${flippedCoeff}`
 
     // Guardar en historial
-    setHistory(prev => [...prev, cards])
+    setHistory(prev => [...prev, { cards, denomL, denomR }])
     setCrossingId(card.id)
 
     let startTime: number | null = null
-    const duration = 1400 // ms - velocidad suave y bien visible para observar el cruce
+    const climbTime = 1100 // ms ascenso
+    const pauseTime = 1000 // ms pausa en el punto más alto sobre el =
+    const fallTime = 1100  // ms descenso
+    const totalDuration = climbTime + pauseTime + fallTime
 
     const animate = (now: number) => {
       if (startTime === null) startTime = now
       const elapsed = now - startTime
-      const rawT = Math.min(1, elapsed / duration)
-      // Easing suave sinusoidal (arranque suave, cúspide fluida y aterrizaje suave)
-      const t = 0.5 - 0.5 * Math.cos(Math.PI * rawT)
+
+      let t: number
+      let isAtApex = false
+      let isPastApex = false
+
+      if (elapsed < climbTime) {
+        // Fase 1: Ascenso suave (t de 0 a 0.5)
+        const subT = elapsed / climbTime
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = eased * 0.5
+        isAtApex = false
+        isPastApex = false
+      } else if (elapsed < climbTime + pauseTime) {
+        // Fase 2: Pausa fija en la cúspide (t = 0.5) para que el estudiante lea con calma
+        t = 0.5
+        isAtApex = true
+        isPastApex = true
+      } else {
+        // Fase 3: Descenso suave (t de 0.5 a 1.0)
+        const subT = Math.min(1, (elapsed - climbTime - pauseTime) / fallTime)
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = 0.5 + eased * 0.5
+        isAtApex = false
+        isPastApex = true
+      }
 
       // Ecuación cuadrática de Bézier para la parábola
       const curX = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX
       const curY = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY
-
-      const isAtApex = rawT >= 0.42 && rawT <= 0.58
-      const isPastApex = rawT >= 0.5
 
       setFlyingToken({
         card,
@@ -354,7 +475,7 @@ export default function PuenteEcuacionView() {
         setFbMsg(`⚡ ¡Cruzando el puente! ${origLabel} invierte su operación a ${flippedLabel}.`)
       }
 
-      if (rawT < 1) {
+      if (elapsed < totalDuration) {
         requestAnimationFrame(animate)
       } else {
         // Aterrizaje completado: actualizar estado oficial
@@ -376,11 +497,11 @@ export default function PuenteEcuacionView() {
   // ── 2. FUSIÓN DE TÉRMINOS SEMEJANTES (Reducir) ──
   const canSimplifyLeft = leftTerms.length > 1 && (leftTerms.filter(t => t.hasVar).length > 1 || leftTerms.filter(t => !t.hasVar).length > 1)
   const canSimplifyRight = rightTerms.length > 1 && (rightTerms.filter(t => t.hasVar).length > 1 || rightTerms.filter(t => !t.hasVar).length > 1)
-  const canSimplify = (canSimplifyLeft || canSimplifyRight) && !crossingId && coeffDivState.stage === 'idle'
+  const canSimplify = (canSimplifyLeft || canSimplifyRight) && !crossingId && !flyingDenom && coeffDivState.stage === 'idle'
 
   const handleSimplify = () => {
     if (!canSimplify) return
-    setHistory(prev => [...prev, cards])
+    setHistory(prev => [...prev, { cards, denomL, denomR }])
 
     const simplifySide = (terms: TermCard[], side: 'left' | 'right'): TermCard[] => {
       let varCoeff = 0
@@ -422,11 +543,14 @@ export default function PuenteEcuacionView() {
   let currentB = 0
 
   if (
+    denomL === 1 &&
+    denomR === 1 &&
     leftTerms.length === 1 &&
     leftTerms[0].hasVar &&
     rightTerms.length === 1 &&
     !rightTerms[0].hasVar &&
     !crossingId &&
+    !flyingDenom &&
     coeffDivState.stage === 'idle'
   ) {
     canDivideCoeff = leftTerms[0].coeff !== 1
@@ -435,11 +559,14 @@ export default function PuenteEcuacionView() {
     currentA = leftTerms[0].coeff
     currentB = rightTerms[0].coeff
   } else if (
+    denomL === 1 &&
+    denomR === 1 &&
     rightTerms.length === 1 &&
     rightTerms[0].hasVar &&
     leftTerms.length === 1 &&
     !leftTerms[0].hasVar &&
     !crossingId &&
+    !flyingDenom &&
     coeffDivState.stage === 'idle'
   ) {
     canDivideCoeff = rightTerms[0].coeff !== 1
@@ -456,7 +583,7 @@ export default function PuenteEcuacionView() {
     const board = boardRef.current
     if (!board) return
 
-    setHistory(prev => [...prev, cards])
+    setHistory(prev => [...prev, { cards, denomL, denomR }])
     setCards(prev => prev.map(c => {
       if (c.hasVar && c.side === varSide) {
         return { ...c, coeff: 1 }
@@ -497,20 +624,39 @@ export default function PuenteEcuacionView() {
     })
 
     let startTime: number | null = null
-    const duration = 1400 // ms - velocidad suave para observar la trasposición de multiplicación a división
+    const climbTime = 1100
+    const pauseTime = 1000
+    const fallTime = 1100
+    const totalDuration = climbTime + pauseTime + fallTime
 
     const animate = (now: number) => {
       if (startTime === null) startTime = now
       const elapsed = now - startTime
-      const rawT = Math.min(1, elapsed / duration)
-      // Easing suave sinusoidal
-      const t = 0.5 - 0.5 * Math.cos(Math.PI * rawT)
+
+      let t: number
+      let isAtApex = false
+      let isPastApex = false
+
+      if (elapsed < climbTime) {
+        const subT = elapsed / climbTime
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = eased * 0.5
+        isAtApex = false
+        isPastApex = false
+      } else if (elapsed < climbTime + pauseTime) {
+        t = 0.5
+        isAtApex = true
+        isPastApex = true
+      } else {
+        const subT = Math.min(1, (elapsed - climbTime - pauseTime) / fallTime)
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = 0.5 + eased * 0.5
+        isAtApex = false
+        isPastApex = true
+      }
 
       const curX = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX
       const curY = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY
-
-      const isAtApex = rawT >= 0.42 && rawT <= 0.58
-      const isPastApex = rawT >= 0.5
 
       setCoeffDivState(prev => ({
         ...prev,
@@ -524,7 +670,7 @@ export default function PuenteEcuacionView() {
         setFbMsg(`⚡ ¡El factor ${a} que multiplicaba cruza el puente y pasa a DIVIDIR al denominador!`)
       }
 
-      if (rawT < 1) {
+      if (elapsed < totalDuration) {
         requestAnimationFrame(animate)
       } else {
         // Llega como fracción b / a
@@ -534,6 +680,111 @@ export default function PuenteEcuacionView() {
           isAtApex: false,
         }))
         setFbMsg(`¡Ubicado en el denominador! Ahora tenemos ${b} ÷ ${a}. Toca el botón para calcular.`)
+      }
+    }
+
+    requestAnimationFrame(animate)
+  }
+
+  // ── 5. LANZAR VUELO PARABÓLICO DEL DENOMINADOR (÷ D -> × D al otro lado) ──
+  const launchDenomMultiply = (fromSide: 'left' | 'right', event?: React.MouseEvent) => {
+    const value = fromSide === 'left' ? denomL : denomR
+    if (value <= 1 || crossingId || !!flyingDenom || coeffDivState.stage !== 'idle') return
+
+    const board = boardRef.current
+    if (!board) return
+
+    setHistory(prev => [...prev, { cards, denomL, denomR }])
+
+    const boardRect = board.getBoundingClientRect()
+    let startX = fromSide === 'left' ? boardRect.width * 0.25 : boardRect.width * 0.75
+    let startY = boardRect.height * 0.7
+
+    if (event) {
+      const btnRect = event.currentTarget.getBoundingClientRect()
+      startX = btnRect.left - boardRect.left + btnRect.width / 2
+      startY = btnRect.top - boardRect.top + btnRect.height / 2
+    }
+
+    const toSide = fromSide === 'left' ? 'right' : 'left'
+    const endX = toSide === 'right' ? boardRect.width * 0.75 : boardRect.width * 0.25
+    const endY = boardRect.height * 0.5
+    const midX = boardRect.width * 0.5
+    const midY = Math.max(30, boardRect.height * 0.12)
+
+    // Ocultar denominador del lado emisor para dar efecto de despegue
+    if (fromSide === 'left') setDenomL(1)
+    else setDenomR(1)
+
+    setFlyingDenom({
+      value,
+      fromSide,
+      toSide,
+      x: startX,
+      y: startY,
+      isAtApex: false,
+      isFlipped: false,
+    })
+
+    let startTime: number | null = null
+    const climbTime = 1100
+    const pauseTime = 1000
+    const fallTime = 1100
+    const totalDuration = climbTime + pauseTime + fallTime
+
+    const animate = (now: number) => {
+      if (startTime === null) startTime = now
+      const elapsed = now - startTime
+
+      let t: number
+      let isAtApex = false
+      let isPastApex = false
+
+      if (elapsed < climbTime) {
+        const subT = elapsed / climbTime
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = eased * 0.5
+        isAtApex = false
+        isPastApex = false
+      } else if (elapsed < climbTime + pauseTime) {
+        t = 0.5
+        isAtApex = true
+        isPastApex = true
+      } else {
+        const subT = Math.min(1, (elapsed - climbTime - pauseTime) / fallTime)
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * subT)
+        t = 0.5 + eased * 0.5
+        isAtApex = false
+        isPastApex = true
+      }
+
+      const curX = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX
+      const curY = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY
+
+      setFlyingDenom(prev => (prev ? {
+        ...prev,
+        x: curX,
+        y: curY,
+        isAtApex,
+        isFlipped: isPastApex,
+      } : null))
+
+      if (isPastApex) {
+        setFbMsg(`⚡ ¡El divisor ÷ ${value} cruza el puente y pasa a MULTIPLICAR (× ${value})!`)
+      }
+
+      if (elapsed < totalDuration) {
+        requestAnimationFrame(animate)
+      } else {
+        // Aterrizaje: multiplicar los términos del miembro destino
+        setCards(prev => prev.map(c => {
+          if (c.side === toSide) {
+            return { ...c, coeff: c.coeff * value }
+          }
+          return c
+        }))
+        setFlyingDenom(null)
+        setFbMsg(`¡Aterrizaje! El miembro ${toSide === 'right' ? 'derecho' : 'izquierdo'} se multiplicó por ${value}. La fracción se eliminó.`)
       }
     }
 
@@ -733,8 +984,52 @@ export default function PuenteEcuacionView() {
 
               {/* Contenido del Miembro Izquierdo */}
               <div className="flex-1 min-h-0 flex flex-wrap items-center justify-center content-center gap-2 lg:gap-3 p-2 overflow-y-auto">
-                {/* Caso Especial: Despeje del coeficiente en ax = b */}
-                {canDivideCoeff && varSide === 'left' && coeffDivState.stage === 'idle' ? (
+                {/* Caso Fracción con Denominador (ej. (2x - 5) / 3 o x / 3) */}
+                {denomL > 1 ? (
+                  <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-violet-950/20 border border-violet-400/25 w-full max-w-[280px]">
+                    {/* Numerador */}
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 p-1 min-h-[44px]">
+                      {leftTerms.map(term => {
+                        const isPos = term.coeff > 0
+                        return (
+                          <div
+                            key={term.id}
+                            onClick={e => crossBridgeParabolic(term, e)}
+                            className={`h-10 sm:h-11 lg:h-12 px-3 lg:px-4 rounded-xl border-2 flex items-center justify-center font-mono font-black text-sm lg:text-base cursor-pointer select-none shadow-md ${
+                              term.hasVar
+                                ? isPos
+                                  ? 'bg-sky-500/25 border-sky-400 text-sky-200'
+                                  : 'bg-rose-500/25 border-rose-400 text-rose-200'
+                                : isPos
+                                ? 'bg-blue-500/25 border-blue-400 text-blue-200'
+                                : 'bg-red-500/25 border-red-400 text-red-200'
+                            }`}
+                            title="Término en el numerador (pasa primero el divisor para liberarlo)"
+                          >
+                            <span>
+                              {term.hasVar
+                                ? (term.coeff === 1 ? 'x' : term.coeff === -1 ? '−x' : `${isPos ? '+' : ''}${term.coeff}x`)
+                                : `${isPos ? '+' : ''}${term.coeff}`}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Barra de Fracción */}
+                    <div className="w-full h-1 bg-amber-400/80 my-1.5 rounded-full shadow-md shadow-amber-500/30" />
+
+                    {/* Denominador Interactivo */}
+                    <button
+                      onClick={e => launchDenomMultiply('left', e)}
+                      className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-mono font-black text-base lg:text-lg border-2 border-amber-300 shadow-xl shadow-amber-500/40 animate-pulse ring-2 ring-amber-400 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                      title="Tocar para pasar el divisor multiplicando al otro lado"
+                    >
+                      <span>÷ {denomL}</span>
+                      <span className="text-[8px] font-bold text-black/80 uppercase">pasa a ×</span>
+                    </button>
+                  </div>
+                ) : canDivideCoeff && varSide === 'left' && coeffDivState.stage === 'idle' ? (
                   <div className="flex items-center gap-1.5 p-2 rounded-xl bg-sky-950/40 border border-sky-400/30">
                     <button
                       onClick={e => launchCoeffDivision(e)}
@@ -814,8 +1109,52 @@ export default function PuenteEcuacionView() {
 
               {/* Contenido del Miembro Derecho */}
               <div className="flex-1 min-h-0 flex flex-wrap items-center justify-center content-center gap-2 lg:gap-3 p-2 overflow-y-auto">
-                {/* Visualización de la fracción generada cuando el coeficiente aterriza en el denominador */}
-                {coeffDivState.stage === 'fraction' ? (
+                {/* Caso Fracción con Denominador en segundo miembro */}
+                {denomR > 1 ? (
+                  <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-teal-950/20 border border-teal-400/25 w-full max-w-[280px]">
+                    {/* Numerador */}
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 p-1 min-h-[44px]">
+                      {rightTerms.map(term => {
+                        const isPos = term.coeff > 0
+                        return (
+                          <div
+                            key={term.id}
+                            onClick={e => crossBridgeParabolic(term, e)}
+                            className={`h-10 sm:h-11 lg:h-12 px-3 lg:px-4 rounded-xl border-2 flex items-center justify-center font-mono font-black text-sm lg:text-base cursor-pointer select-none shadow-md ${
+                              term.hasVar
+                                ? isPos
+                                  ? 'bg-sky-500/25 border-sky-400 text-sky-200'
+                                  : 'bg-rose-500/25 border-rose-400 text-rose-200'
+                                : isPos
+                                ? 'bg-blue-500/25 border-blue-400 text-blue-200'
+                                : 'bg-red-500/25 border-red-400 text-red-200'
+                            }`}
+                            title="Término en el numerador"
+                          >
+                            <span>
+                              {term.hasVar
+                                ? (term.coeff === 1 ? 'x' : term.coeff === -1 ? '−x' : `${isPos ? '+' : ''}${term.coeff}x`)
+                                : `${isPos ? '+' : ''}${term.coeff}`}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Barra de Fracción */}
+                    <div className="w-full h-1 bg-amber-400/80 my-1.5 rounded-full shadow-md shadow-amber-500/30" />
+
+                    {/* Denominador Interactivo */}
+                    <button
+                      onClick={e => launchDenomMultiply('right', e)}
+                      className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-mono font-black text-base lg:text-lg border-2 border-amber-300 shadow-xl shadow-amber-500/40 animate-pulse ring-2 ring-amber-400 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                      title="Tocar para pasar el divisor multiplicando al otro lado"
+                    >
+                      <span>÷ {denomR}</span>
+                      <span className="text-[8px] font-bold text-black/80 uppercase">pasa a ×</span>
+                    </button>
+                  </div>
+                ) : coeffDivState.stage === 'fraction' ? (
                   <div className="flex flex-col items-center gap-2 animate-bounce">
                     <div className="flex flex-col items-center font-mono font-black text-xl lg:text-2xl text-white bg-teal-950/40 border-2 border-teal-400/60 rounded-xl p-2.5 shadow-xl">
                       <span className="text-teal-200">{coeffDivState.num}</span>
@@ -946,6 +1285,33 @@ export default function PuenteEcuacionView() {
             </div>
           )}
 
+          {/* ── 8. PROYECTIL FLOTANTE: DENOMINADOR EN VUELO PARABÓLICO (÷ -> ×) ── */}
+          {flyingDenom && (
+            <div
+              className="absolute z-50 pointer-events-none -translate-x-1/2 -translate-y-1/2 transition-none"
+              style={{
+                left: `${flyingDenom.x}px`,
+                top: `${flyingDenom.y}px`,
+              }}
+            >
+              <div
+                className={`px-4 py-2 rounded-xl border-2 flex flex-col items-center justify-center font-mono font-black text-sm lg:text-base shadow-2xl transition-all duration-200 ${
+                  flyingDenom.isAtApex
+                    ? 'bg-amber-500 border-amber-300 text-black ring-8 ring-amber-300 scale-125 shadow-amber-500/60'
+                    : 'bg-gradient-to-r from-amber-600 to-amber-700 border-amber-300 text-white ring-4 ring-amber-400/60 scale-110'
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  {flyingDenom.isAtApex && <Sparkles size={14} className="text-black animate-spin" />}
+                  <span>{flyingDenom.isFlipped ? `× ${flyingDenom.value}` : `÷ ${flyingDenom.value}`}</span>
+                </div>
+                <span className="text-[8px] font-bold uppercase tracking-tighter text-amber-100">
+                  {flyingDenom.isAtApex ? '⚡ ÷ pasa a ×' : flyingDenom.isFlipped ? 'Pasa a multiplicar' : 'Divisor en vuelo'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Micro-leyenda pedagógica */}
           <div className="shrink-0 flex items-center justify-center gap-3 lg:gap-4 text-[9px] lg:text-[10px] text-white/35 pt-1.5">
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sky-500" /> Variables x</span>
@@ -1054,15 +1420,19 @@ export default function PuenteEcuacionView() {
                 const isDel = k === '⌫'
                 const isClr = k === 'C'
                 const isOk = k === '✓'
+                const isParen = k === '(' || k === ')'
+                const isDiv = k === '/'
                 let cls = 'h-7 lg:h-8 rounded text-[11px] font-bold active:scale-95 transition-all flex items-center justify-center cursor-pointer '
-                if (isOk) cls += 'col-span-3 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/35'
+                if (isOk) cls += 'col-span-2 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/35'
                 else if (isDel) cls += 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/30'
                 else if (isClr) cls += 'bg-red-500/15 text-red-300/70 border border-red-400/20 hover:bg-red-500/25'
                 else if (isOp) cls += 'bg-sky-500/20 text-sky-300 border border-sky-400/30 hover:bg-sky-500/30'
+                else if (isParen) cls += 'bg-violet-500/20 text-violet-300 border border-violet-400/30 hover:bg-violet-500/30'
+                else if (isDiv) cls += 'bg-amber-500/20 text-amber-300 border border-amber-400/30 hover:bg-amber-500/30'
                 else cls += 'bg-white/10 text-white border border-white/10 hover:bg-white/15'
                 return (
                   <button key={`${k}-${i}`} type="button" className={cls} onClick={() => handleKb(k)}>
-                    {k}
+                    {isOk ? <span className="flex items-center gap-1 font-bold text-[11px]"><Check size={12} /> Listo</span> : k}
                   </button>
                 )
               })}
@@ -1085,16 +1455,19 @@ export default function PuenteEcuacionView() {
             <strong className="text-white">Movimiento Parabólico sobre el =</strong>: Toca cualquier tarjeta de número o variable para que salte por el aire en una parábola. Justo en el punto más alto, al pasar por encima del signo <strong className="text-violet-300">=</strong>, su signo se invierte automáticamente (<span className="text-sky-300">+</span> pasa a <span className="text-rose-300">−</span>, y <span className="text-rose-300">−</span> pasa a <span className="text-sky-300">+</span>).
           </li>
           <li>
+            <strong className="text-white">Ecuaciones con Denominador (ej. (2x - 5) / 3 = 7 o x / 3 = 2)</strong>: Cuando un miembro está dividido por un denominador, pulsa el botón ámbar inferior <strong className="text-amber-300">÷ D</strong>. El divisor despegará en parábola, cambiará en la cúspide a <span className="text-amber-300">multiplicación (× D)</span> y multiplicará al otro miembro, eliminando la fracción y liberando el numerador.
+          </li>
+          <li>
             <strong className="text-white">Fusionar términos semejantes</strong>: Agrupa las variables $x$ a un lado y los números al otro. Cuando tengas varios términos en un mismo miembro, presiona <strong className="text-violet-400">Fusionar</strong> para reducirlos sumando o restando sus coeficientes.
           </li>
           <li>
-            <strong className="text-white">El Paso Crucial (ax = b, ej. 3x = 12)</strong>: Cuando te queda solo el factor multiplicando a la $x$ (ej. $3x = 12$), el número <strong className="text-amber-300">3</strong> está multiplicando. Toca el botón <strong className="text-violet-400">3</strong> para que despegue en parábola, cambie en el aire de <span className="text-violet-300">multiplicación (×)</span> a <span className="text-amber-300">división (÷)</span>, y aterrice debajo del 12 formando la fracción <span className="font-mono text-emerald-300">12 / 3</span>.
+            <strong className="text-white">El Paso Crucial (ax = b, ej. 3x = 12)</strong>: Cuando te queda solo el factor multiplicando a la $x$ (ej. $3x = 12$), toca el botón <strong className="text-violet-400">3</strong> para que despegue en parábola, cambie en el aire a <span className="text-amber-300">división (÷)</span>, y aterrice formando la fracción <span className="font-mono text-emerald-300">12 / 3</span>.
           </li>
           <li>
             <strong className="text-white">Calcular solución</strong>: Presiona el botón verde para calcular la división final ($12 \div 3 = 4$) y despejar completamente el valor de $x$.
           </li>
           <li>
-            <strong className="text-white">Teclado Virtual</strong>: Puedes tocar las casillas de los miembros en la barra superior para editar o probar cualquier ecuación que desees.
+            <strong className="text-white">Teclado Virtual con Fracciones</strong>: Puedes escribir ecuaciones complejas con <span className="font-mono text-amber-300">/</span> y paréntesis <span className="font-mono text-violet-300">( )</span> usando el teclado virtual flotante o tu teclado físico.
           </li>
         </ol>
       </ModalHelp>
