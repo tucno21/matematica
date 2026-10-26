@@ -26,9 +26,13 @@ interface Position {
     y: number;
 }
 
-interface SnapTarget {
-    id: string;
-    side: 'left' | 'right' | 'top' | 'bottom';
+interface SnapResult {
+    x: number;
+    y: number;
+    type: 'wall' | 'adjacent' | 'base-align' | 'equivalence' | 'row-rail';
+    guideLineX?: number;
+    targetId?: string;
+    label?: string;
 }
 
 interface FractionBarProps {
@@ -42,7 +46,7 @@ interface FractionBarProps {
     onDragStop: (pos: Position) => void;
     onDuplicate: () => void;
     onLongPressDelete: () => void;
-    snapTarget: SnapTarget | null;
+    snapResult: SnapResult | null;
     isSnapping: boolean;
 }
 
@@ -52,7 +56,6 @@ interface GuideLinesProps {
     show: boolean;
     rowHeight: number;
 }
-
 
 interface RegletaFracionesCanvasProps {
     fractions: Fraction[];
@@ -69,7 +72,7 @@ interface RegletaFracionesCanvasProps {
     onDuplicate: (fraction: Fraction, containerWidth: number) => void;
     onDeleteById: (id: string) => void;
     draggingId: string | null;
-    snapTargetMap: Record<string, SnapTarget | null>;
+    activeSnap: SnapResult | null;
     onContainerWidth: (w: number) => void;
 }
 
@@ -110,11 +113,18 @@ const BAR_GAP = 3;
 const WHOLE_WIDTH_PERCENT = 50;
 
 /**
- * Snap thresholds — separate for each axis so diagonal drags
- * don't accidentally trigger snapping on the wrong axis.
+ * Snap thresholds:
+ * - WALL: margen izquierdo inicial (X = 0)
+ * - ROW: riel horizontal de fila (Y = k * rowHeight)
+ * - MAIN: acople horizontal continuo (cola con cabeza)
+ * - EQUIV: coincidencia de extremos derechos (equivalencia matemática)
+ * - BASE: alineación de bases izquierdas compartidas
  */
-const SNAP_THRESHOLD_MAIN = 22;   // along the joining axis
-const SNAP_THRESHOLD_CROSS = 18;  // perpendicular alignment tolerance
+const SNAP_THRESHOLD_WALL = 28;
+const SNAP_THRESHOLD_ROW = 22;
+const SNAP_THRESHOLD_MAIN = 24;
+const SNAP_THRESHOLD_EQUIV = 20;
+const SNAP_THRESHOLD_BASE = 18;
 
 function createInitialFractions(rowH: number): Fraction[] {
     return [
@@ -142,106 +152,118 @@ function barPixelWidth(denominator: number, containerWidth: number): number {
 }
 
 /**
- * Improved snap: uses separate thresholds for the main axis (joining edge)
- * and cross axis (alignment). This prevents false positives on diagonal drags
- * and works consistently regardless of screen size because all distances are
- * computed in the same pixel space as the bars themselves.
- *
- * For horizontal snaps (left/right): main axis = X gap, cross axis = Y alignment.
- * For vertical snaps (top/bottom):   main axis = Y gap, cross axis = X alignment.
+ * Sistema integral de imantado de bases y equivalencias:
+ * 1. Base izquierda X = 0 (punto de partida universal)
+ * 2. Rieles de fila Y = k * rowHeight (nunca queda flotando a media altura)
+ * 3. Acople horizontal cabeza-con-cola sin fisuras (suma visual)
+ * 4. Extremo derecho de equivalencia (revelación visual de fracciones iguales)
+ * 5. Base común compartida entre filas distantes
  */
-function computeSnapTarget(
+function computeSnap(
     dragged: Fraction,
+    pos: Position,
     others: Fraction[],
     containerWidth: number,
     rowHeight: number,
-): SnapTarget | null {
+): SnapResult {
     const dW = barPixelWidth(dragged.denominator, containerWidth);
 
-    let best: SnapTarget | null = null;
+    // 1. Riel horizontal Y más cercano
+    const nearestRow = Math.max(0, Math.round(pos.y / rowHeight));
+    const targetRowY = nearestRow * rowHeight;
+    const isNearRow = Math.abs(pos.y - targetRowY) <= SNAP_THRESHOLD_ROW;
+    let snappedY = isNearRow ? targetRowY : pos.y;
+    let snappedX = pos.x;
+
+    let snapType: SnapResult['type'] = 'row-rail';
+    let guideLineX: number | undefined = undefined;
+    let targetId: string | undefined = undefined;
+    let label: string | undefined = undefined;
+
+    // 2. Base izquierda X = 0 (Muro inicial)
+    if (pos.x <= SNAP_THRESHOLD_WALL && pos.x >= -40) {
+        snappedX = 0;
+        snapType = 'wall';
+        guideLineX = 0;
+        label = 'Base 0';
+    }
+
+    // 3. Comparar con otras barras en el lienzo
     let bestScore = Infinity;
 
     for (const other of others) {
         if (other.id === dragged.id) continue;
         const oW = barPixelWidth(other.denominator, containerWidth);
+        const yDiff = Math.abs(pos.y - other.y);
+        const isSameRow = yDiff <= SNAP_THRESHOLD_ROW;
 
-        // ── Horizontal candidates ────────────────────────────────────────────
-        // Main axis: gap between edges on X
-        // Cross axis: Y alignment (top edges aligned)
-
-        const yDiff = Math.abs(dragged.y - other.y);   // cross axis for horizontal snap
-
-        if (yDiff <= SNAP_THRESHOLD_CROSS) {
-            // dragged snaps to right of other (dragged.x ≈ other.x + oW)
-            const gapRight = Math.abs(dragged.x - (other.x + oW));
-            if (gapRight <= SNAP_THRESHOLD_MAIN) {
-                const score = gapRight + yDiff * 0.5;
-                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'left' }; }
+        // 3.1 Acople horizontal secuencial en la misma fila (cabeza con cola)
+        if (isSameRow) {
+            // Pegado a la derecha de other: other.x + oW
+            const gapRight = Math.abs(pos.x - (other.x + oW));
+            if (gapRight <= SNAP_THRESHOLD_MAIN && gapRight < bestScore) {
+                bestScore = gapRight;
+                snappedX = other.x + oW;
+                snappedY = other.y;
+                snapType = 'adjacent';
+                targetId = other.id;
+                guideLineX = other.x + oW;
+                label = 'Acoplado';
             }
 
-            // dragged snaps to left of other (dragged.x + dW ≈ other.x)
-            const gapLeft = Math.abs((dragged.x + dW) - other.x);
-            if (gapLeft <= SNAP_THRESHOLD_MAIN) {
-                const score = gapLeft + yDiff * 0.5;
-                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'right' }; }
-            }
-        }
-
-        // ── Vertical candidates ──────────────────────────────────────────────
-        // Main axis: gap between edges on Y
-        // Cross axis: X alignment (left edges aligned)
-
-        const xDiff = Math.abs(dragged.x - other.x);   // cross axis for vertical snap
-
-        if (xDiff <= SNAP_THRESHOLD_CROSS) {
-            // dragged snaps below other (dragged.y ≈ other.y + rowHeight)
-            const gapBelow = Math.abs(dragged.y - (other.y + rowHeight));
-            if (gapBelow <= SNAP_THRESHOLD_MAIN) {
-                const score = gapBelow + xDiff * 0.5;
-                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'top' }; }
-            }
-
-            // dragged snaps above other (dragged.y + rowHeight ≈ other.y)
-            const gapAbove = Math.abs((dragged.y + rowHeight) - other.y);
-            if (gapAbove <= SNAP_THRESHOLD_MAIN) {
-                const score = gapAbove + xDiff * 0.5;
-                if (score < bestScore) { bestScore = score; best = { id: other.id, side: 'bottom' }; }
+            // Pegado a la izquierda de other: other.x - dW
+            const gapLeft = Math.abs((pos.x + dW) - other.x);
+            if (gapLeft <= SNAP_THRESHOLD_MAIN && gapLeft < bestScore) {
+                bestScore = gapLeft;
+                snappedX = Math.max(0, other.x - dW);
+                snappedY = other.y;
+                snapType = 'adjacent';
+                targetId = other.id;
+                guideLineX = other.x;
+                label = 'Acoplado';
             }
         }
-    }
-    return best;
-}
 
-/**
- * Computes exact snapped position — zero gap for horizontal, BAR_GAP for vertical
- * so bars sit flush against each other without visible gaps.
- */
-function snapPosition(
-    dragged: Fraction,
-    target: Fraction,
-    side: 'left' | 'right' | 'top' | 'bottom',
-    containerWidth: number,
-    rowHeight: number,
-): Position {
-    const dW = barPixelWidth(dragged.denominator, containerWidth);
-    const tW = barPixelWidth(target.denominator, containerWidth);
+        // 3.2 Coincidencia de Extremo Derecho (Equivalencia matemática)
+        const draggedRight = pos.x + dW;
+        const otherRight = other.x + oW;
+        const edgeDiff = Math.abs(draggedRight - otherRight);
 
-    switch (side) {
-        case 'left':
-            // Place dragged immediately to the right of target — no gap
-            return { x: target.x + tW, y: target.y };
-        case 'right':
-            // Place dragged immediately to the left of target — no gap
-            return { x: target.x - dW, y: target.y };
-        case 'top':
-            // Place dragged below target
-            return { x: target.x, y: target.y + rowHeight };
-        case 'bottom':
-            // Place dragged above target
-            return { x: target.x, y: target.y - rowHeight };
-        default:
-            return { x: dragged.x, y: dragged.y };
+        if (edgeDiff <= SNAP_THRESHOLD_EQUIV && edgeDiff < bestScore && snapType !== 'adjacent') {
+            bestScore = edgeDiff;
+            snappedX = Math.max(0, otherRight - dW);
+            snapType = 'equivalence';
+            targetId = other.id;
+            guideLineX = otherRight;
+            label = 'Equivalente';
+        }
+
+        // 3.3 Alineación de Base Izquierda (Ambas empiezan en la misma X)
+        const baseDiff = Math.abs(pos.x - other.x);
+        if (
+            baseDiff <= SNAP_THRESHOLD_BASE &&
+            baseDiff < bestScore &&
+            snapType !== 'adjacent' &&
+            snapType !== 'equivalence' &&
+            snapType !== 'wall'
+        ) {
+            bestScore = baseDiff;
+            snappedX = other.x;
+            snapType = 'base-align';
+            targetId = other.id;
+            guideLineX = other.x;
+            label = 'Base común';
+        }
     }
+
+    return {
+        x: Math.max(0, Math.round(snappedX)),
+        y: Math.max(0, Math.round(snappedY)),
+        type: snapType,
+        guideLineX: guideLineX !== undefined ? Math.round(guideLineX) : undefined,
+        targetId,
+        label,
+    };
 }
 
 // ─── Custom Hooks ─────────────────────────────────────────────────────────────
@@ -332,7 +354,7 @@ const FractionBar = React.memo(function FractionBar({
     onDragStop,
     onDuplicate,
     onLongPressDelete,
-    snapTarget,
+    snapResult,
     isSnapping,
 }: FractionBarProps) {
     const nodeRef = useRef<HTMLDivElement>(null);
@@ -368,7 +390,9 @@ const FractionBar = React.memo(function FractionBar({
         }
     };
 
-    const hasSnapTarget = !!snapTarget;
+    const hasSnapTarget = !!snapResult && snapResult.type !== 'row-rail';
+    const isEquiv = snapResult?.type === 'equivalence';
+    const isWall = snapResult?.type === 'wall';
 
     return (
         <Draggable
@@ -415,7 +439,17 @@ const FractionBar = React.memo(function FractionBar({
           absolute cursor-grab active:cursor-grabbing
           ${fraction.color}
           flex items-center justify-center
-          border ${isLongPressing ? 'border-red-500 border-solid ring-1 ring-red-500' : hasSnapTarget ? 'border-white border-dashed ring-1 ring-white' : 'border-gray-800'}
+          border ${
+              isLongPressing
+                  ? 'border-red-500 border-solid ring-1 ring-red-500'
+                  : hasSnapTarget
+                  ? isEquiv
+                      ? 'border-emerald-400 ring-2 ring-emerald-400'
+                      : isWall
+                      ? 'border-sky-400 ring-2 ring-sky-400'
+                      : 'border-blue-400 ring-2 ring-blue-400'
+                  : 'border-gray-800'
+          }
           select-none touch-none
           fraction-bar rounded-none
           ${isSnapping ? 'snapping' : ''}
@@ -436,7 +470,13 @@ const FractionBar = React.memo(function FractionBar({
             >
                 {renderValue()}
                 {hasSnapTarget && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-none border border-blue-400 animate-pulse" />
+                    <span
+                        className={`absolute -top-2.5 -right-1 px-1 rounded text-[8px] font-black text-white shadow-md animate-pulse z-50 ${
+                            isEquiv ? 'bg-emerald-600 ring-1 ring-emerald-300' : 'bg-sky-600 ring-1 ring-sky-300'
+                        }`}
+                    >
+                        {snapResult?.label ?? '✓'}
+                    </span>
                 )}
                 {isLongPressing && (
                     <div className="absolute inset-0 bg-red-500/25 rounded-none flex items-center justify-center pointer-events-none" style={{ borderRadius: 0 }}>
@@ -514,7 +554,7 @@ function RegletaFracionesCanvas({
     onDuplicate,
     onDeleteById,
     draggingId,
-    snapTargetMap,
+    activeSnap,
     onContainerWidth,
 }: RegletaFracionesCanvasProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -653,6 +693,38 @@ function RegletaFracionesCanvas({
                         </pattern>
                     </defs>
                     <rect width="100%" height="100%" fill="url(#grid)" />
+
+                    {/* Línea guía vertical de alineación e imantado con feedback visual */}
+                    {isDragging && activeSnap && activeSnap.guideLineX !== undefined && (
+                        <g>
+                            <line
+                                x1={activeSnap.guideLineX}
+                                y1={0}
+                                x2={activeSnap.guideLineX}
+                                y2={worldH}
+                                stroke={activeSnap.type === 'equivalence' ? '#10b981' : '#0284c7'}
+                                strokeWidth={activeSnap.type === 'equivalence' ? '2.5' : '2'}
+                                strokeDasharray={activeSnap.type === 'equivalence' ? '6 3' : '4 4'}
+                            />
+                            {/* Etiqueta flotante cerca del punto de imantado */}
+                            <foreignObject
+                                x={Math.max(4, activeSnap.guideLineX - 45)}
+                                y={Math.max(6, activeSnap.y - 28)}
+                                width="90"
+                                height="24"
+                            >
+                                <div
+                                    className={`px-2 py-0.5 rounded text-[10px] font-black text-center shadow-lg select-none whitespace-nowrap ${
+                                        activeSnap.type === 'equivalence'
+                                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                                            : 'bg-sky-600 text-white ring-1 ring-sky-200'
+                                    }`}
+                                >
+                                    {activeSnap.label ?? 'Alineado'}
+                                </div>
+                            </foreignObject>
+                        </g>
+                    )}
                 </svg>
 
                 <GuideLines containerHeight={worldH} containerWidth={worldW} show={isDragging} rowHeight={rowHeight} />
@@ -660,7 +732,6 @@ function RegletaFracionesCanvas({
                 {/* Barras de fracciones */}
                 <div className="relative w-full h-full pointer-events-auto">
                     {fractions.map((fraction) => {
-                        const snap = snapTargetMap[fraction.id] ?? null;
                         const isActive = fraction.id === draggingId;
                         return (
                             <FractionBar
@@ -675,8 +746,8 @@ function RegletaFracionesCanvas({
                                 onDragStop={(pos) => onDragStop(fraction.id, pos)}
                                 onDuplicate={() => onDuplicate(fraction, cW > 0 ? cW : 800)}
                                 onLongPressDelete={() => onDeleteById(fraction.id)}
-                                snapTarget={snap}
-                                isSnapping={isActive && !!snap}
+                                snapResult={isActive ? activeSnap : null}
+                                isSnapping={isActive && !!activeSnap && activeSnap.type !== 'row-rail'}
                             />
                         );
                     })}
@@ -829,10 +900,7 @@ const RegletaFraciones = (): React.ReactElement => {
         containerWidthRef.current = w;
     }, []);
 
-    /**
-     * Map of fractionId → current snap target while dragging.
-     */
-    const [snapTargetMap, setSnapTargetMap] = useState<Record<string, SnapTarget | null>>({});
+    const [activeSnap, setActiveSnap] = useState<SnapResult | null>(null);
 
     // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -860,57 +928,55 @@ const RegletaFraciones = (): React.ReactElement => {
             if (prev.length <= 1) return prev;
             return prev.filter((f) => f.id !== id);
         });
-        setDraggingId((prev) => prev === id ? null : prev);
-        setSnapTargetMap((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-        });
+        setDraggingId((prev) => (prev === id ? null : prev));
+        setActiveSnap(null);
     }, [setFractions]);
 
     const resetFractions = useCallback(() => {
         setFractions(createInitialFractions(rowHeight));
-        setSnapTargetMap({});
+        setActiveSnap(null);
     }, [rowHeight, setFractions]);
 
     const handleDragStart = useCallback((id: string) => {
         setDraggingId(id);
+        setActiveSnap(null);
     }, []);
 
     const handleDrag = useCallback((id: string, pos: Position) => {
-        // Use functional update to get latest fractions without stale closure
         setFractions((prev) => {
             const dragged = prev.find((f) => f.id === id);
             if (!dragged) return prev;
             const cW = containerWidthRef.current;
             if (cW === 0) return prev;
-            const snap = computeSnapTarget({ ...dragged, ...pos }, prev, cW, rowHeight);
-            setSnapTargetMap((m) => {
-                // Avoid re-render if snap target hasn't changed
-                const existing = m[id];
-                if (existing?.id === snap?.id && existing?.side === snap?.side) return m;
-                return { ...m, [id]: snap };
+            const snap = computeSnap(dragged, pos, prev, cW, rowHeight);
+            setActiveSnap((existing) => {
+                if (
+                    existing?.x === snap.x &&
+                    existing?.y === snap.y &&
+                    existing?.type === snap.type &&
+                    existing?.guideLineX === snap.guideLineX &&
+                    existing?.label === snap.label
+                ) {
+                    return existing;
+                }
+                return snap;
             });
-            return prev; // don't update positions during drag — Draggable handles it
+            return prev;
         });
     }, [rowHeight, setFractions]);
 
     const handleDragStop = useCallback((id: string, pos: Position) => {
         setDraggingId(null);
+        setActiveSnap(null);
         setFractions((prev) => {
             const dragged = prev.find((f) => f.id === id);
             if (!dragged) return prev;
             const cW = containerWidthRef.current;
-            const snap = cW > 0 ? computeSnapTarget({ ...dragged, ...pos }, prev, cW, rowHeight) : null;
-            let finalPos: Position = pos;
-            if (snap) {
-                const target = prev.find((f) => f.id === snap.id);
-                if (target) {
-                    finalPos = snapPosition(dragged, target, snap.side, cW, rowHeight);
-                }
-            }
-            setSnapTargetMap((m) => ({ ...m, [id]: null }));
-            return prev.map((f) => (f.id === id ? { ...f, ...finalPos } : f));
+            if (cW === 0) return prev;
+            const snap = computeSnap(dragged, pos, prev, cW, rowHeight);
+            // Al soltar, encajar Y exactamente en el riel de fila
+            const finalY = Math.max(0, Math.round(snap.y / rowHeight) * rowHeight);
+            return prev.map((f) => (f.id === id ? { ...f, x: snap.x, y: finalY } : f));
         });
     }, [rowHeight, setFractions]);
 
@@ -1102,7 +1168,7 @@ const RegletaFraciones = (): React.ReactElement => {
                     onDuplicate={handleDuplicate}
                     onDeleteById={handleDeleteById}
                     draggingId={draggingId}
-                    snapTargetMap={snapTargetMap}
+                    activeSnap={activeSnap}
                     onContainerWidth={handleContainerWidth}
                 />
             </div>
