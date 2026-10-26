@@ -101,7 +101,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/concepto-fraccion',
-        element: <Layout><ConceptoFraccionView /></Layout>
+        element: <ConceptoFraccionView />
     },
     {
         path: '/fraccion-conjunto',
