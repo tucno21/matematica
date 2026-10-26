@@ -48,6 +48,7 @@ src/
     ├── CompetenciaView.tsx    # Temas de una competencia + buscador
     ├── GeoplanoView.tsx       # Geoplano configurable con retos (pantalla completa)
     ├── AngulosView.tsx        # Explorador de ángulos: 6 modos interactivos (pantalla completa)
+    ├── MedirAngulosView.tsx   # Medición con transportador y goniómetro interactivo (pantalla completa)
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -128,6 +129,13 @@ public/
 - **Triángulo y cuadrilátero**: arrastra los vértices y los ángulos interiores se miden solos; la suma siempre es 180° y 360° (soporta cuadriláteros cóncavos)
 - **Interfaz compacta** según el estándar de tablets: botones h-6/h-7 en tablet y lg:h-8 en escritorio, medidas en el pie, ayuda contextual por modo
 - **Estado efímero**: al salir de la vista todo se reinicia; sin dependencias nuevas (Canvas 2D + pointer events)
+
+### 1.3 📏 Medición con Transportador (`MedirAngulosView`)
+- **Transportador / goniómetro realista**: diseño translúcido de acrílico con graduaciones cada 1°, 5° y 10°, doble escala (0°-180° y 180°-0°), mira reticular central y línea de base
+- **Manipulación dinámica y táctil**: arrastrable por el cuerpo y rotativo mediante manija exterior giratoria con botones de ajuste fino (±1°, ±5°) y auto-alineación
+- **6 modos de figuras y retos**: ángulos individuales, rectas secantes, ángulos suplementarios/llanos, triángulos y cuadriláteros con vértices al azar
+- **Validación pedagógica con tolerancia**: teclado virtual integrado, input numérico con verificación instantánea y mensajes formativos de alineación
+- **Pantalla completa y cero scroll**: optimizado según el estándar de tablets del gobierno y laptops sin wrapper `<Layout>`
 
 ### 2. 🌡️ Introducción a Enteros (`IntroEnterosView`)
 - **Termómetro interactivo** arrastrable (rango: -20°C a 30°C)
@@ -346,6 +354,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/competencia/:competencyId` | `CompetenciaView` | Temas de una competencia con buscador |
 | `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
 | `/angulos` | `AngulosView` | Explorador de ángulos con 6 modos (pantalla completa) |
+| `/medir-angulos` | `MedirAngulosView` | Medición con transportador y goniómetro interactivo (pantalla completa) |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

@@ -27,6 +27,7 @@ import BarrasEcuacionView from '../views/BarrasEcuacionView'
 import PuenteEcuacionView from '../views/PuenteEcuacionView'
 import GeoplanoView from '../views/GeoplanoView'
 import AngulosView from '../views/AngulosView'
+import MedirAngulosView from '../views/MedirAngulosView'
 
 const router = createBrowserRouter([
     {
@@ -140,6 +141,10 @@ const router = createBrowserRouter([
     {
         path: '/angulos',
         element: <AngulosView />
+    },
+    {
+        path: '/medir-angulos',
+        element: <MedirAngulosView />
     }
 ])
 
