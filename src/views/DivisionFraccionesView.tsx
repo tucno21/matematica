@@ -324,12 +324,12 @@ function CaseIntInt({
                     <div
                         key={barIdx}
                         className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/40 shadow-lg shadow-teal-500/10"
-                        style={{ minHeight: 54 }}
+                        style={{ minHeight: 36 }}
                     >
                         {groupCount === 1 ? (
                             <div
                                 className="w-full rounded-lg bg-gradient-to-b from-teal-400 to-teal-500"
-                                style={{ minHeight: 54 }}
+                                style={{ minHeight: 36 }}
                             />
                         ) : (
                             Array.from({ length: groupCount }, (_, pieceIdx) => {
@@ -345,9 +345,9 @@ function CaseIntInt({
                                         ref={(el) => {
                                             if (el) barRefs.current.set(`${barIdx}-${pieceIdx}`, el);
                                         }}
-                                        className="flex-1 border-r-[3px] last:border-r-0 border-gray-600/80 transition-all duration-300"
+                                        className="flex-1 border-r-2 last:border-r-0 border-black transition-all duration-300"
                                         style={{
-                                            minHeight: 54,
+                                            minHeight: 36,
                                             backgroundColor: isFlying
                                                 ? "rgba(52,211,153,0.3)"
                                                 : isGiven
@@ -571,7 +571,7 @@ function CaseFracInt({
                 </div>
             </div>
 
-            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 54 }}>
+            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 36 }}>
                 {Array.from({ length: totalParts }, (_, i) => {
                     const isColored = i < coloredParts;
                     const isGiven = isColored && i < totalDistributed;
@@ -583,10 +583,10 @@ function CaseFracInt({
                                 if (el && isColored) barRefs.current.set(i, el);
                             }}
                             className={[
-                                "flex-1 border-r-[3px] last:border-r-0 border-gray-600/80 transition-all duration-300",
+                                "flex-1 border-r-2 last:border-r-0 border-black transition-all duration-300",
                             ].join(" ")}
                             style={{
-                                minHeight: 54,
+                                minHeight: 36,
                                 backgroundColor: isFlying
                                     ? "rgba(45,212,191,0.3)"
                                     : isGiven
@@ -933,7 +933,7 @@ function CaseFracFrac({
                 <span className="text-white/40 text-xs">partes</span>
             </div>
 
-            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 54 }}>
+            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 36 }}>
                 {Array.from({ length: barDivisions }, (_, i) => {
                     const isColored = i < coloredCells;
                     const isInPlacedRange = isColored && i < placedCount * divisorCells;
@@ -954,8 +954,8 @@ function CaseFracFrac({
                     return (
                         <div
                             key={i}
-                            className={`flex-1 border-r-[3px] last:border-r-0 border-gray-600/80 transition-all duration-500 ${bg} ${shadow}`}
-                            style={{ minHeight: 54 }}
+                            className={`flex-1 border-r-2 last:border-r-0 border-black transition-all duration-500 ${bg} ${shadow}`}
+                            style={{ minHeight: 36 }}
                         />
                     );
                 })}
@@ -1236,134 +1236,193 @@ export default function DivisionFraccionesView() {
     }, []);
 
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white flex flex-col select-none" style={{ touchAction: "none" }}>
-            <div className="relative flex items-center justify-center px-4 pt-4 pb-2">
+        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none">
+            {/* 1. Header (34-44px) */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute left-4 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/70 text-sm font-semibold hover:bg-white/20 active:scale-95 transition-all"
+                    className="flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-white/80 active:scale-95 transition-all"
                 >
-                    ← Volver
+                    ← <span className="hidden xs:inline">Volver</span>
                 </button>
-                <h1 className="text-lg font-bold">Dividir Fracciones</h1>
+
+                <div className="flex items-center gap-1.5 truncate px-1">
+                    <h1 className="text-[13px] lg:text-[15px] font-bold text-white truncate">
+                        División de Fracciones
+                    </h1>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/30 shrink-0">
+                        Nivel {level}
+                    </span>
+                </div>
+
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="absolute right-4 w-8 h-8 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                    className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs lg:text-sm active:scale-95 transition-all"
+                    title="Ayuda"
                 >
                     ?
                 </button>
+            </header>
+
+            {/* 2. Barra de niveles y operación superior (34-40px) */}
+            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] lg:text-xs">
+                {/* Selector de nivel */}
+                <div className="flex items-center gap-1 shrink-0">
+                    {Array.from({ length: 9 }, (_, i) => i + 1).map((l) => (
+                        <button
+                            key={l}
+                            onClick={() => handleLevelChange(l)}
+                            className={[
+                                "w-6 h-6 lg:w-7 lg:h-7 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95",
+                                l === level
+                                    ? "bg-rose-600 text-white shadow-xs"
+                                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80",
+                            ].join(" ")}
+                        >
+                            {l}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Operación central */}
+                <div className="flex items-center px-2 py-0.5 rounded-lg bg-black/40 border border-white/10 shrink-0">
+                    <OpDisplay ex={exercise} />
+                </div>
+
+                {/* Etiqueta del nivel */}
+                <div className="text-[11px] text-white/40 font-medium truncate hidden md:inline">
+                    {levelLabel(level)}
+                </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 px-4 py-1 flex-wrap">
-                {Array.from({ length: 9 }, (_, i) => i + 1).map((l) => (
+            {/* 3. Área de trabajo central (flex-1 min-h-0) */}
+            <main className="flex-1 min-h-0 flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 overflow-hidden relative">
+                <div className="w-full max-w-2xl bg-[#0d1424]/90 border border-white/10 rounded-2xl p-2.5 sm:p-3 lg:p-4 shadow-xl flex flex-col justify-center gap-2 max-h-full overflow-y-auto">
+                    {exercise.caseType === "int-int" && (
+                        <CaseIntInt
+                            ex={exercise}
+                            groupCount={groupCount}
+                            setGroupCount={setGroupCount}
+                            distributed={distributed}
+                            setDistributed={setDistributed}
+                            confirmed={intIntConfirmed}
+                            setConfirmed={setIntIntConfirmed}
+                            errorMessage={intIntError}
+                            setErrorMessage={setIntIntError}
+                        />
+                    )}
+                    {exercise.caseType === "frac-int" && (
+                        <CaseFracInt
+                            ex={exercise}
+                            groupCount={fracIntGroups}
+                            setGroupCount={setFracIntGroups}
+                            subdivisions={subdivisions}
+                            setSubdivisions={setSubdivisions}
+                            distributed={fracIntDistributed}
+                            setDistributed={setFracIntDistributed}
+                            confirmed={fracIntConfirmed}
+                            setConfirmed={setFracIntConfirmed}
+                            errorMessage={fracIntError}
+                            setErrorMessage={setFracIntError}
+                        />
+                    )}
+                    {exercise.caseType === "int-frac" && (
+                        <CaseIntFrac
+                            ex={exercise}
+                            count={intFracCount}
+                            setCount={setIntFracCount}
+                            placedCount={intFracPlaced}
+                            setPlacedCount={setIntFracPlaced}
+                            confirmed={intFracConfirmed}
+                            setConfirmed={setIntFracConfirmed}
+                        />
+                    )}
+                    {exercise.caseType === "frac-frac" && (
+                        <CaseFracFrac
+                            ex={exercise}
+                            subdivisions={fracFracSubdivs}
+                            setSubdivisions={setFracFracSubdivs}
+                            placedCount={fracFracPlaced}
+                            setPlacedCount={setFracFracPlaced}
+                            count={fracFracCount}
+                            setCount={setFracFracCount}
+                            confirmed={fracFracConfirmed}
+                            setConfirmed={setFracFracConfirmed}
+                        />
+                    )}
+                </div>
+            </main>
+
+            {/* 4. Barra inferior de acción y feedback (40-48px) */}
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+                {/* Feedback a la izquierda */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {celebration ? (
+                        <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-emerald-400 truncate">
+                            🎉 ¡Excelente! Operación completada con éxito
+                        </span>
+                    ) : (
+                        <span className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-white/60 truncate">
+                            {levelLabel(level)}
+                        </span>
+                    )}
+                </div>
+
+                {/* Acciones principales a la derecha */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {isComplete && (
+                        <button
+                            onClick={handleShowMath}
+                            className="h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-rose-300 border border-rose-500/30 transition-all active:scale-95"
+                        >
+                            📐 Ver matemática
+                        </button>
+                    )}
                     <button
-                        key={l}
-                        onClick={() => handleLevelChange(l)}
-                        className={[
-                            "w-8 h-8 rounded-lg font-bold text-sm transition-all",
-                            l === level
-                                ? "bg-rose-500 text-white shadow-md shadow-rose-500/30"
-                                : "bg-white/10 text-white/50 hover:bg-white/20",
-                        ].join("")}
+                        onClick={handleNewExercise}
+                        className="h-7 px-3.5 lg:h-8 lg:px-5 rounded-lg bg-amber-600 hover:bg-amber-500 text-[11px] lg:text-xs font-bold text-white transition-all shadow-md active:scale-95"
                     >
-                        {l}
+                        🎲 Nuevo
                     </button>
-                ))}
-            </div>
-            <div className="text-center text-xs text-white/40 mb-1">{levelLabel(level)}</div>
+                    <button
+                        onClick={() => handleLevelChange(level)}
+                        className="h-7 px-2.5 lg:h-8 lg:px-3.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-white/70 transition-all active:scale-95"
+                    >
+                        🔄 Reiniciar
+                    </button>
+                </div>
+            </footer>
 
-            <div className="flex justify-center px-4 py-3">
-                <OpDisplay ex={exercise} />
-            </div>
-
-            <div className="flex-1 flex items-start justify-center px-4 py-2 overflow-auto">
-                {exercise.caseType === "int-int" && (
-                    <CaseIntInt
-                        ex={exercise}
-                        groupCount={groupCount}
-                        setGroupCount={setGroupCount}
-                        distributed={distributed}
-                        setDistributed={setDistributed}
-                        confirmed={intIntConfirmed}
-                        setConfirmed={setIntIntConfirmed}
-                        errorMessage={intIntError}
-                        setErrorMessage={setIntIntError}
-                    />
-                )}
-                {exercise.caseType === "frac-int" && (
-                    <CaseFracInt
-                        ex={exercise}
-                        groupCount={fracIntGroups}
-                        setGroupCount={setFracIntGroups}
-                        subdivisions={subdivisions}
-                        setSubdivisions={setSubdivisions}
-                        distributed={fracIntDistributed}
-                        setDistributed={setFracIntDistributed}
-                        confirmed={fracIntConfirmed}
-                        setConfirmed={setFracIntConfirmed}
-                        errorMessage={fracIntError}
-                        setErrorMessage={setFracIntError}
-                    />
-                )}
-                {exercise.caseType === "int-frac" && (
-                    <CaseIntFrac
-                        ex={exercise}
-                        count={intFracCount}
-                        setCount={setIntFracCount}
-                        placedCount={intFracPlaced}
-                        setPlacedCount={setIntFracPlaced}
-                        confirmed={intFracConfirmed}
-                        setConfirmed={setIntFracConfirmed}
-                    />
-                )}
-                {exercise.caseType === "frac-frac" && (
-                    <CaseFracFrac
-                        ex={exercise}
-                        subdivisions={fracFracSubdivs}
-                        setSubdivisions={setFracFracSubdivs}
-                        placedCount={fracFracPlaced}
-                        setPlacedCount={setFracFracPlaced}
-                        count={fracFracCount}
-                        setCount={setFracFracCount}
-                        confirmed={fracFracConfirmed}
-                        setConfirmed={setFracFracConfirmed}
-                    />
-                )}
-            </div>
-
+            {/* Modal de Pasos Matemáticos */}
             {showMath && (
-                <div className="px-4 py-3 bg-white/5 border-t border-white/10">
-                    <MathWriting ex={exercise} />
+                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="w-full max-w-lg bg-[#0d1424] border border-white/20 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[85vh]">
+                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">📐</span>
+                                <h3 className="text-sm font-bold text-white">Pasos Matemáticos Detallados</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowMath(false)}
+                                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white font-bold text-xs transition-all"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto py-4 pr-1 flex-1 min-h-0">
+                            <MathWriting ex={exercise} />
+                        </div>
+                        <div className="pt-3 border-t border-white/10 flex justify-end">
+                            <button
+                                onClick={() => setShowMath(false)}
+                                className="h-8 px-4 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition-all active:scale-95"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
-
-            {celebration && (
-                <div className="text-center px-4 pb-2">
-                    <span className="text-emerald-400 font-bold text-lg">🎉 ¡Excelente!</span>
-                </div>
-            )}
-
-            <div className="flex items-center justify-center gap-3 px-4 py-4 flex-wrap">
-                {isComplete && !showMath && (
-                    <button
-                        onClick={handleShowMath}
-                        className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-rose-500/30"
-                    >
-                        Ver la matemática
-                    </button>
-                )}
-                <button
-                    onClick={handleNewExercise}
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-amber-500/30"
-                >
-                    Nuevo ejercicio
-                </button>
-                <button
-                    onClick={() => handleLevelChange(level)}
-                    className="px-5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white/70 font-bold text-sm hover:bg-white/20 active:scale-95 transition-all"
-                >
-                    Reiniciar
-                </button>
-            </div>
 
             <ModalHelp
                 open={showHelp}

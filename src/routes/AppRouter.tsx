@@ -93,11 +93,11 @@ const router = createBrowserRouter([
     },
     {
         path: '/multiplicar-fracciones',
-        element: <Layout><MultiplicarFraccionesView /></Layout>
+        element: <MultiplicarFraccionesView />
     },
     {
         path: '/division-fracciones',
-        element: <Layout><DivisionFraccionesView /></Layout>
+        element: <DivisionFraccionesView />
     },
     {
         path: '/concepto-fraccion',
@@ -105,7 +105,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/fraccion-conjunto',
-        element: <Layout><FraccionConjuntoView /></Layout>
+        element: <FraccionConjuntoView />
     },
     {
         path: '/igualdad-balanza',

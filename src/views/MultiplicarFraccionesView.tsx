@@ -54,17 +54,17 @@ function generateExercise(level: number): Exercise {
         const den = 2 + Math.floor(Math.random() * 4);
         const num = 1 + Math.floor(Math.random() * (den - 1));
         const total = level === 3
-            ? den * (2 + Math.floor(Math.random() * 4))
-            : 2 + Math.floor(Math.random() * 10);
+            ? den * (2 + Math.floor(Math.random() * 3))
+            : den * (1 + Math.floor(Math.random() * 3));
         const rn = total * num;
         const rd = den;
         const [sn, sd] = simplify(rn, rd);
         return { caseType, n1: total, d1: 1, n2: num, d2: den, resultNum: sn, resultDen: sd };
     }
 
-    const d1 = 2 + Math.floor(Math.random() * 5);
+    const d1 = 2 + Math.floor(Math.random() * 4);
     const n1 = 1 + Math.floor(Math.random() * (d1 - 1));
-    const d2 = 2 + Math.floor(Math.random() * 5);
+    const d2 = 2 + Math.floor(Math.random() * 4);
     const n2 = 1 + Math.floor(Math.random() * (d2 - 1));
     const rn = n1 * n2;
     const rd = d1 * d2;
@@ -74,12 +74,29 @@ function generateExercise(level: number): Exercise {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function FractionDisplay({ num, den, color }: { num: number; den: number; color: string }) {
+function FractionDisplay({
+    num,
+    den,
+    color,
+    size = "normal",
+}: {
+    num: number;
+    den: number;
+    color: string;
+    size?: "normal" | "small" | "large";
+}) {
+    const textCls =
+        size === "large"
+            ? "text-base lg:text-xl"
+            : size === "small"
+                ? "text-[10px] lg:text-xs"
+                : "text-xs lg:text-sm";
+    const lineH = size === "large" ? "h-0.5 my-0.5" : "h-px my-0.5";
     return (
-        <div className="flex flex-col items-center" style={{ color }}>
-            <span className="font-bold text-lg leading-tight">{num}</span>
-            <div className="w-full h-px" style={{ backgroundColor: color }} />
-            <span className="font-bold text-lg leading-tight">{den}</span>
+        <div className={`inline-flex flex-col items-center font-bold ${textCls} leading-none select-none`} style={{ color }}>
+            <span>{num}</span>
+            <span className={`w-full ${lineH}`} style={{ backgroundColor: color }} />
+            <span>{den}</span>
         </div>
     );
 }
@@ -89,26 +106,26 @@ function OpDisplay({ ex }: { ex: Exercise }) {
     const amber = "#fbbf24";
     if (ex.caseType === "frac-int") {
         return (
-            <div className="flex items-center gap-3 text-2xl font-bold">
-                <span style={{ color: teal }}>{ex.n2}</span>
-                <span className="text-white/60">×</span>
+            <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm lg:text-base select-none">
+                <span className="text-teal-400 font-extrabold">{ex.n2}</span>
+                <span className="text-white/40">×</span>
                 <FractionDisplay num={ex.n1} den={ex.d1} color={amber} />
             </div>
         );
     }
     if (ex.caseType === "int-frac") {
         return (
-            <div className="flex items-center gap-3 text-2xl font-bold">
+            <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm lg:text-base select-none">
                 <FractionDisplay num={ex.n2} den={ex.d2} color={teal} />
-                <span className="text-white/60">de</span>
-                <span style={{ color: amber }}>{ex.n1}</span>
+                <span className="text-white/40 text-[11px] sm:text-xs font-semibold">de</span>
+                <span className="text-amber-400 font-extrabold">{ex.n1}</span>
             </div>
         );
     }
     return (
-        <div className="flex items-center gap-3 text-2xl font-bold">
+        <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm lg:text-base select-none">
             <FractionDisplay num={ex.n1} den={ex.d1} color={teal} />
-            <span className="text-white/60">×</span>
+            <span className="text-white/40">×</span>
             <FractionDisplay num={ex.n2} den={ex.d2} color={amber} />
         </div>
     );
@@ -117,7 +134,10 @@ function OpDisplay({ ex }: { ex: Exercise }) {
 // ─── Case 1: Fraction × Integer ──────────────────────────────────────────────
 
 function CaseFracInt({
-    ex, groups, setGroups, joined, setJoined,
+    ex,
+    groups,
+    setGroups,
+    joined,
 }: {
     ex: Exercise;
     groups: number;
@@ -125,106 +145,123 @@ function CaseFracInt({
     joined: boolean;
     setJoined: (b: boolean) => void;
 }) {
-    const { n1, d1, n2 } = ex;
+    const { n1, d1 } = ex;
     const totalPieces = n1 * groups;
     const resultNum = totalPieces;
     const resultDen = d1;
-    const isOverflow = totalPieces > d1;
-    const canJoin = groups === n2;
+    const [sn, sd] = simplify(resultNum, resultDen);
+    const needsSimplify = sn !== resultNum || sd !== resultDen;
 
-    const barWidth = `${100 / d1}%`;
+    const barsNeeded = Math.max(1, Math.ceil(totalPieces / d1));
+    const compactBars = groups > 3 || (joined && barsNeeded > 1);
+    const barH = compactBars ? "h-6 sm:h-7" : "h-7 sm:h-8 lg:h-9";
 
     return (
-        <div className="flex flex-col items-center gap-4 w-full max-w-xl mx-auto">
+        <div className="flex flex-col items-center justify-center gap-2 w-full max-w-xl mx-auto">
             {!joined ? (
                 <>
-                    <div className="flex items-center gap-3">
-                        <span className="text-white/70 text-sm font-semibold">¿Cuántos grupos?</span>
-                        <button
-                            onClick={() => setGroups(Math.max(0, groups - 1))}
-                            className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                        >−</button>
-                        <span className="w-8 text-center font-mono font-bold text-xl text-white">{groups}</span>
-                        <button
-                            onClick={() => setGroups(Math.min(12, groups + 1))}
-                            className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                        >+</button>
+                    {/* Control de grupos */}
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg border border-white/10 px-3 py-1">
+                        <span className="text-white/70 text-xs font-semibold">¿Cuántos grupos?</span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setGroups(Math.max(0, groups - 1))}
+                                disabled={groups <= 0}
+                                className="w-7 h-7 rounded-md bg-white/10 text-white font-bold text-base flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 transition-all select-none"
+                            >
+                                −
+                            </button>
+                            <span className="w-6 text-center font-mono font-bold text-sm text-teal-300">
+                                {groups}
+                            </span>
+                            <button
+                                onClick={() => setGroups(Math.min(8, groups + 1))}
+                                disabled={groups >= 8}
+                                className="w-7 h-7 rounded-md bg-white/10 text-white font-bold text-base flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 transition-all select-none"
+                            >
+                                +
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 w-full">
-                        {Array.from({ length: groups }, (_, g) => (
-                            <div key={g} className="flex items-center gap-2">
-                                <span className="text-white/40 text-xs font-mono w-6">{g + 1}.</span>
-                                <div className="flex w-full rounded-xl overflow-hidden border-2 border-amber-400/60 shadow-md" style={{ minHeight: 48 }}>
-                                    {Array.from({ length: d1 }, (_, i) => (
-                                        <div
-                                            key={i}
-                                            className={[
-                                                "flex-1 border-r last:border-r-0 border-gray-700",
-                                                i < n1
-                                                    ? "bg-gradient-to-b from-amber-400 to-amber-500"
-                                                    : "bg-amber-900/30",
-                                            ].join(" ")}
-                                            style={{ minHeight: 48 }}
-                                        />
-                                    ))}
-                                </div>
+                    {/* Barras de grupos */}
+                    <div className="flex flex-col gap-1.5 w-full max-h-[220px] overflow-y-auto pr-1">
+                        {groups === 0 ? (
+                            <div className="text-center py-4 text-xs text-white/40 italic">
+                                Usa los botones + para añadir grupos de {n1}/{d1}
                             </div>
-                        ))}
-                    </div>
-
-                    {canJoin && (
-                        <button
-                            onClick={() => setJoined(true)}
-                            className="px-6 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-teal-500/30"
-                        >
-                            Juntar todo
-                        </button>
-                    )}
-                </>
-            ) : (
-                <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="text-white/70 text-sm font-semibold">Resultado</div>
-                    <div className="flex w-full rounded-xl overflow-hidden border-2 border-emerald-400/60 shadow-md" style={{ minHeight: 48 }}>
-                        {isOverflow ? (
-                            <>
-                                {Array.from({ length: d1 }, (_, i) => (
-                                    <div
-                                        key={`f-${i}`}
-                                        className="flex-1 bg-gradient-to-b from-emerald-400 to-emerald-500 border-r border-gray-700"
-                                        style={{ minHeight: 48, width: barWidth }}
-                                    />
-                                ))}
-                                <div className="w-px bg-white/40 mx-1" />
-                                {Array.from({ length: totalPieces - d1 }, (_, i) => (
-                                    <div
-                                        key={`s-${i}`}
-                                        className="flex-1 bg-gradient-to-b from-emerald-400 to-emerald-500 border-r last:border-r-0 border-gray-700"
-                                        style={{ minHeight: 48, width: barWidth }}
-                                    />
-                                ))}
-                            </>
                         ) : (
-                            Array.from({ length: d1 }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className={[
-                                        "flex-1 border-r last:border-r-0 border-gray-700",
-                                        i < totalPieces
-                                            ? "bg-gradient-to-b from-emerald-400 to-emerald-500"
-                                            : "bg-emerald-900/30",
-                                    ].join(" ")}
-                                    style={{ minHeight: 48, width: barWidth }}
-                                />
+                            Array.from({ length: groups }, (_, g) => (
+                                <div key={g} className="flex items-center gap-1.5">
+                                    <span className="text-white/40 text-[10px] font-mono font-bold w-5 text-right shrink-0">
+                                        #{g + 1}
+                                    </span>
+                                    <div
+                                        className={`flex-1 flex rounded-xl overflow-hidden border-2 border-amber-400/60 bg-slate-900/90 shadow-inner ${barH}`}
+                                    >
+                                        {Array.from({ length: d1 }, (_, i) => (
+                                            <div
+                                                key={i}
+                                                className={[
+                                                    "flex-1 border-r-2 last:border-r-0 border-black transition-all select-none",
+                                                    i < n1
+                                                        ? "bg-gradient-to-r from-amber-400 to-amber-500 shadow-xs"
+                                                        : "bg-slate-800/80",
+                                                ].join(" ")}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             ))
                         )}
                     </div>
-                    <div className="text-center">
-                        <FractionDisplay
-                            num={resultNum}
-                            den={resultDen}
-                            color="#34d399"
-                        />
+                </>
+            ) : (
+                /* Resultado unificado */
+                <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="flex items-center gap-2">
+                        <span className="text-emerald-300 text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                            Resultado combinado
+                        </span>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+                            <FractionDisplay num={resultNum} den={resultDen} color="#34d399" />
+                            {needsSimplify && (
+                                <>
+                                    <span className="text-white/40 text-xs font-bold">=</span>
+                                    <FractionDisplay num={sn} den={sd} color="#a78bfa" />
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 w-full max-h-[220px] overflow-y-auto pr-1">
+                        {Array.from({ length: barsNeeded }, (_, b) => (
+                            <div key={b} className="flex items-center gap-1.5">
+                                {barsNeeded > 1 && (
+                                    <span className="text-white/40 text-[10px] font-mono font-bold w-5 text-right shrink-0">
+                                        #{b + 1}
+                                    </span>
+                                )}
+                                <div
+                                    className={`flex-1 flex rounded-xl overflow-hidden border-2 border-emerald-400/60 bg-slate-900/90 shadow-inner ${barH}`}
+                                >
+                                    {Array.from({ length: d1 }, (_, i) => {
+                                        const filled = b * d1 + i < totalPieces;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={[
+                                                    "flex-1 border-r-2 last:border-r-0 border-black transition-all select-none",
+                                                    filled
+                                                        ? "bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-xs"
+                                                        : "bg-slate-800/80",
+                                                ].join(" ")}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -235,7 +272,12 @@ function CaseFracInt({
 // ─── Case 2: Integer × Fraction ──────────────────────────────────────────────
 
 function CaseIntFrac({
-    ex, groupCount, setGroupCount, selectCount, setSelectCount, confirmed, setConfirmed,
+    ex,
+    groupCount,
+    setGroupCount,
+    selectCount,
+    setSelectCount,
+    confirmed,
 }: {
     ex: Exercise;
     groupCount: number;
@@ -245,7 +287,7 @@ function CaseIntFrac({
     confirmed: boolean;
     setConfirmed: (b: boolean) => void;
 }) {
-    const { n1, n2, d2 } = ex;
+    const { n1 } = ex;
     const chipsPerGroup = groupCount > 0 ? Math.ceil(n1 / groupCount) : n1;
     const remainder = groupCount > 0 ? n1 % groupCount : 0;
     const groups: number[] = [];
@@ -257,60 +299,78 @@ function CaseIntFrac({
     }
 
     const coloredCount = groups.slice(0, selectCount).reduce((a, b) => a + b, 0);
-    const canConfirm = groupCount === d2 && selectCount === n2;
 
     return (
-        <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-white/70 text-xs">Dividir en</span>
+        <div className="flex flex-col items-center justify-center gap-2 w-full max-w-xl mx-auto">
+            {/* Controles de división y selección */}
+            <div className="flex items-center gap-2 flex-wrap justify-center text-xs">
+                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2.5 py-1">
+                    <span className="text-white/70">Dividir en</span>
                     <button
-                        onClick={() => setGroupCount(Math.max(1, groupCount - 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">{groupCount}</span>
+                        onClick={() => {
+                            const next = Math.max(1, groupCount - 1);
+                            setGroupCount(next);
+                            if (selectCount > next) setSelectCount(next);
+                        }}
+                        disabled={groupCount <= 1}
+                        className="w-6 h-6 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 transition-all select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-5 text-center font-mono font-bold text-teal-300">{groupCount}</span>
                     <button
-                        onClick={() => setGroupCount(Math.min(12, groupCount + 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >+</button>
-                    <span className="text-white/70 text-xs">grupos</span>
+                        onClick={() => setGroupCount(Math.min(8, groupCount + 1))}
+                        disabled={groupCount >= 8}
+                        className="w-6 h-6 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 transition-all select-none"
+                    >
+                        +
+                    </button>
+                    <span className="text-white/70">grupos</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-white/70 text-xs">Tomar</span>
+
+                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2.5 py-1">
+                    <span className="text-white/70">Tomar</span>
                     <button
                         onClick={() => setSelectCount(Math.max(0, selectCount - 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">{selectCount}</span>
+                        disabled={selectCount <= 0}
+                        className="w-6 h-6 rounded bg-teal-500/20 text-teal-300 font-bold text-xs flex items-center justify-center hover:bg-teal-500/30 active:scale-95 disabled:opacity-20 transition-all select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-5 text-center font-mono font-bold text-teal-300">{selectCount}</span>
                     <button
                         onClick={() => setSelectCount(Math.min(groupCount, selectCount + 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >+</button>
-                    <span className="text-white/70 text-xs">grupos</span>
+                        disabled={selectCount >= groupCount}
+                        className="w-6 h-6 rounded bg-teal-500/20 text-teal-300 font-bold text-xs flex items-center justify-center hover:bg-teal-500/30 active:scale-95 disabled:opacity-20 transition-all select-none"
+                    >
+                        +
+                    </button>
+                    <span className="text-white/70">grupos</span>
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-center">
+            {/* Fichas divididas en grupos */}
+            <div className="flex flex-wrap gap-2 justify-center items-center max-h-[200px] overflow-y-auto p-1 w-full">
                 {groups.map((count, g) => {
                     const isSelected = g < selectCount;
                     return (
                         <div
                             key={g}
                             className={[
-                                "flex flex-wrap gap-1.5 p-2 rounded-xl border-2 transition-all duration-300",
+                                "flex flex-wrap gap-1 p-1.5 rounded-xl border-2 transition-all duration-200 items-center justify-center",
                                 isSelected
-                                    ? "border-teal-400 bg-teal-500/20"
-                                    : "border-white/10 bg-white/5",
+                                    ? "border-teal-400 bg-teal-500/20 shadow-xs"
+                                    : "border-white/10 bg-slate-900/60",
                             ].join(" ")}
                         >
                             {Array.from({ length: count }, (_, i) => (
                                 <div
                                     key={i}
                                     className={[
-                                        "w-8 h-8 rounded-full transition-all duration-200",
+                                        "w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-150 border",
                                         isSelected
-                                            ? "bg-gradient-to-br from-teal-400 to-teal-500 shadow-md"
-                                            : "bg-white/20",
+                                            ? "bg-gradient-to-br from-teal-400 to-teal-500 border-teal-300 shadow-xs"
+                                            : "bg-slate-700/80 border-black/40",
                                     ].join(" ")}
                                 />
                             ))}
@@ -319,18 +379,11 @@ function CaseIntFrac({
                 })}
             </div>
 
-            {!confirmed && canConfirm && (
-                <button
-                    onClick={() => setConfirmed(true)}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
-                >
-                    ¿Cuántas fichas tomé?
-                </button>
-            )}
-
             {confirmed && (
-                <div className="text-center">
-                    <span className="text-emerald-400 font-bold text-xl">{coloredCount} fichas</span>
+                <div className="text-center bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-lg">
+                    <span className="text-emerald-300 font-bold text-sm sm:text-base">
+                        {coloredCount} fichas tomadas de {n1}
+                    </span>
                 </div>
             )}
         </div>
@@ -340,7 +393,15 @@ function CaseIntFrac({
 // ─── Case 3: Fraction × Fraction ─────────────────────────────────────────────
 
 function CaseFracFrac({
-    ex, cols, setCols, colSelect, setColSelect, rows, setRows, rowSelect, setRowSelect, confirmed, setConfirmed,
+    cols,
+    setCols,
+    colSelect,
+    setColSelect,
+    rows,
+    setRows,
+    rowSelect,
+    setRowSelect,
+    confirmed,
 }: {
     ex: Exercise;
     cols: number;
@@ -354,63 +415,102 @@ function CaseFracFrac({
     confirmed: boolean;
     setConfirmed: (b: boolean) => void;
 }) {
-    const { n1, d1, n2, d2 } = ex;
-    const canConfirm = cols === d1 && colSelect === n1 && rows === d2 && rowSelect === n2;
     const totalCells = cols * rows;
     const intersectCells = colSelect * rowSelect;
+    const [sn, sd] = simplify(intersectCells, totalCells);
+    const needsSimplify = sn !== intersectCells || sd !== totalCells;
 
     return (
-        <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto">
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-teal-400 text-xs font-semibold">Columnas</span>
+        <div className="flex flex-col items-center justify-center gap-2 w-full max-w-lg mx-auto">
+            {/* Controles de Columnas y Filas */}
+            <div className="flex items-center gap-2 flex-wrap justify-center text-xs">
+                {/* Columnas */}
+                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-1">
+                    <span className="text-teal-400 font-semibold">Cols:</span>
                     <button
-                        onClick={() => { setCols(Math.max(1, cols - 1)); setColSelect(Math.min(colSelect, cols - 1)); }}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">{cols}</span>
+                        onClick={() => {
+                            const next = Math.max(1, cols - 1);
+                            setCols(next);
+                            if (colSelect > next) setColSelect(next);
+                        }}
+                        disabled={cols <= 1}
+                        className="w-5 h-5 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-4 text-center font-mono font-bold text-white">{cols}</span>
                     <button
-                        onClick={() => setCols(Math.min(12, cols + 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >+</button>
-                    <span className="text-white/40 text-xs">colorear</span>
+                        onClick={() => setCols(Math.min(8, cols + 1))}
+                        disabled={cols >= 8}
+                        className="w-5 h-5 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        +
+                    </button>
+                    <span className="text-white/40 text-[10px]">pintar:</span>
                     <button
                         onClick={() => setColSelect(Math.max(0, colSelect - 1))}
-                        className="w-8 h-8 rounded-lg bg-teal-500/30 text-teal-300 font-bold flex items-center justify-center hover:bg-teal-500/50 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-teal-300">{colSelect}</span>
+                        disabled={colSelect <= 0}
+                        className="w-5 h-5 rounded bg-teal-500/20 text-teal-300 font-bold text-xs flex items-center justify-center hover:bg-teal-500/30 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-4 text-center font-mono font-bold text-teal-300">{colSelect}</span>
                     <button
                         onClick={() => setColSelect(Math.min(cols, colSelect + 1))}
-                        className="w-8 h-8 rounded-lg bg-teal-500/30 text-teal-300 font-bold flex items-center justify-center hover:bg-teal-500/50 active:scale-90 transition-all"
-                    >+</button>
+                        disabled={colSelect >= cols}
+                        className="w-5 h-5 rounded bg-teal-500/20 text-teal-300 font-bold text-xs flex items-center justify-center hover:bg-teal-500/30 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        +
+                    </button>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-amber-400 text-xs font-semibold">Filas</span>
+
+                {/* Filas */}
+                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-1">
+                    <span className="text-amber-400 font-semibold">Filas:</span>
                     <button
-                        onClick={() => { setRows(Math.max(1, rows - 1)); setRowSelect(Math.min(rowSelect, rows - 1)); }}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">{rows}</span>
+                        onClick={() => {
+                            const next = Math.max(1, rows - 1);
+                            setRows(next);
+                            if (rowSelect > next) setRowSelect(next);
+                        }}
+                        disabled={rows <= 1}
+                        className="w-5 h-5 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-4 text-center font-mono font-bold text-white">{rows}</span>
                     <button
-                        onClick={() => setRows(Math.min(12, rows + 1))}
-                        className="w-8 h-8 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
-                    >+</button>
-                    <span className="text-white/40 text-xs">colorear</span>
+                        onClick={() => setRows(Math.min(8, rows + 1))}
+                        disabled={rows >= 8}
+                        className="w-5 h-5 rounded bg-white/10 text-white font-bold text-xs flex items-center justify-center hover:bg-white/20 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        +
+                    </button>
+                    <span className="text-white/40 text-[10px]">pintar:</span>
                     <button
                         onClick={() => setRowSelect(Math.max(0, rowSelect - 1))}
-                        className="w-8 h-8 rounded-lg bg-amber-500/30 text-amber-300 font-bold flex items-center justify-center hover:bg-amber-500/50 active:scale-90 transition-all"
-                    >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-amber-300">{rowSelect}</span>
+                        disabled={rowSelect <= 0}
+                        className="w-5 h-5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center hover:bg-amber-500/30 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        −
+                    </button>
+                    <span className="w-4 text-center font-mono font-bold text-amber-300">{rowSelect}</span>
                     <button
                         onClick={() => setRowSelect(Math.min(rows, rowSelect + 1))}
-                        className="w-8 h-8 rounded-lg bg-amber-500/30 text-amber-300 font-bold flex items-center justify-center hover:bg-amber-500/50 active:scale-90 transition-all"
-                    >+</button>
+                        disabled={rowSelect >= rows}
+                        className="w-5 h-5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center hover:bg-amber-500/30 active:scale-95 disabled:opacity-20 select-none"
+                    >
+                        +
+                    </button>
                 </div>
             </div>
 
+            {/* Cuadrícula adaptativa */}
             <div
-                className="grid border-2 border-white/30 rounded-lg overflow-hidden w-full aspect-square max-w-sm"
+                className="grid border-2 border-white/40 rounded-xl overflow-hidden shadow-inner bg-slate-900/90"
                 style={{
+                    width: "min(42vw, 190px)",
+                    height: "min(42vw, 190px)",
                     gridTemplateColumns: `repeat(${cols}, 1fr)`,
                     gridTemplateRows: `repeat(${rows}, 1fr)`,
                 }}
@@ -422,44 +522,36 @@ function CaseFracFrac({
                     const inRow = r < rowSelect;
                     const isIntersection = inCol && inRow;
 
-                    let bg = "bg-white/5";
-                    if (isIntersection) bg = "bg-gradient-to-br from-emerald-400 to-emerald-500";
+                    let bg = "bg-slate-800/80";
+                    if (isIntersection) bg = "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-xs";
                     else if (inCol) bg = "bg-teal-500/40";
                     else if (inRow) bg = "bg-amber-500/40";
 
                     return (
                         <div
                             key={idx}
-                            className={`border border-white/10 transition-all duration-200 ${bg}`}
+                            className={`border border-black/40 transition-all duration-150 ${bg}`}
                         />
                     );
                 })}
             </div>
 
-            <div className="text-white/50 text-sm text-center">
-                Celdas de intersección: <span className="text-emerald-400 font-bold">{intersectCells}</span>
-                {" / "}
-                Total: <span className="text-white font-bold">{totalCells}</span>
+            <div className="flex items-center gap-2 text-xs">
+                <span className="text-white/60">
+                    Intersección: <strong className="text-emerald-400 font-mono">{intersectCells}</strong> / {totalCells}
+                </span>
+                {confirmed && (
+                    <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                        <FractionDisplay num={intersectCells} den={totalCells} color="#34d399" size="small" />
+                        {needsSimplify && (
+                            <>
+                                <span className="text-white/40 font-bold text-[10px]">=</span>
+                                <FractionDisplay num={sn} den={sd} color="#a78bfa" size="small" />
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
-
-            {!confirmed && canConfirm && (
-                <button
-                    onClick={() => setConfirmed(true)}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
-                >
-                    Comprobar
-                </button>
-            )}
-
-            {confirmed && (
-                <div className="text-center">
-                    <FractionDisplay
-                        num={intersectCells}
-                        den={totalCells}
-                        color="#34d399"
-                    />
-                </div>
-            )}
         </div>
     );
 }
@@ -468,10 +560,10 @@ function CaseFracFrac({
 
 function InlineFrac({ num, den, color }: { num: number; den: number; color: string }) {
     return (
-        <div className="flex flex-col items-center" style={{ color }}>
-            <span className="font-bold text-lg leading-tight">{num}</span>
-            <div className="w-full h-px" style={{ backgroundColor: color }} />
-            <span className="font-bold text-lg leading-tight">{den}</span>
+        <div className="inline-flex flex-col items-center" style={{ color }}>
+            <span className="font-bold text-base lg:text-xl leading-tight">{num}</span>
+            <div className="w-full h-0.5 my-0.5" style={{ backgroundColor: color }} />
+            <span className="font-bold text-base lg:text-xl leading-tight">{den}</span>
         </div>
     );
 }
@@ -483,19 +575,22 @@ function MathWriting({ ex }: { ex: Exercise }) {
 
     if (ex.caseType === "frac-int") {
         return (
-            <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-3 flex-wrap">
-                    <span className="font-bold text-2xl" style={{ color: teal }}>{ex.n2}</span>
-                    <span className="text-white/50 text-2xl">×</span>
+            <div className="text-center space-y-3">
+                <p className="text-xs text-white/50 uppercase tracking-widest font-bold">
+                    Multiplicación como suma repetida
+                </p>
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                    <span className="font-bold text-xl sm:text-2xl" style={{ color: teal }}>{ex.n2}</span>
+                    <span className="text-white/50 text-xl sm:text-2xl">×</span>
                     <InlineFrac num={ex.n1} den={ex.d1} color={amber} />
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className="text-white/50 text-xl sm:text-2xl">=</span>
                     {Array.from({ length: ex.n2 }, (_, i) => (
                         <React.Fragment key={i}>
-                            {i > 0 && <span className="text-white/50 text-2xl">+</span>}
+                            {i > 0 && <span className="text-white/50 text-lg">+</span>}
                             <InlineFrac num={ex.n1} den={ex.d1} color={amber} />
                         </React.Fragment>
                     ))}
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className="text-white/50 text-xl sm:text-2xl">=</span>
                     <InlineFrac num={ex.resultNum} den={ex.resultDen} color={green} />
                 </div>
             </div>
@@ -505,48 +600,54 @@ function MathWriting({ ex }: { ex: Exercise }) {
         const divided = ex.n1 / ex.d2;
         const multiplied = divided * ex.n2;
         return (
-            <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-3 flex-wrap">
+            <div className="text-center space-y-3">
+                <p className="text-xs text-white/50 uppercase tracking-widest font-bold">
+                    Fracción de un conjunto (dividir y tomar)
+                </p>
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap text-sm sm:text-base">
                     <InlineFrac num={ex.n2} den={ex.d2} color={teal} />
-                    <span className="text-white/50 text-lg">de</span>
-                    <span className="font-bold text-2xl" style={{ color: amber }}>{ex.n1}</span>
-                    <span className="text-white/50 text-lg">→</span>
-                    <span className="font-bold text-xl" style={{ color: amber }}>{ex.n1}</span>
-                    <span className="text-white/50 text-xl">÷</span>
-                    <span className="font-bold text-xl" style={{ color: teal }}>{ex.d2}</span>
-                    <span className="text-white/50 text-xl">=</span>
-                    <span className="font-bold text-xl" style={{ color: amber }}>{divided}</span>
-                    <span className="text-white/50 text-lg">→</span>
-                    <span className="font-bold text-xl" style={{ color: amber }}>{divided}</span>
-                    <span className="text-white/50 text-xl">×</span>
-                    <span className="font-bold text-xl" style={{ color: teal }}>{ex.n2}</span>
-                    <span className="text-white/50 text-xl">=</span>
-                    <span className="font-bold text-2xl" style={{ color: green }}>{multiplied}</span>
+                    <span className="text-white/50">de</span>
+                    <span className="font-bold text-xl sm:text-2xl" style={{ color: amber }}>{ex.n1}</span>
+                    <span className="text-white/50">→</span>
+                    <span className="font-bold" style={{ color: amber }}>{ex.n1}</span>
+                    <span className="text-white/50">÷</span>
+                    <span className="font-bold" style={{ color: teal }}>{ex.d2}</span>
+                    <span className="text-white/50">=</span>
+                    <span className="font-bold" style={{ color: amber }}>{divided}</span>
+                    <span className="text-white/50">→</span>
+                    <span className="font-bold" style={{ color: amber }}>{divided}</span>
+                    <span className="text-white/50">×</span>
+                    <span className="font-bold" style={{ color: teal }}>{ex.n2}</span>
+                    <span className="text-white/50">=</span>
+                    <span className="font-bold text-xl sm:text-2xl" style={{ color: green }}>{multiplied}</span>
                 </div>
             </div>
         );
     }
     return (
-        <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-3 flex-wrap">
+        <div className="text-center space-y-3">
+            <p className="text-xs text-white/50 uppercase tracking-widest font-bold">
+                Producto directo: Numerador × Numerador y Denominador × Denominador
+            </p>
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                 <InlineFrac num={ex.n1} den={ex.d1} color={teal} />
-                <span className="text-white/50 text-2xl">×</span>
+                <span className="text-white/50 text-xl sm:text-2xl">×</span>
                 <InlineFrac num={ex.n2} den={ex.d2} color={amber} />
-                <span className="text-white/50 text-2xl">=</span>
+                <span className="text-white/50 text-xl sm:text-2xl">=</span>
                 <div className="flex flex-col items-center text-white/50">
                     <div className="flex items-center gap-1">
-                        <span className="font-bold text-lg" style={{ color: teal }}>{ex.n1}</span>
+                        <span className="font-bold text-sm sm:text-base" style={{ color: teal }}>{ex.n1}</span>
                         <span>×</span>
-                        <span className="font-bold text-lg" style={{ color: amber }}>{ex.n2}</span>
+                        <span className="font-bold text-sm sm:text-base" style={{ color: amber }}>{ex.n2}</span>
                     </div>
-                    <div className="w-full h-px bg-white/40" />
+                    <div className="w-full h-0.5 bg-white/40 my-0.5" />
                     <div className="flex items-center gap-1">
-                        <span className="font-bold text-lg" style={{ color: teal }}>{ex.d1}</span>
+                        <span className="font-bold text-sm sm:text-base" style={{ color: teal }}>{ex.d1}</span>
                         <span>×</span>
-                        <span className="font-bold text-lg" style={{ color: amber }}>{ex.d2}</span>
+                        <span className="font-bold text-sm sm:text-base" style={{ color: amber }}>{ex.d2}</span>
                     </div>
                 </div>
-                <span className="text-white/50 text-2xl">=</span>
+                <span className="text-white/50 text-xl sm:text-2xl">=</span>
                 <InlineFrac num={ex.resultNum} den={ex.resultDen} color={green} />
             </div>
         </div>
@@ -594,7 +695,6 @@ export default function MultiplicarFraccionesView() {
 
     // Shared
     const [showMath, setShowMath] = useState(false);
-    const [celebration, setCelebration] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
 
     const isComplete =
@@ -615,7 +715,6 @@ export default function MultiplicarFraccionesView() {
         setRowSelect(0);
         setFracFracConfirmed(false);
         setShowMath(false);
-        setCelebration(false);
     }, [level]);
 
     const handleLevelChange = useCallback((newLevel: number) => {
@@ -632,181 +731,268 @@ export default function MultiplicarFraccionesView() {
         setRowSelect(0);
         setFracFracConfirmed(false);
         setShowMath(false);
-        setCelebration(false);
     }, []);
 
-    const handleShowMath = useCallback(() => {
-        setShowMath(true);
-        setCelebration(true);
-    }, []);
+    // Can action helpers
+    const canJoinCase1 = groups === exercise.n2;
+    const canConfirmCase2 = groupCount === exercise.d2 && selectCount === exercise.n2;
+    const canConfirmCase3 =
+        cols === exercise.d1 &&
+        colSelect === exercise.n1 &&
+        rows === exercise.d2 &&
+        rowSelect === exercise.n2;
+
+    const getInstruction = () => {
+        if (isComplete) return { text: "¡Operación completada con éxito!", tone: "emerald" };
+        if (exercise.caseType === "frac-int") {
+            if (canJoinCase1) return { text: "¡Cantidad de grupos correcta! Pulsa «Juntar todo».", tone: "green" };
+            return { text: `Crea exactamente ${exercise.n2} grupos usando el botón +/−.`, tone: "amber" };
+        }
+        if (exercise.caseType === "int-frac") {
+            if (canConfirmCase2) return { text: "¡Grupos listos! Pulsa «¿Cuántas fichas tomé?».", tone: "green" };
+            return { text: `Divide en ${exercise.d2} grupos y toma ${exercise.n2} de ellos.`, tone: "amber" };
+        }
+        if (canConfirmCase3) return { text: "¡Cuadrícula completada! Pulsa «Comprobar».", tone: "green" };
+        return { text: `Ajusta ${exercise.d1} columnas (${exercise.n1} pintar) y ${exercise.d2} filas (${exercise.n2} pintar).`, tone: "amber" };
+    };
+
+    const { text: hintText, tone: hintTone } = getInstruction();
 
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white flex flex-col select-none" style={{ touchAction: "none" }}>
-            {/* ── Header ── */}
-            <div className="relative flex items-center justify-center px-4 pt-4 pb-2">
+        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none">
+            {/* 1. Header (34-44px) */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute left-4 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/70 text-sm font-semibold hover:bg-white/20 active:scale-95 transition-all"
+                    className="flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-white/80 active:scale-95 transition-all"
                 >
-                    ← Volver
+                    ← <span className="hidden xs:inline">Volver</span>
                 </button>
-                <h1 className="text-lg font-bold">Multiplicar Fracciones</h1>
+
+                <div className="flex items-center gap-1.5 truncate px-1">
+                    <h1 className="text-[13px] lg:text-[15px] font-bold text-white truncate">
+                        Multiplicación de Fracciones
+                    </h1>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border bg-indigo-500/20 text-indigo-300 border-indigo-500/30 shrink-0">
+                        Nivel {level}
+                    </span>
+                </div>
+
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="absolute right-4 w-8 h-8 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+                    className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs lg:text-sm active:scale-95 transition-all"
+                    title="Ayuda"
                 >
                     ?
                 </button>
+            </header>
+
+            {/* 2. Barra de niveles y operación superior (34-40px) */}
+            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] lg:text-xs">
+                {/* Selector de nivel */}
+                <div className="flex items-center gap-1 shrink-0">
+                    {Array.from({ length: 7 }, (_, i) => i + 1).map((l) => (
+                        <button
+                            key={l}
+                            onClick={() => handleLevelChange(l)}
+                            className={[
+                                "w-6 h-6 lg:w-7 lg:h-7 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95",
+                                l === level
+                                    ? "bg-indigo-600 text-white shadow-xs"
+                                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80",
+                            ].join(" ")}
+                        >
+                            {l}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Ejercicio / Operación central */}
+                <div className="flex items-center px-2 py-0.5 rounded-lg bg-black/40 border border-white/10 shrink-0">
+                    <OpDisplay ex={exercise} />
+                </div>
+
+                {/* Etiqueta del nivel */}
+                <div className="text-[11px] text-white/40 font-medium truncate hidden md:inline">
+                    {levelLabel(level)}
+                </div>
             </div>
 
-            {/* ── Level selector ── */}
-            <div className="flex items-center justify-center gap-2 px-4 py-1 flex-wrap">
-                {Array.from({ length: 7 }, (_, i) => i + 1).map((l) => (
-                    <button
-                        key={l}
-                        onClick={() => handleLevelChange(l)}
-                        className={[
-                            "w-8 h-8 rounded-lg font-bold text-sm transition-all",
-                            l === level
-                                ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/30"
-                                : "bg-white/10 text-white/50 hover:bg-white/20",
-                        ].join("")}
-                    >
-                        {l}
-                    </button>
-                ))}
-            </div>
-            <div className="text-center text-xs text-white/40 mb-1">{levelLabel(level)}</div>
+            {/* 3. Área de trabajo central (flex-1 min-h-0) */}
+            <main className="flex-1 min-h-0 flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 overflow-hidden relative">
+                <div className="w-full max-w-2xl bg-[#0d1424]/90 border border-white/10 rounded-2xl p-2.5 sm:p-3 lg:p-4 shadow-xl flex flex-col justify-center gap-2">
+                    {exercise.caseType === "frac-int" && (
+                        <CaseFracInt
+                            ex={exercise}
+                            groups={groups}
+                            setGroups={setGroups}
+                            joined={joined}
+                            setJoined={setJoined}
+                        />
+                    )}
+                    {exercise.caseType === "int-frac" && (
+                        <CaseIntFrac
+                            ex={exercise}
+                            groupCount={groupCount}
+                            setGroupCount={setGroupCount}
+                            selectCount={selectCount}
+                            setSelectCount={setSelectCount}
+                            confirmed={intFracConfirmed}
+                            setConfirmed={setIntFracConfirmed}
+                        />
+                    )}
+                    {exercise.caseType === "frac-frac" && (
+                        <CaseFracFrac
+                            ex={exercise}
+                            cols={cols}
+                            setCols={setCols}
+                            colSelect={colSelect}
+                            setColSelect={setColSelect}
+                            rows={rows}
+                            setRows={setRows}
+                            rowSelect={rowSelect}
+                            setRowSelect={setRowSelect}
+                            confirmed={fracFracConfirmed}
+                            setConfirmed={setFracFracConfirmed}
+                        />
+                    )}
+                </div>
+            </main>
 
-            {/* ── Operation ── */}
-            <div className="flex justify-center px-4 py-3">
-                <OpDisplay ex={exercise} />
-            </div>
+            {/* 4. Barra inferior de acción y feedback (40-48px) */}
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+                {/* Feedback a la izquierda */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="shrink-0 text-xs">
+                        {hintTone === "emerald" ? "🎉" : hintTone === "green" ? "✓" : "💡"}
+                    </span>
+                    <span className={[
+                        "text-[10px] sm:text-[11px] lg:text-xs font-semibold truncate",
+                        hintTone === "emerald" ? "text-emerald-400" : hintTone === "green" ? "text-teal-300" : "text-amber-300",
+                    ].join(" ")}>
+                        {hintText}
+                    </span>
+                </div>
 
-            {/* ── Visual Area ── */}
-            <div className="flex-1 flex items-start justify-center px-4 py-2 overflow-auto">
-                {exercise.caseType === "frac-int" && (
-                    <CaseFracInt
-                        ex={exercise}
-                        groups={groups}
-                        setGroups={setGroups}
-                        joined={joined}
-                        setJoined={setJoined}
-                    />
-                )}
-                {exercise.caseType === "int-frac" && (
-                    <CaseIntFrac
-                        ex={exercise}
-                        groupCount={groupCount}
-                        setGroupCount={setGroupCount}
-                        selectCount={selectCount}
-                        setSelectCount={setSelectCount}
-                        confirmed={intFracConfirmed}
-                        setConfirmed={setIntFracConfirmed}
-                    />
-                )}
-                {exercise.caseType === "frac-frac" && (
-                    <CaseFracFrac
-                        ex={exercise}
-                        cols={cols}
-                        setCols={setCols}
-                        colSelect={colSelect}
-                        setColSelect={setColSelect}
-                        rows={rows}
-                        setRows={setRows}
-                        rowSelect={rowSelect}
-                        setRowSelect={setRowSelect}
-                        confirmed={fracFracConfirmed}
-                        setConfirmed={setFracFracConfirmed}
-                    />
-                )}
-            </div>
+                {/* Acciones principales a la derecha */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {!isComplete ? (
+                        <>
+                            {exercise.caseType === "frac-int" && (
+                                <button
+                                    onClick={() => setJoined(true)}
+                                    disabled={!canJoinCase1}
+                                    className="h-7 px-3.5 lg:h-8 lg:px-5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-25 disabled:cursor-not-allowed text-[11px] lg:text-xs font-bold text-white transition-all shadow-md active:scale-95"
+                                >
+                                    Juntar todo
+                                </button>
+                            )}
+                            {exercise.caseType === "int-frac" && (
+                                <button
+                                    onClick={() => setIntFracConfirmed(true)}
+                                    disabled={!canConfirmCase2}
+                                    className="h-7 px-3.5 lg:h-8 lg:px-5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-25 disabled:cursor-not-allowed text-[11px] lg:text-xs font-bold text-white transition-all shadow-md active:scale-95"
+                                >
+                                    ¿Cuántas tomé?
+                                </button>
+                            )}
+                            {exercise.caseType === "frac-frac" && (
+                                <button
+                                    onClick={() => setFracFracConfirmed(true)}
+                                    disabled={!canConfirmCase3}
+                                    className="h-7 px-3.5 lg:h-8 lg:px-5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-25 disabled:cursor-not-allowed text-[11px] lg:text-xs font-bold text-white transition-all shadow-md active:scale-95"
+                                >
+                                    Comprobar
+                                </button>
+                            )}
+                            <button
+                                onClick={handleNewExercise}
+                                className="h-7 px-2.5 lg:h-8 lg:px-3.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-white/70 transition-all active:scale-95"
+                            >
+                                🎲 Nuevo
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setShowMath(true)}
+                                className="h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-indigo-300 border border-indigo-500/30 transition-all active:scale-95"
+                            >
+                                📐 Ver matemática
+                            </button>
+                            <button
+                                onClick={handleNewExercise}
+                                className="h-7 px-3.5 lg:h-8 lg:px-5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[11px] lg:text-xs font-bold text-white transition-all shadow-md active:scale-95"
+                            >
+                                🎲 Nuevo ejercicio
+                            </button>
+                        </>
+                    )}
+                </div>
+            </footer>
 
-            {/* ── Math writing ── */}
+            {/* Modal de Pasos Matemáticos */}
             {showMath && (
-                <div className="px-4 py-3 bg-white/5 border-t border-white/10">
-                    <MathWriting ex={exercise} />
+                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="w-full max-w-lg bg-[#0d1424] border border-white/20 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[85vh]">
+                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">📐</span>
+                                <h3 className="text-sm font-bold text-white">Pasos Matemáticos Detallados</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowMath(false)}
+                                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white font-bold text-xs transition-all"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto py-4 pr-1 flex-1 min-h-0">
+                            <MathWriting ex={exercise} />
+                        </div>
+                        <div className="pt-3 border-t border-white/10 flex justify-end">
+                            <button
+                                onClick={() => setShowMath(false)}
+                                className="h-8 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all active:scale-95"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* ── Celebration ── */}
-            {celebration && (
-                <div className="text-center px-4 pb-2">
-                    <span className="text-emerald-400 font-bold text-lg">🎉 ¡Excelente!</span>
-                </div>
-            )}
-
-            {/* ── Controls ── */}
-            <div className="flex items-center justify-center gap-3 px-4 py-4 flex-wrap">
-                {isComplete && !showMath && (
-                    <button
-                        onClick={handleShowMath}
-                        className="px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-indigo-500/30"
-                    >
-                        Ver la matemática
-                    </button>
-                )}
-                <button
-                    onClick={handleNewExercise}
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-amber-500/30"
-                >
-                    Nuevo ejercicio
-                </button>
-                <button
-                    onClick={handleLevelChange.bind(null, level)}
-                    className="px-5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white/70 font-bold text-sm hover:bg-white/20 active:scale-95 transition-all"
-                >
-                    Reiniciar
-                </button>
-            </div>
-
+            {/* Modal de Ayuda */}
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
                 title="¿Cómo multiplicar fracciones visualmente?"
-                bgColor="#0f172a"
-                titleColor="#e2e8f0"
+                bgColor="#0d1424"
+                titleColor="#f8fafc"
+                buttonColor="bg-indigo-600 hover:bg-indigo-500"
             >
-                <div className="text-white/80 text-sm space-y-4">
-                    <p>Resuelve multiplicaciones paso a paso con barras, fichas y cuadrículas. Hay <strong className="text-white">3 tipos</strong> de ejercicio según el nivel:</p>
+                <div className="text-white/80 text-xs sm:text-sm space-y-3 leading-relaxed">
+                    <p>Resuelve multiplicaciones visualmente con barras, conjuntos y cuadrículas de área:</p>
 
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-teal-400">Fracción × Entero (niveles 1-2)</p>
-                        <ol className="list-decimal list-inside space-y-1 text-white/70">
-                            <li>Observa la <strong className="text-amber-400">fracción</strong> que debes multiplicar por un número <strong className="text-teal-400">entero</strong>.</li>
-                            <li>Usa los botones <strong>−</strong> y <strong>+</strong> para crear la <strong className="text-white">cantidad de grupos</strong> que indica el entero.</li>
-                            <li>Cada grupo muestra una barra con la fracción. Cuando tengas los grupos correctos, pulsa <strong className="text-teal-400">Juntar todo</strong>.</li>
-                            <li>Las partes coloreadas se combinan en una sola barra mostrando el <strong className="text-emerald-400">resultado</strong>.</li>
-                        </ol>
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1 border border-white/10">
+                        <p className="font-bold text-teal-400">1. Fracción × Entero (niveles 1-2)</p>
+                        <p className="text-white/70">
+                            Usa <strong>+/−</strong> para crear la cantidad de grupos indicada por el entero. Cuando coincida, pulsa <strong className="text-teal-300">Juntar todo</strong> para sumar las partes.
+                        </p>
                     </div>
 
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-amber-400">Entero × Fracción — fracción de un conjunto (niveles 3-4)</p>
-                        <ol className="list-decimal list-inside space-y-1 text-white/70">
-                            <li>Tienes una cantidad de <strong className="text-amber-400">fichas</strong> y debes tomar una fracción de ellas.</li>
-                            <li>Usa <strong className="text-white">Dividir en</strong> para separar las fichas en tantos grupos como indica el <strong className="text-white">denominador</strong>.</li>
-                            <li>Usa <strong className="text-white">Tomar</strong> para seleccionar tantos grupos como indica el <strong className="text-white">numerador</strong>.</li>
-                            <li>Los grupos seleccionados se colorean de <strong className="text-teal-400">teal</strong>. Cuando coincidan con la fracción, pulsa <strong className="text-emerald-400">¿Cuántas fichas tomé?</strong>.</li>
-                        </ol>
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1 border border-white/10">
+                        <p className="font-bold text-amber-400">2. Fracción de un Conjunto (niveles 3-4)</p>
+                        <p className="text-white/70">
+                            Usa <strong>Dividir en</strong> para repartir las fichas en grupos según el denominador, y <strong>Tomar</strong> según el numerador.
+                        </p>
                     </div>
 
-                    <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                        <p className="font-bold text-emerald-400">Fracción × Fracción (niveles 5-6)</p>
-                        <ol className="list-decimal list-inside space-y-1 text-white/70">
-                            <li>Se muestra una <strong className="text-white">cuadrícula</strong> donde debes configurar <strong className="text-teal-400">Columnas</strong> (denominador 1) y <strong className="text-amber-400">Filas</strong> (denominador 2).</li>
-                            <li>Ajusta <strong className="text-white">colorear</strong> en cada eje para marcar las partes que indica cada numerador.</li>
-                            <li>Las celdas <strong className="text-emerald-400">intersección</strong> (donde se cruzan columnas y filas coloreadas) representan el <strong className="text-white">numerador del resultado</strong>.</li>
-                            <li>El <strong className="text-white">total de celdas</strong> es el denominador. Cuando todo coincida, pulsa <strong className="text-emerald-400">Comprobar</strong>.</li>
-                        </ol>
-                    </div>
-
-                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
-                        <p className="font-bold text-white text-xs uppercase tracking-wide">Consejos generales</p>
-                        <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
-                            <li>El nivel <strong className="text-white/80">7</strong> mezcla todos los tipos aleatoriamente.</li>
-                            <li>Usa <strong className="text-white/80">Nuevo ejercicio</strong> para cambiar el problema y <strong className="text-white/80">Reiniciar</strong> para empezar de cero.</li>
-                            <li>Al completar, pulsa <strong className="text-indigo-400">Ver la matemática</strong> para ver la demostración formal de la operación.</li>
-                        </ul>
+                    <div className="bg-white/5 rounded-xl p-2.5 space-y-1 border border-white/10">
+                        <p className="font-bold text-emerald-400">3. Fracción × Fracción (niveles 5-6)</p>
+                        <p className="text-white/70">
+                            Ajusta <strong>Columnas</strong> y <strong>Filas</strong> según cada denominador. Las celdas donde se cruzan ambos colores representan el numerador del resultado.
+                        </p>
                     </div>
                 </div>
             </ModalHelp>
