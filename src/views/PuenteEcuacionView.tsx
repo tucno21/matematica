@@ -171,7 +171,7 @@ export default function PuenteEcuacionView() {
   })
 
   // Mensaje de feedback
-  const [fbMsg, setFbMsg] = useState('Toca una tarjeta para verla saltar en parábola por el puente del =.')
+  const [fbMsg, setFbMsg] = useState('Toca una tarjeta para trasponerla en parábola por el puente del =.')
   const [solvedState, setSolvedState] = useState(false)
   const [finalXState, setFinalXState] = useState<number | null>(null)
 
@@ -305,19 +305,21 @@ export default function PuenteEcuacionView() {
     setCrossingId(card.id)
 
     let startTime: number | null = null
-    const duration = 850 // ms
+    const duration = 1400 // ms - velocidad suave y bien visible para observar el cruce
 
     const animate = (now: number) => {
       if (startTime === null) startTime = now
       const elapsed = now - startTime
-      const t = Math.min(1, elapsed / duration)
+      const rawT = Math.min(1, elapsed / duration)
+      // Easing suave sinusoidal (arranque suave, cúspide fluida y aterrizaje suave)
+      const t = 0.5 - 0.5 * Math.cos(Math.PI * rawT)
 
       // Ecuación cuadrática de Bézier para la parábola
       const curX = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX
       const curY = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY
 
-      const isAtApex = t >= 0.42 && t <= 0.58
-      const isPastApex = t >= 0.5
+      const isAtApex = rawT >= 0.42 && rawT <= 0.58
+      const isPastApex = rawT >= 0.5
 
       setFlyingToken({
         card,
@@ -332,7 +334,7 @@ export default function PuenteEcuacionView() {
         setFbMsg(`⚡ ¡Cruzando el puente! ${origLabel} invierte su operación a ${flippedLabel}.`)
       }
 
-      if (t < 1) {
+      if (rawT < 1) {
         requestAnimationFrame(animate)
       } else {
         // Aterrizaje completado: actualizar estado oficial
@@ -469,18 +471,20 @@ export default function PuenteEcuacionView() {
     })
 
     let startTime: number | null = null
-    const duration = 900 // ms
+    const duration = 1400 // ms - velocidad suave para observar la trasposición de multiplicación a división
 
     const animate = (now: number) => {
       if (startTime === null) startTime = now
       const elapsed = now - startTime
-      const t = Math.min(1, elapsed / duration)
+      const rawT = Math.min(1, elapsed / duration)
+      // Easing suave sinusoidal
+      const t = 0.5 - 0.5 * Math.cos(Math.PI * rawT)
 
       const curX = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX
       const curY = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY
 
-      const isAtApex = t >= 0.42 && t <= 0.58
-      const isPastApex = t >= 0.5
+      const isAtApex = rawT >= 0.42 && rawT <= 0.58
+      const isPastApex = rawT >= 0.5
 
       setCoeffDivState(prev => ({
         ...prev,
@@ -494,7 +498,7 @@ export default function PuenteEcuacionView() {
         setFbMsg(`⚡ ¡El factor ${a} que multiplicaba cruza el puente y pasa a DIVIDIR al denominador!`)
       }
 
-      if (t < 1) {
+      if (rawT < 1) {
         requestAnimationFrame(animate)
       } else {
         // Llega como fracción b / a
@@ -781,7 +785,7 @@ export default function PuenteEcuacionView() {
                       <div
                         key={term.id}
                         onClick={e => crossBridgeParabolic(term, e)}
-                        className={`h-12 sm:h-14 lg:h-16 px-3 lg:px-5 rounded-xl border-2 flex flex-col items-center justify-center font-mono font-black text-sm lg:text-lg cursor-pointer select-none shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+                        className={`h-11 sm:h-13 lg:h-14 px-3 sm:px-4 lg:px-5 rounded-xl border-2 flex items-center justify-center font-mono font-black text-sm sm:text-base lg:text-lg cursor-pointer select-none shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
                           term.hasVar
                             ? isPos
                               ? 'bg-sky-500/25 border-sky-400 text-sky-200 hover:bg-sky-500/35'
@@ -790,15 +794,12 @@ export default function PuenteEcuacionView() {
                             ? 'bg-blue-500/25 border-blue-400 text-blue-200 hover:bg-blue-500/35'
                             : 'bg-red-500/25 border-red-400 text-red-200 hover:bg-red-500/35'
                         } ${isCrossing ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
-                        title="Tocar para saltar en parábola al otro lado del ="
+                        title="Tocar para trasladar al otro lado por el puente"
                       >
                         <span>
                           {term.hasVar
                             ? (term.coeff === 1 ? 'x' : term.coeff === -1 ? '−x' : `${isPos ? '+' : ''}${term.coeff}x`)
                             : `${isPos ? '+' : ''}${term.coeff}`}
-                        </span>
-                        <span className="text-[8px] lg:text-[9px] text-white/50 font-normal flex items-center gap-0.5 mt-0.5">
-                          Saltar puente ⚡
                         </span>
                       </div>
                     )
@@ -809,7 +810,7 @@ export default function PuenteEcuacionView() {
               <div className="text-[9px] text-white/30 text-center">
                 {canDivideCoeff && varSide === 'left'
                   ? 'Toca el número para pasarlo dividiendo'
-                  : 'Toca cualquier término para enviarlo en parábola'}
+                  : 'Toca cualquier término para pasarlo al otro lado del puente'}
               </div>
             </div>
 
@@ -881,7 +882,7 @@ export default function PuenteEcuacionView() {
                       <div
                         key={term.id}
                         onClick={e => crossBridgeParabolic(term, e)}
-                        className={`h-12 sm:h-14 lg:h-16 px-3 lg:px-5 rounded-xl border-2 flex flex-col items-center justify-center font-mono font-black text-sm lg:text-lg cursor-pointer select-none shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+                        className={`h-11 sm:h-13 lg:h-14 px-3 sm:px-4 lg:px-5 rounded-xl border-2 flex items-center justify-center font-mono font-black text-sm sm:text-base lg:text-lg cursor-pointer select-none shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
                           term.hasVar
                             ? isPos
                               ? 'bg-sky-500/25 border-sky-400 text-sky-200 hover:bg-sky-500/35'
@@ -890,15 +891,12 @@ export default function PuenteEcuacionView() {
                             ? 'bg-blue-500/25 border-blue-400 text-blue-200 hover:bg-blue-500/35'
                             : 'bg-red-500/25 border-red-400 text-red-200 hover:bg-red-500/35'
                         } ${isCrossing ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
-                        title="Tocar para saltar en parábola al otro lado del ="
+                        title="Tocar para trasladar al otro lado por el puente"
                       >
                         <span>
                           {term.hasVar
                             ? (term.coeff === 1 ? 'x' : term.coeff === -1 ? '−x' : `${isPos ? '+' : ''}${term.coeff}x`)
                             : `${isPos ? '+' : ''}${term.coeff}`}
-                        </span>
-                        <span className="text-[8px] lg:text-[9px] text-white/50 font-normal flex items-center gap-0.5 mt-0.5">
-                          ⚡ Saltar puente
                         </span>
                       </div>
                     )
@@ -907,7 +905,7 @@ export default function PuenteEcuacionView() {
               </div>
 
               <div className="text-[9px] text-white/30 text-center">
-                Al cruzar en parábola, el signo se invierte sobre el =
+                Al cruzar el puente (=), la operación se invierte automáticamente
               </div>
             </div>
           </div>
