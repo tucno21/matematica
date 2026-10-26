@@ -1,5 +1,18 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft,
+  HelpCircle,
+  RotateCcw,
+  Undo2,
+  Sparkles,
+  CheckCircle2,
+  Calculator,
+  History as HistoryIcon,
+  ArrowRight,
+  Repeat,
+  AlertTriangle,
+} from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
 
 type ObjType = 'apple' | 'orange' | 'lemon' | 'pear' | 'watermelon' | 'box'
@@ -22,7 +35,6 @@ const DEFS: Record<ObjType, { name: string; w: number; color: string }> = {
   watermelon: { name: 'Sandía', w: 5, color: '#16a34a' },
   box: { name: 'Caja', w: 10, color: '#92400e' },
 }
-
 
 let _id = 0
 const mk = (t: ObjType): Obj => ({ id: `o${_id++}`, type: t })
@@ -52,48 +64,72 @@ interface Lvl {
 
 const LVLS: Lvl[] = [
   {
-    prop: 'Reflexiva', sub: 'Todo es igual a sí mismo', mode: 'reflexive',
-    initL: ['orange', 'apple', 'lemon'], initR: [],
+    prop: 'Reflexiva',
+    sub: 'Todo es igual a sí mismo (a = a)',
+    mode: 'reflexive',
+    initL: ['orange', 'apple', 'lemon'],
+    initR: [],
     tray: ['orange', 'apple', 'lemon'],
   },
   {
-    prop: 'Simétrica', sub: 'Si A = B entonces B = A', mode: 'symmetric',
-    initL: ['watermelon'], initR: ['orange', 'lemon'],
+    prop: 'Simétrica',
+    sub: 'Si A = B entonces B = A',
+    mode: 'symmetric',
+    initL: ['watermelon'],
+    initR: ['orange', 'lemon'],
     tray: [],
   },
   {
-    prop: 'Transitiva', sub: 'Si A = B y B = C entonces A = C', mode: 'transitive',
-    initL: ['watermelon'], initR: [],
+    prop: 'Transitiva',
+    sub: 'Si A = B y B = C entonces A = C',
+    mode: 'transitive',
+    initL: ['watermelon'],
+    initR: [],
     tray: ['apple', 'orange', 'lemon', 'pear', 'watermelon'],
   },
   {
-    prop: 'Adición', sub: 'Si A = B entonces A + C = B + C', mode: 'addition',
-    initL: ['pear'], initR: ['orange', 'orange'],
+    prop: 'Adición',
+    sub: 'Si A = B entonces A + C = B + C',
+    mode: 'addition',
+    initL: ['pear'],
+    initR: ['orange', 'orange'],
     tray: ['lemon'],
   },
   {
-    prop: 'Adición+', sub: 'Combinaciones en ambos lados', mode: 'addition-combo',
-    initL: ['watermelon'], initR: ['pear', 'apple'],
+    prop: 'Adición+',
+    sub: 'Combinaciones en ambos lados',
+    mode: 'addition-combo',
+    initL: ['watermelon'],
+    initR: ['pear', 'apple'],
     tray: ['apple', 'orange'],
   },
   {
-    prop: 'Multiplicación', sub: 'Si A = B entonces A × C = B × C', mode: 'multiply',
-    initL: ['pear'], initR: ['orange', 'orange'],
+    prop: 'Multiplicación',
+    sub: 'Si A = B entonces A × C = B × C',
+    mode: 'multiply',
+    initL: ['pear'],
+    initR: ['orange', 'orange'],
     tray: [],
   },
   {
-    prop: 'División', sub: 'Si A = B entonces A ÷ C = B ÷ C', mode: 'divide',
-    initL: ['apple', 'apple', 'apple', 'apple'], initR: ['apple', 'apple', 'apple', 'apple'],
+    prop: 'División',
+    sub: 'Si A = B entonces A ÷ C = B ÷ C',
+    mode: 'divide',
+    initL: ['apple', 'apple', 'apple', 'apple'],
+    initR: ['apple', 'apple', 'apple', 'apple'],
     tray: [],
   },
   {
-    prop: 'Libre', sub: 'Experimenta libremente', mode: 'free',
-    initL: [], initR: [],
+    prop: 'Libre',
+    sub: 'Experimenta libremente en la balanza',
+    mode: 'free',
+    initL: [],
+    initR: [],
     tray: ['apple', 'orange', 'lemon', 'pear', 'watermelon', 'box'],
   },
 ]
 
-function ObjIcon({ type, size = 36 }: { type: ObjType; size?: number }) {
+function ObjIcon({ type, size = 32 }: { type: ObjType; size?: number }) {
   switch (type) {
     case 'apple':
       return (
@@ -148,34 +184,43 @@ function ObjIcon({ type, size = 36 }: { type: ObjType; size?: number }) {
 }
 
 function ScaleSVG({ angle, balanced }: { angle: number; balanced: boolean }) {
-  const W = 600, H = 280
-  const px = W / 2, py = 70
-  const half = 200, chain = 80
+  const W = 600, H = 260
+  const px = 300, py = 60
+  const half = 205, chain = 75
 
-  const rad = angle * Math.PI / 180
+  const rad = (angle * Math.PI) / 180
   const lx = px - half * Math.cos(rad), ly = py + half * Math.sin(rad)
   const rx = px + half * Math.cos(rad), ry = py - half * Math.sin(rad)
   const lpy = ly + chain, rpy = ry + chain
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ touchAction: 'none' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full select-none" style={{ touchAction: 'none' }}>
       <defs>
         <filter id="glow">
           <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <polygon points={`${px - 35},${H - 10} ${px + 35},${H - 10} ${px},${H - 45}`} fill="#475569" />
-      <rect x={px - 5} y={py - 5} width={10} height={H - 45 - py + 10} rx="3" fill="#64748b" />
+      {/* Base física */}
+      <polygon points={`${px - 45},${H - 6} ${px + 45},${H - 6} ${px},${H - 36}`} fill="#334155" />
+      <rect x={px - 5} y={py - 5} width={10} height={H - 36 - py + 6} rx="3" fill="#475569" />
+
+      {/* Brazo oscilante */}
       <line x1={lx} y1={ly} x2={rx} y2={ry} stroke="#94a3b8" strokeWidth="5" strokeLinecap="round" />
       <circle cx={lx} cy={ly} r="5" fill="#94a3b8" />
       <circle cx={rx} cy={ry} r="5" fill="#94a3b8" />
-      <line x1={lx} y1={ly} x2={lx} y2={lpy} stroke="#64748b" strokeWidth="2" />
-      <line x1={rx} y1={ry} x2={rx} y2={rpy} stroke="#64748b" strokeWidth="2" />
-      <ellipse cx={lx} cy={lpy + 8} rx={60} ry={8} fill="#1e293b" stroke="#475569" strokeWidth="2" />
-      <ellipse cx={rx} cy={rpy + 8} rx={60} ry={8} fill="#1e293b" stroke="#475569" strokeWidth="2" />
+
+      {/* Cadenas */}
+      <line x1={lx} y1={ly} x2={lx} y2={lpy} stroke="#64748b" strokeWidth="2" strokeDasharray="3,2" />
+      <line x1={rx} y1={ry} x2={rx} y2={rpy} stroke="#64748b" strokeWidth="2" strokeDasharray="3,2" />
+
+      {/* Platillos (elipses) */}
+      <ellipse cx={lx} cy={lpy + 6} rx={58} ry={8} fill="#1e293b" stroke="#64748b" strokeWidth="2.5" />
+      <ellipse cx={rx} cy={rpy + 6} rx={58} ry={8} fill="#1e293b" stroke="#64748b" strokeWidth="2.5" />
+
+      {/* Pivote central */}
       <circle cx={px} cy={py} r="12" fill="#94a3b8" />
-      <circle cx={px} cy={py} r="7" fill="#475569" />
+      <circle cx={px} cy={py} r="7" fill="#334155" />
       {balanced && (
         <circle cx={px} cy={py} r="16" fill="#22c55e" opacity=".5" filter="url(#glow)">
           <animate attributeName="opacity" values=".3;.7;.3" dur="2s" repeatCount="indefinite" />
@@ -185,85 +230,18 @@ function ScaleSVG({ angle, balanced }: { angle: number; balanced: boolean }) {
   )
 }
 
-function MathDisplay({ left, right, swapped, addedObj, show }: {
-  left: Obj[]
-  right: Obj[]
-  swapped?: boolean
-  addedObj?: ObjType | null
-  show: boolean
-}) {
-  if (!show) return null
-
-  const fmtSide = (os: Obj[]) => {
-    const counts = countTypes(os)
-    const parts = Object.entries(counts).map(([t, c]) =>
-      c > 1 ? `${DEFS[t as ObjType].name} ×${c}` : DEFS[t as ObjType].name
-    )
-    return parts.length ? parts.join(' + ') : '—'
-  }
-  const fmtWeights = (os: Obj[]) => {
-    const counts = countTypes(os)
-    const parts = Object.entries(counts).map(([t, c]) => c > 1 ? `${DEFS[t as ObjType].w} ×${c}` : `${DEFS[t as ObjType].w}`)
-    return parts.length ? parts.join(' + ') : '0'
-  }
-
-  const lw = wOf(left), rw = wOf(right)
-
-  return (
-    <div className="text-center space-y-1 font-mono text-sm sm:text-base" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-      {swapped && <div className="text-amber-400 text-xs mb-1">↕ intercambiar</div>}
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        <span className="text-teal-300">{fmtSide(left)}</span>
-        <span className="text-white/60">=</span>
-        <span className="text-violet-300">{fmtSide(right)}</span>
-      </div>
-      <div className="flex items-center justify-center gap-2 flex-wrap text-white/70">
-        <span>{fmtWeights(left)}</span>
-        <span className="text-white/60">=</span>
-        <span>{fmtWeights(right)}</span>
-      </div>
-      {(lw > 0 || rw > 0) && (
-        <div className="flex items-center justify-center gap-2 font-bold">
-          <span className="text-teal-200">{lw}</span>
-          <span className={lw === rw ? 'text-green-400' : 'text-red-400'}>{lw === rw ? '=' : '≠'}</span>
-          <span className="text-violet-200">{rw}</span>
-        </div>
-      )}
-      {addedObj && (
-        <div className="text-amber-300 text-xs">
-          + {DEFS[addedObj].name} ({DEFS[addedObj].w}) en ambos lados
-        </div>
-      )}
-    </div>
-  )
-}
-
-function HistoryPanel({ entries, show }: { entries: HistEntry[]; show: boolean }) {
-  if (!show || entries.length === 0) return null
-  return (
-    <div className="bg-white/5 rounded-xl p-3 border border-white/10 max-h-32 overflow-y-auto">
-      <div className="text-xs text-white/40 mb-1">Historial</div>
-      {entries.map((e, i) => (
-        <div key={i} className="text-xs text-white/60 py-0.5">{e.text}</div>
-      ))}
-    </div>
-  )
-}
-
 export default function IgualdadBalanzaView() {
   const nav = useNavigate()
+  const helpId = useId()
 
   const [level, setLevel] = useState(1)
-  const [leftPlate, setLeftPlate] = useState<Obj[]>([])
-  const [rightPlate, setRightPlate] = useState<Obj[]>([])
-  const [initLeft, setInitLeft] = useState<Obj[]>([])
-  const [initRight, setInitRight] = useState<Obj[]>([])
+  const [leftPlate, setLeftPlate] = useState<Obj[]>(() => mks(LVLS[0].initL))
+  const [rightPlate, setRightPlate] = useState<Obj[]>(() => mks(LVLS[0].initR))
+  const [initLeft, setInitLeft] = useState<Obj[]>(() => mks(LVLS[0].initL))
   const [history, setHistory] = useState<HistEntry[]>([])
   const [showMath, setShowMath] = useState(false)
   const [showHist, setShowHist] = useState(false)
   const [phase, setPhase] = useState(0)
-  const [complete, setComplete] = useState(false)
-  const [completeLevel, setCompleteLevel] = useState(0)
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null)
   const [ghostType, setGhostType] = useState<ObjType | null>(null)
   const [swapped, setSwapped] = useState(false)
@@ -283,6 +261,23 @@ export default function IgualdadBalanzaView() {
   const leftW = wOf(leftPlate)
   const rightW = wOf(rightPlate)
   const balanced = leftW === rightW && (leftW > 0 || rightW > 0)
+
+  // Objetivo cumplido como valor derivado puro
+  const complete = useMemo(() => {
+    const m = cfg.mode
+    if (m === 'reflexive') return rightPlate.length > 0 && sameComp(leftPlate, rightPlate)
+    if (m === 'symmetric') return swapped && balanced
+    if (m === 'transitive') {
+      return phase === 2 || (phase === 1 && rightPlate.length > 0 && balanced && !sameComp(initLeft, rightPlate))
+    }
+    if (m === 'addition' || m === 'addition-combo') {
+      return balanced && leftW > wOf(initLeft)
+    }
+    if (m === 'multiply') return leftPlate.length > initLeft.length && balanced
+    if (m === 'divide') return leftPlate.length < initLeft.length && balanced
+    if (m === 'free') return balanced && leftPlate.length > 0
+    return false
+  }, [cfg.mode, rightPlate, leftPlate, swapped, balanced, phase, initLeft, leftW])
 
   const targetAngle = useMemo(() => {
     const diff = leftW - rightW
@@ -315,18 +310,18 @@ export default function IgualdadBalanzaView() {
     setLeftPlate(l)
     setRightPlate(r)
     setInitLeft(l.map(o => ({ ...o })))
-    setInitRight(r.map(o => ({ ...o })))
     setHistory([])
     setPhase(0)
-    setComplete(false)
-    setCompleteLevel(0)
     setSwapped(false)
     setAddedObj(null)
     setShowDivByZero(false)
     setShakeScale(false)
   }, [])
 
-  useEffect(() => { initLevel(level) }, [level, initLevel])
+  const changeLevel = useCallback((lvl: number) => {
+    setLevel(lvl)
+    initLevel(lvl)
+  }, [initLevel])
 
   const addHistory = useCallback((text: string) => {
     setHistory(prev => [...prev, { text }])
@@ -353,7 +348,7 @@ export default function IgualdadBalanzaView() {
     const cr = containerRef.current?.getBoundingClientRect()
     if (!cr) return null
     const midX = cr.left + cr.width / 2
-    if (cy > cr.top + cr.height * 0.2 && cy < cr.bottom) {
+    if (cy > cr.top + cr.height * 0.15 && cy < cr.bottom) {
       return cx < midX ? 'left' : 'right'
     }
     return null
@@ -418,8 +413,7 @@ export default function IgualdadBalanzaView() {
       }
       return prev.slice(0, -1)
     })
-    addHistory('Deshacer')
-  }, [addHistory])
+  }, [])
 
   const handleReset = useCallback(() => {
     initLevel(level)
@@ -476,485 +470,551 @@ export default function IgualdadBalanzaView() {
     setAddedObj(type)
   }, [addToPlate])
 
-  useEffect(() => {
-    if (complete || completeLevel === level) return
-    const m = cfg.mode
-
-    if (m === 'reflexive') {
-      if (rightPlate.length > 0 && sameComp(leftPlate, rightPlate)) {
-        setComplete(true); setCompleteLevel(level)
-        addHistory('✓ Propiedad Reflexiva: a = a')
-      }
-    }
-
-    if (m === 'symmetric') {
-      if (swapped && balanced) {
-        setComplete(true); setCompleteLevel(level)
-        addHistory('✓ Propiedad Simétrica: A = B → B = A')
-      }
-    }
-
-    if (m === 'transitive') {
-      if (phase === 0 && balanced && rightPlate.length > 0) {
-        setPhase(1)
-        addHistory('Balanza 1 equilibrada')
-      }
-      if (phase === 1) {
-        if (rightPlate.length > 0 && balanced && !sameComp(initLeft, rightPlate)) {
-          setPhase(2)
-          addHistory('Balanza 2 equilibrada — ¡cadena descubierta!')
-          setComplete(true); setCompleteLevel(level)
-        }
-      }
-    }
-
-    if (m === 'addition' || m === 'addition-combo') {
-      if (phase === 0) {
-        const diff = Math.abs(leftW - rightW)
-        if (diff > 0 && leftW !== wOf(initLeft) && rightW === wOf(initRight)) {
-          setPhase(1)
-          addHistory('Desequilibrio creado — ahora equilibra agregando al otro lado')
-        }
-        if (diff > 0 && rightW !== wOf(initRight) && leftW === wOf(initLeft)) {
-          setPhase(1)
-          addHistory('Desequilibrio creado — ahora equilibra agregando al otro lado')
-        }
-        if (balanced && leftW > wOf(initLeft) && rightW > wOf(initRight)) {
-          setComplete(true); setCompleteLevel(level)
-          addHistory('✓ Monotonía de la Adición: A + C = B + C')
-        }
-      }
-      if (phase === 1 && balanced && leftW > wOf(initLeft)) {
-        setComplete(true); setCompleteLevel(level)
-        addHistory('✓ Monotonía de la Adición: A + C = B + C')
-      }
-    }
-
-    if (m === 'multiply') {
-      if (leftPlate.length > initLeft.length && balanced) {
-        setComplete(true); setCompleteLevel(level)
-        addHistory('✓ Monotonía de la Multiplicación: A × C = B × C')
-      }
-    }
-
-    if (m === 'divide') {
-      if (leftPlate.length < initLeft.length && balanced) {
-        setComplete(true); setCompleteLevel(level)
-        addHistory('✓ Monotonía de la División: A ÷ C = B ÷ C')
-      }
-    }
-
-    if (m === 'free') {
-      if (balanced && leftPlate.length > 0) {
-        setComplete(true); setCompleteLevel(level)
-      }
-    }
-  }, [leftPlate, rightPlate, balanced, cfg.mode, phase, complete, swapped, initLeft, initRight, leftW, rightW, addHistory])
-
   const trayTypes = cfg.tray
 
-  const rad = displayAngle * Math.PI / 180
-  const leftPlateVisualTop = 70 + 200 * Math.sin(rad) + 80
-  const rightPlateVisualTop = 70 - 200 * Math.sin(rad) + 80
-  const leftPct = leftPlateVisualTop / 280 * 100
-  const rightPct = rightPlateVisualTop / 280 * 100
+  // ── Cálculo exacto de las posiciones de los platillos en el sistema 600×260 ──
+  const rad = (displayAngle * Math.PI) / 180
+  const px = 300, py = 60, half = 205, chain = 75
+  const lx = px - half * Math.cos(rad)
+  const ly = py + half * Math.sin(rad)
+  const rx = px + half * Math.cos(rad)
+  const ry = py - half * Math.sin(rad)
+  const lpy = ly + chain
+  const rpy = ry + chain
+
+  // Coordenadas porcentuales exactas de la superficie de los platos
+  const leftX_pct = (lx / 600) * 100
+  const leftY_pct = (lpy / 260) * 100
+  const rightX_pct = (rx / 600) * 100
+  const rightY_pct = (rpy / 260) * 100
 
   const leftLocked = cfg.mode === 'reflexive'
   const rightLocked = cfg.mode === 'symmetric' && !swapped
 
   const showMultiply = cfg.mode === 'multiply'
   const showDivide = cfg.mode === 'divide'
+  const hasSpecialActions =
+    cfg.mode === 'symmetric' ||
+    showMultiply ||
+    showDivide ||
+    ((cfg.mode === 'addition' || cfg.mode === 'addition-combo') && trayTypes.length > 0)
 
   const promptText = useMemo(() => {
     const m = cfg.mode
-    if (complete) return '¡Propiedad demostrada!'
-    if (m === 'reflexive') return 'Equilibra colocando los mismos objetos en el plato derecho'
-    if (m === 'symmetric') return 'Intercambia los platos y observa que el equilibrio se mantiene'
-    if (m === 'transitive' && phase === 0) return 'Equilibra esta balanza con objetos del cajón'
-    if (m === 'transitive' && phase >= 1) return 'Ahora encuentra otros objetos que también sumen lo mismo'
-    if (m === 'addition' && phase === 0) return 'Agrega un objeto a un lado... ¿qué pasa?'
-    if (m === 'addition' && phase === 1) return 'Agrega el mismo objeto al otro lado para equilibrar'
-    if (m === 'addition-combo' && phase === 0) return 'Agrega objetos a un lado... ¿qué pasa con el equilibrio?'
-    if (m === 'addition-combo' && phase === 1) return 'Agrega los mismos objetos al otro lado'
-    if (m === 'multiply') return 'Usa ×2 o ×3 para duplicar ambos lados'
-    if (m === 'divide') return 'Usa ÷2 o ÷4 para dividir ambos lados'
-    if (m === 'free') return 'Coloca objetos libremente y observa la balanza'
+    if (complete) return '¡Propiedad demostrada con éxito! Presiona Siguiente.'
+    if (m === 'reflexive') return 'Equilibra colocando los mismos objetos en el plato derecho.'
+    if (m === 'symmetric') return 'Presiona Swap para intercambiar y comprueba que se mantiene el balance.'
+    if (m === 'transitive' && phase === 0) return 'Equilibra esta balanza con objetos del cajón.'
+    if (m === 'transitive' && phase >= 1) return 'Ahora encuentra otra combinación que también sume lo mismo.'
+    if (m === 'addition' && phase === 0) return 'Agrega un objeto a un lado para romper el equilibrio.'
+    if (m === 'addition' && phase === 1) return 'Agrega el mismo objeto al otro lado para restaurar el equilibrio.'
+    if (m === 'addition-combo' && phase === 0) return 'Agrega objetos a un lado y observa qué pasa.'
+    if (m === 'addition-combo' && phase === 1) return 'Agrega los mismos objetos al otro lado.'
+    if (m === 'multiply') return 'Usa las palancas ×2 o ×3 para multiplicar ambos lados.'
+    if (m === 'divide') return 'Usa las palancas ÷2 o ÷4 para dividir ambos lados.'
+    if (m === 'free') return 'Coloca objetos libremente y experimenta con la balanza.'
     return ''
   }, [cfg.mode, phase, complete])
 
+  // Formato matemático
+  const fmtMathSide = (os: Obj[]) => {
+    const counts = countTypes(os)
+    const parts = Object.entries(counts).map(([t, c]) =>
+      c > 1 ? `${DEFS[t as ObjType].name} ×${c}` : DEFS[t as ObjType].name
+    )
+    return parts.length ? parts.join(' + ') : '0'
+  }
+
   return (
-    <div className="min-h-dvh bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
-      <div className="max-w-2xl mx-auto px-3 py-4 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div
+      className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none"
+      style={{ fontFamily: "'Nunito', sans-serif" }}
+    >
+      {/* ── 1. Cabecera (34-44px) ── */}
+      <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+        <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => nav(-1)}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm hover:bg-white/10 active:scale-95 transition-all"
+            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            aria-label="Volver"
+            title="Volver"
           >
-            ← Volver
+            <ArrowLeft size={15} />
           </button>
-          <div className="text-center flex-1 mx-3">
-            <div className="text-xs text-teal-400 font-bold">{cfg.prop}</div>
-            <div className="text-[10px] text-white/40">{cfg.sub}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/90 truncate">
+              Balanza de Igualdad
+            </h1>
+            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono bg-teal-400/10 text-teal-300 border border-teal-400/20">
+              {cfg.prop}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+
+        {/* Prompt contextual en cabecera */}
+        <div className="flex-1 max-w-md mx-2 hidden sm:block text-center truncate">
+          <span className="text-[11px] lg:text-xs text-amber-300 font-semibold bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20 truncate inline-block max-w-full">
+            {promptText}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] lg:text-xs text-white/40 font-mono hidden sm:inline">
+            Nivel {level}/8
+          </span>
+          <button
+            onClick={() => setShowHelp(true)}
+            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            aria-label="Ayuda"
+            title="Ayuda"
+          >
+            <HelpCircle size={15} />
+          </button>
+        </div>
+      </header>
+
+      {/* ── 2. Barra de Navegación de Niveles y Utilidades (36-40px) ── */}
+      <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto custom-scrollbar">
+        {/* Selector de los 8 niveles */}
+        <div className="flex items-center gap-1 shrink-0">
+          {LVLS.map((l, i) => (
             <button
-              onClick={() => setShowHelp(true)}
-              className="w-7 h-7 rounded-full bg-white/10 text-white/70 text-sm font-bold flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all"
+              key={l.prop}
+              onClick={() => changeLevel(i + 1)}
+              className={`h-7 px-2 sm:px-2.5 rounded-md text-[10px] sm:text-[11px] font-bold transition-all shrink-0 flex items-center gap-1 ${
+                level === i + 1
+                  ? 'bg-teal-500 text-black shadow-sm ring-1 ring-teal-400 font-black'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+              }`}
             >
-              ?
+              <span>{i + 1}.</span>
+              <span className="hidden sm:inline">{l.prop}</span>
             </button>
-            <div className="text-xs text-white/30">Nivel {level}/8</div>
-          </div>
+          ))}
         </div>
 
-        {/* Prompt */}
-        <div className="text-center text-sm text-amber-300 bg-amber-400/10 rounded-xl py-2 px-3 border border-amber-400/20">
-          {promptText}
-        </div>
-
-        <div className="h-[56px] overflow-hidden">
-          {complete && (
-            <div className="bg-green-500/20 border border-green-400/30 rounded-xl px-4 py-2 text-center animate-[popIn_0.4s_ease-out]">
-              <div className="text-green-300 font-bold text-sm">¡Equilibrio!</div>
-              <div className="text-green-400/60 text-[10px]">{cfg.prop}: {cfg.sub}</div>
-            </div>
-          )}
-        </div>
-
-        {/* Balance Scale */}
-        <div
-          ref={containerRef}
-          className={`relative -mt-14 ${shakeScale ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
-          style={{ touchAction: 'none' }}
-        >
-          <ScaleSVG angle={displayAngle} balanced={balanced} />
-
-          {/* Left plate drop zone */}
-          <div
-            ref={leftRef}
-            className="absolute flex flex-wrap justify-center content-end gap-1 px-2 pb-1"
-            style={{
-              left: '3%',
-              width: '27%',
-              top: `${leftPct + 4}%`,
-              height: '22%',
-              border: leftLocked ? '2px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(45,212,191,0.3)',
-              borderRadius: '12px',
-              background: leftLocked ? 'transparent' : 'rgba(45,212,191,0.03)',
-            }}
+        {/* Herramientas de utilidad */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => setShowMath(s => !s)}
+            className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 transition-all ${
+              showMath
+                ? 'bg-teal-500/20 border-teal-400 text-teal-300'
+                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+            }`}
+            title="Ver expresión matemática"
           >
-            {leftPlate.map(o => (
-              <button
-                key={o.id}
-                className={`active:scale-90 transition-transform ${leftLocked ? 'pointer-events-none' : ''}`}
-                onPointerDown={e => !leftLocked && startDrag(o.type, 'left', o.id, e)}
-                onClick={() => !leftLocked && tapPlateObj('left', o.id)}
-              >
-                <ObjIcon type={o.type} size={20 + DEFS[o.type].w * 3} />
-              </button>
-            ))}
-          </div>
+            <Calculator size={11} />
+            <span className="hidden sm:inline">Mate</span>
+          </button>
 
-          {/* Right plate drop zone */}
-          <div
-            ref={rightRef}
-            className="absolute flex flex-wrap justify-center content-end gap-1 px-2 pb-1"
-            style={{
-              right: '3%',
-              width: '27%',
-              top: `${rightPct + 4}%`,
-              height: '22%',
-              border: rightLocked ? '2px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(167,139,250,0.3)',
-              borderRadius: '12px',
-              background: rightLocked ? 'transparent' : 'rgba(167,139,250,0.03)',
-            }}
+          <button
+            onClick={() => setShowHist(s => !s)}
+            className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 transition-all ${
+              showHist
+                ? 'bg-violet-500/20 border-violet-400 text-violet-300'
+                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+            }`}
+            title="Historial de acciones"
           >
-            {rightPlate.map(o => (
-              <button
-                key={o.id}
-                className={`active:scale-90 transition-transform ${rightLocked ? 'pointer-events-none' : ''}`}
-                onPointerDown={e => !rightLocked && startDrag(o.type, 'right', o.id, e)}
-                onClick={() => !rightLocked && tapPlateObj('right', o.id)}
-              >
-                <ObjIcon type={o.type} size={20 + DEFS[o.type].w * 3} />
-              </button>
-            ))}
-          </div>
+            <HistoryIcon size={11} />
+            <span className="hidden sm:inline">Historial</span>
+          </button>
 
-          {/* Weight labels */}
-          <div
-            className="absolute text-center font-bold text-sm"
-            style={{ fontFamily: "'JetBrains Mono', monospace", left: '3%', width: '27%', top: `${leftPct - 6}%` }}
+          <button
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            className="h-7 px-2 rounded-md bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] font-bold flex items-center gap-1 disabled:opacity-30 active:scale-95 transition-all"
+            title="Deshacer última acción"
           >
-            <span className={leftW === rightW && leftW > 0 ? 'text-green-400' : 'text-teal-300'}>{leftW}</span>
-          </div>
-          <div
-            className="absolute text-center font-bold text-sm"
-            style={{ fontFamily: "'JetBrains Mono', monospace", right: '3%', width: '27%', top: `${rightPct - 6}%` }}
+            <Undo2 size={11} />
+          </button>
+
+          <button
+            onClick={handleReset}
+            className="h-7 px-2 rounded-md bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+            title="Reiniciar este nivel"
           >
-            <span className={leftW === rightW && rightW > 0 ? 'text-green-400' : 'text-violet-300'}>{rightW}</span>
-          </div>
+            <RotateCcw size={11} />
+          </button>
         </div>
+      </div>
 
-        {/* Transitive level: second scale info */}
-        {cfg.mode === 'transitive' && phase >= 1 && (
-          <div className="bg-violet-500/10 border border-violet-400/20 rounded-xl p-3 text-center">
-            <div className="text-xs text-violet-300 mb-1">Cadena transitiva</div>
-            <div className="text-sm text-white/70">
-              {`Sandía (5) = ${rightPlate.map(o => DEFS[o.type].name).join(' + ')} (${wOf(rightPlate)})`}
-            </div>
-            <div className="text-sm text-white/70 mt-1">
-              {`${rightPlate.map(o => DEFS[o.type].name).join(' + ')} = ...`}
-            </div>
-          </div>
-        )}
+      {/* ── 3. Área de Trabajo Central: Estante Izquierdo, Balanza Central y Panel Derecho (flex-1 min-h-0) ── */}
+      <div
+        className="flex-1 min-h-0 flex items-stretch overflow-hidden px-1 sm:px-2 lg:px-4 py-1 gap-1 sm:gap-2 lg:gap-3"
+        style={{ touchAction: 'none' }}
+      >
+        {/* PANEL IZQUIERDO: Estante de Objetos */}
+        {trayTypes.length > 0 && (
+          <aside className="w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden shadow-inner">
+            <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-white/30 text-center">
+              Cajón
+            </span>
 
-        {/* Div by zero animation */}
-        {showDivByZero && (
-          <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-4 text-center animate-[shake_0.3s_ease-in-out]">
-            <div className="text-red-400 font-bold text-lg">💥</div>
-            <div className="text-red-300 text-sm font-bold">¡No se puede dividir entre cero!</div>
-            <div className="text-red-400/60 text-xs mt-1">No existe ese reparto</div>
-          </div>
-        )}
-
-        {/* Action buttons row */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          {cfg.mode === 'symmetric' && (
-            <button
-              onClick={handleSwap}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 text-sm font-bold hover:bg-amber-500/30 active:scale-95 transition-all"
-            >
-              ↔ Intercambiar
-            </button>
-          )}
-
-          {showMultiply && (
-            <>
-              {[2, 3, 4].map(f => (
-                <button
-                  key={`m${f}`}
-                  onClick={() => handleMultiplyBoth(f)}
-                  className="px-3 py-2 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-300 text-sm font-bold hover:bg-teal-500/30 active:scale-95 transition-all"
-                >
-                  ×{f} ambos
-                </button>
-              ))}
-            </>
-          )}
-
-          {showDivide && (
-            <>
-              {[2, 4].map(d => (
-                <button
-                  key={`d${d}`}
-                  onClick={() => handleDivideBoth(d)}
-                  className="px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/30 text-violet-300 text-sm font-bold hover:bg-violet-500/30 active:scale-95 transition-all"
-                >
-                  ÷{d} ambos
-                </button>
-              ))}
-              <button
-                onClick={() => handleDivideBoth(0)}
-                className="px-3 py-2 rounded-xl bg-red-500/20 border border-red-400/30 text-red-300 text-sm font-bold hover:bg-red-500/30 active:scale-95 transition-all"
-              >
-                ÷0
-              </button>
-            </>
-          )}
-
-          {(cfg.mode === 'addition' || cfg.mode === 'addition-combo') && trayTypes.length > 0 && (
-            <>
-              {trayTypes.map(t => (
-                <button
-                  key={`ab${t}`}
-                  onClick={() => handleAddBoth(t)}
-                  className="px-3 py-2 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-300 text-sm font-bold hover:bg-teal-500/30 active:scale-95 transition-all flex items-center gap-1"
-                >
-                  +<ObjIcon type={t} size={18} /> ambos
-                </button>
-              ))}
-            </>
-          )}
-
-          {showMultiply && (
-            <>
-              <div className="w-full h-px bg-white/10 my-1" />
-              <span className="text-[10px] text-white/30 self-center">Solo un lado:</span>
-              {[2, 3].map(f => (
-                <button
-                  key={`ml${f}`}
-                  onClick={() => handleMultiplyOne('left', f)}
-                  className="px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-400/20 text-red-300/60 text-xs hover:bg-red-500/20 active:scale-95 transition-all"
-                >
-                  ×{f} izq
-                </button>
-              ))}
-              {[2, 3].map(f => (
-                <button
-                  key={`mr${f}`}
-                  onClick={() => handleMultiplyOne('right', f)}
-                  className="px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-400/20 text-red-300/60 text-xs hover:bg-red-500/20 active:scale-95 transition-all"
-                >
-                  ×{f} der
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* Object Tray */}
-        {(trayTypes.length > 0 && !showMultiply && !showDivide) && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-3" style={{ touchAction: 'none' }}>
-            <div className="text-xs text-white/30 mb-2 text-center">Cajón de objetos</div>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex-1 w-full flex flex-col items-center justify-around overflow-y-auto py-1 gap-1 custom-scrollbar">
               {trayTypes.map(t => (
                 <button
                   key={`tray-${t}`}
                   onClick={() => tapTray(t)}
                   onPointerDown={e => startDrag(t, null, null, e)}
-                  className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
+                  className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 xl:w-14 xl:h-14 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 active:scale-90 transition-all flex flex-col items-center justify-center relative shadow-sm"
+                  title={`${DEFS[t].name} (peso ${DEFS[t].w})`}
                 >
-                  <ObjIcon type={t} size={30 + DEFS[t].w * 3} />
-                  <span className="text-[10px] text-white/40">{DEFS[t].w}</span>
+                  <ObjIcon type={t} size={22 + DEFS[t].w * 2.2} />
+                  <span className="absolute bottom-0 right-1 text-[8px] lg:text-[9px] font-mono font-bold text-white/50">
+                    {DEFS[t].w}
+                  </span>
                 </button>
               ))}
             </div>
-          </div>
+
+            <span className="text-[7px] lg:text-[8px] text-white/30 text-center leading-tight">
+              Toca / arrastra
+            </span>
+          </aside>
         )}
 
-        {/* Utility buttons */}
-        <div className="flex gap-2 justify-center flex-wrap">
-          <button
-            onClick={() => setShowMath(s => !s)}
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs hover:bg-white/10 active:scale-95 transition-all"
-          >
-            {showMath ? 'Ocultar matemática' : 'Ver matemática'}
-          </button>
-          <button
-            onClick={() => setShowHist(s => !s)}
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs hover:bg-white/10 active:scale-95 transition-all"
-          >
-            Historial
-          </button>
-          <button
-            onClick={handleUndo}
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs hover:bg-white/10 active:scale-95 transition-all"
-          >
-            ↩ Deshacer
-          </button>
-          <button
-            onClick={handleReset}
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs hover:bg-white/10 active:scale-95 transition-all"
-          >
-            ↻ Reiniciar
-          </button>
-        </div>
+        {/* ESPACIO CENTRAL: La Balanza Dinámica Adaptativa */}
+        <main className="flex-1 min-w-0 flex flex-col items-center justify-between relative bg-gradient-to-b from-white/[0.01] to-white/[0.03] border border-white/5 rounded-xl p-1 sm:p-2 overflow-hidden">
+          
+          {/* Banner de objetivo cumplido o prompt móvil */}
+          <div className="h-6 sm:h-7 shrink-0 flex items-center justify-center w-full">
+            {complete ? (
+              <div className="px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] sm:text-xs font-bold flex items-center gap-1.5 shadow-md animate-bounce">
+                <Sparkles size={12} className="text-emerald-300" />
+                <span>¡Equilibrio! {cfg.prop}: {cfg.sub}</span>
+              </div>
+            ) : (
+              <div className="text-[10px] sm:text-[11px] text-white/50 truncate text-center sm:hidden">
+                {promptText}
+              </div>
+            )}
+          </div>
 
-        {/* Math display */}
-        <MathDisplay left={leftPlate} right={rightPlate} swapped={swapped} addedObj={addedObj} show={showMath} />
+          {/* Área adaptativa centrada para la Balanza SVG y las frutas */}
+          <div className="w-full flex-1 min-h-0 flex items-center justify-center relative">
+            <div
+              ref={containerRef}
+              className={`relative w-full max-w-[540px] sm:max-w-[620px] lg:max-w-[780px] xl:max-w-[880px] aspect-[600/260] select-none ${
+                shakeScale ? 'animate-[shake_0.4s_ease-in-out]' : ''
+              }`}
+            >
+              <ScaleSVG angle={displayAngle} balanced={balanced} />
 
-        {/* History */}
-        <HistoryPanel entries={history} show={showHist} />
-
-        {/* Level navigation */}
-        <div className="flex gap-2 justify-center pt-2 pb-6">
-          <button
-            onClick={() => level > 1 && setLevel(level - 1)}
-            disabled={level === 1}
-            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm disabled:opacity-30 hover:bg-white/10 active:scale-95 transition-all"
-          >
-            ← Anterior
-          </button>
-          <div className="flex gap-1.5 items-center">
-            {LVLS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setLevel(i + 1)}
-                className={`w-7 h-7 rounded-full text-xs font-bold transition-all ${i + 1 === level
-                  ? 'bg-teal-500 text-white scale-110'
-                  : 'bg-white/10 text-white/40 hover:bg-white/20'
-                  }`}
+              {/* Plato Izquierdo: Las frutas se apoyan EXACTAMENTE sobre el platillo */}
+              <div
+                ref={leftRef}
+                className="absolute flex flex-wrap items-end justify-center content-end gap-1 px-1 transition-all"
+                style={{
+                  left: `${leftX_pct - 13}%`,
+                  width: '26%',
+                  top: `${leftY_pct - 27}%`,
+                  height: '28%',
+                  border: leftLocked ? '1.5px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(45,212,191,0.4)',
+                  borderRadius: '12px 12px 4px 4px',
+                  background: leftLocked ? 'transparent' : 'rgba(45,212,191,0.03)',
+                }}
               >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => level < 8 && setLevel(level + 1)}
-            disabled={level === 8}
-            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm disabled:opacity-30 hover:bg-white/10 active:scale-95 transition-all"
-          >
-            Siguiente →
-          </button>
-        </div>
+                {leftPlate.map(o => (
+                  <button
+                    key={o.id}
+                    className={`active:scale-90 transition-transform ${leftLocked ? 'pointer-events-none' : ''}`}
+                    onPointerDown={e => !leftLocked && startDrag(o.type, 'left', o.id, e)}
+                    onClick={() => !leftLocked && tapPlateObj('left', o.id)}
+                    title={`${DEFS[o.type].name} (peso ${DEFS[o.type].w})`}
+                  >
+                    <ObjIcon type={o.type} size={22 + DEFS[o.type].w * 2.6} />
+                  </button>
+                ))}
+              </div>
 
-        {/* Drag ghost */}
-        {ghostPos && ghostType && (
-          <div
-            className="fixed pointer-events-none z-50 opacity-80"
-            style={{ left: ghostPos.x - 20, top: ghostPos.y - 20 }}
-          >
-            <ObjIcon type={ghostType} size={40} />
+              {/* Plato Derecho: Las frutas se apoyan EXACTAMENTE sobre el platillo */}
+              <div
+                ref={rightRef}
+                className="absolute flex flex-wrap items-end justify-center content-end gap-1 px-1 transition-all"
+                style={{
+                  left: `${rightX_pct - 13}%`,
+                  width: '26%',
+                  top: `${rightY_pct - 27}%`,
+                  height: '28%',
+                  border: rightLocked ? '1.5px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(167,139,250,0.4)',
+                  borderRadius: '12px 12px 4px 4px',
+                  background: rightLocked ? 'transparent' : 'rgba(167,139,250,0.03)',
+                }}
+              >
+                {rightPlate.map(o => (
+                  <button
+                    key={o.id}
+                    className={`active:scale-90 transition-transform ${rightLocked ? 'pointer-events-none' : ''}`}
+                    onPointerDown={e => !rightLocked && startDrag(o.type, 'right', o.id, e)}
+                    onClick={() => !rightLocked && tapPlateObj('right', o.id)}
+                    title={`${DEFS[o.type].name} (peso ${DEFS[o.type].w})`}
+                  >
+                    <ObjIcon type={o.type} size={22 + DEFS[o.type].w * 2.6} />
+                  </button>
+                ))}
+              </div>
+
+              {/* Marcador de Peso colgante bajo el Plato Izquierdo */}
+              <div
+                className="absolute text-center font-bold font-mono text-[10px] sm:text-xs pointer-events-none -translate-x-1/2"
+                style={{ left: `${leftX_pct}%`, top: `${leftY_pct + 4}%` }}
+              >
+                <span className={`px-2 py-0.5 rounded-full shadow-md ${leftW === rightW && leftW > 0 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-[#0f172a] text-teal-300 border border-teal-500/30'}`}>
+                  {leftW}
+                </span>
+              </div>
+
+              {/* Marcador de Peso colgante bajo el Plato Derecho */}
+              <div
+                className="absolute text-center font-bold font-mono text-[10px] sm:text-xs pointer-events-none -translate-x-1/2"
+                style={{ left: `${rightX_pct}%`, top: `${rightY_pct + 4}%` }}
+              >
+                <span className={`px-2 py-0.5 rounded-full shadow-md ${leftW === rightW && rightW > 0 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-[#0f172a] text-violet-300 border border-violet-500/30'}`}>
+                  {rightW}
+                </span>
+              </div>
+
+              {/* Display Matemático Flotante (overlay cuando está activo) */}
+              {showMath && (
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-[#0a0f1d]/90 backdrop-blur-md border border-white/15 rounded-xl px-3 py-1 text-center font-mono shadow-xl z-20 pointer-events-none">
+                  <div className="text-[10px] sm:text-xs text-white/80">
+                    <span className="text-teal-300 font-bold">{fmtMathSide(leftPlate)}</span>
+                    <span className="mx-1 text-white/50">=</span>
+                    <span className="text-violet-300 font-bold">{fmtMathSide(rightPlate)}</span>
+                  </div>
+                  <div className="text-xs sm:text-sm font-black mt-0.5 flex items-center justify-center gap-1.5">
+                    <span className="text-teal-200">{leftW}</span>
+                    <span className={leftW === rightW ? 'text-emerald-400' : 'text-rose-400'}>
+                      {leftW === rightW ? '=' : '≠'}
+                    </span>
+                    <span className="text-violet-200">{rightW}</span>
+                  </div>
+                  {addedObj && (
+                    <div className="text-[9px] text-amber-300 mt-0.5">
+                      + {DEFS[addedObj].name} ({DEFS[addedObj].w}) en ambos lados
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Panel de Historial Flotante (overlay cuando está activo) */}
+              {showHist && (
+                <div className="absolute top-1 right-1 max-w-[210px] max-h-36 bg-[#0a0f1d]/95 backdrop-blur-md border border-white/20 rounded-xl p-2 text-[10px] text-white/70 overflow-y-auto shadow-2xl z-30 custom-scrollbar">
+                  <div className="font-bold text-white/90 border-b border-white/10 pb-0.5 mb-1 flex items-center justify-between">
+                    <span>Historial</span>
+                    <button onClick={() => setShowHist(false)} className="text-white/40 hover:text-white">✕</button>
+                  </div>
+                  {history.length === 0 ? (
+                    <div className="text-white/30 italic">Sin acciones aún</div>
+                  ) : (
+                    history.slice(-8).map((e, idx) => (
+                      <div key={idx} className="py-0.5 border-b border-white/5 last:border-0 truncate">
+                        {e.text}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Alerta de división por cero */}
+              {showDivByZero && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-rose-500/90 text-white rounded-xl px-3 py-2 flex items-center gap-2 shadow-2xl z-40 animate-bounce">
+                  <AlertTriangle size={16} />
+                  <span className="text-xs font-bold">¡No se puede dividir entre cero!</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Micro-leyenda o Cadena transitiva en nivel 3 */}
+          <div className="shrink-0 pt-0.5">
+            {cfg.mode === 'transitive' && phase >= 1 ? (
+              <div className="text-[10px] font-mono text-violet-300 bg-violet-500/10 px-2.5 py-0.5 rounded-full border border-violet-400/30">
+                Cadena: Sandía (5) = {rightPlate.map(o => DEFS[o.type].name).join(' + ')} ({wOf(rightPlate)})
+              </div>
+            ) : (
+              <div className="text-[9px] text-white/35 flex items-center justify-center gap-2">
+                <span>Plato izquierdo: {leftLocked ? 'Fijo' : 'Interactuable'}</span>
+                <span>•</span>
+                <span>Plato derecho: {rightLocked ? 'Fijo' : 'Interactuable'}</span>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* PANEL DERECHO: Herramientas de Operación especiales */}
+        {hasSpecialActions && (
+          <aside className="w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden shadow-inner">
+            <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-white/30 text-center">
+              Acción
+            </span>
+
+            <div className="flex-1 w-full flex flex-col items-center justify-center gap-1.5 py-1">
+              {/* Nivel Simétrico: Intercambiar */}
+              {cfg.mode === 'symmetric' && (
+                <button
+                  onClick={handleSwap}
+                  className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-[10px] font-bold flex flex-col items-center justify-center active:scale-95 transition-all shadow-md"
+                  title="Intercambiar platos"
+                >
+                  <Repeat size={15} />
+                  <span className="text-[8px] lg:text-[9px] font-mono font-bold mt-0.5">Swap</span>
+                </button>
+              )}
+
+              {/* Nivel Multiplicación */}
+              {showMultiply && (
+                <>
+                  {[2, 3].map(f => (
+                    <button
+                      key={`m${f}`}
+                      onClick={() => handleMultiplyBoth(f)}
+                      className="w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-200 text-xs font-mono font-bold active:scale-95 transition-all"
+                      title={`Multiplicar ambos platos por ${f}`}
+                    >
+                      ×{f}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => handleMultiplyOne('left', 2)}
+                    className="w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 text-rose-300 text-[8px] font-bold active:scale-95 transition-all"
+                    title="Desequilibrar multiplicando solo un lado"
+                  >
+                    ×2 izq
+                  </button>
+                </>
+              )}
+
+              {/* Nivel División */}
+              {showDivide && (
+                <>
+                  {[2, 4].map(d => (
+                    <button
+                      key={`d${d}`}
+                      onClick={() => handleDivideBoth(d)}
+                      className="w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-400/40 text-violet-200 text-xs font-mono font-bold active:scale-95 transition-all"
+                      title={`Dividir ambos platos entre ${d}`}
+                    >
+                      ÷{d}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => handleDivideBoth(0)}
+                    className="w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 text-[9px] font-mono font-bold active:scale-95 transition-all"
+                    title="Dividir entre cero"
+                  >
+                    ÷0
+                  </button>
+                </>
+              )}
+
+              {/* Niveles de Adición */}
+              {(cfg.mode === 'addition' || cfg.mode === 'addition-combo') && (
+                <>
+                  {trayTypes.map(t => (
+                    <button
+                      key={`ab${t}`}
+                      onClick={() => handleAddBoth(t)}
+                      className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-200 flex flex-col items-center justify-center active:scale-95 transition-all"
+                      title={`+ ${DEFS[t].name} en ambos lados`}
+                    >
+                      <span className="text-[7px] lg:text-[8px] font-bold">+2 lados</span>
+                      <ObjIcon type={t} size={16} />
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+
+            <span className="text-[7px] lg:text-[8px] text-white/30 text-center leading-tight">
+              Operar
+            </span>
+          </aside>
         )}
       </div>
 
+      {/* ── 4. Barra Inferior de Acción y Feedback (40-48px) ── */}
+      <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {complete ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] sm:text-[11px] lg:text-xs font-bold">
+              <CheckCircle2 size={13} className="text-emerald-300 shrink-0" />
+              <span className="truncate">¡Propiedad {cfg.prop} demostrada!</span>
+            </div>
+          ) : (
+            <div className="text-[10px] sm:text-[11px] text-white/70 truncate font-medium">
+              {promptText}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => level > 1 && changeLevel(level - 1)}
+            disabled={level === 1}
+            className="h-7 lg:h-8 px-2 sm:px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] sm:text-[11px] font-bold disabled:opacity-30 active:scale-95 transition-all flex items-center gap-1"
+          >
+            <span>Anterior</span>
+          </button>
+
+          <button
+            onClick={() => level < 8 && changeLevel(level + 1)}
+            disabled={level === 8}
+            className={`h-7 lg:h-8 px-2.5 sm:px-3.5 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all shadow-md ${
+              complete
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-black animate-pulse'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+          >
+            <span>Siguiente</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
+      </footer>
+
+      {/* Fantasma de arrastre (Ghost) */}
+      {ghostPos && ghostType && (
+        <div
+          className="fixed pointer-events-none z-50 opacity-90 -translate-x-1/2 -translate-y-1/2"
+          style={{ left: ghostPos.x, top: ghostPos.y }}
+        >
+          <ObjIcon type={ghostType} size={36} />
+        </div>
+      )}
+
+      {/* Modal de Ayuda */}
       <ModalHelp
         open={showHelp}
         onClose={() => setShowHelp(false)}
         title="¿Cómo usar la balanza de igualdad?"
         bgColor="#080c18"
-        titleColor="#e2e8f0"
+        maxWidth="max-w-md"
+        buttonColor="bg-teal-500 hover:bg-teal-400"
       >
-        <div className="text-white/80 text-sm space-y-4">
-          <p>Explora las <strong className="text-white">propiedades de la igualdad</strong> usando una balanza. Cada objeto tiene un <strong className="text-white">peso</strong> distinto. Cuando ambos platos pesan lo mismo, hay equilibrio.</p>
+        <div key={helpId} className="space-y-2 text-white/80 text-xs leading-relaxed pb-2">
+          <p>
+            Explora las <strong className="text-white">propiedades de la igualdad</strong> usando la balanza. Cada objeto tiene un peso distinto:
+          </p>
 
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-teal-400">Reflexiva (nivel 1)</p>
-            <p className="text-white/70">Coloca en el plato derecho los <strong className="text-white">mismos objetos</strong> que están en el izquierdo. Todo es igual a sí mismo.</p>
+          <div className="grid grid-cols-2 gap-1.5 p-2 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+            <div>🍎 Manzana = 1</div>
+            <div>🍊 Naranja = 2</div>
+            <div>🍋 Limón = 3</div>
+            <div>🍐 Pera = 4</div>
+            <div>🍉 Sandía = 5</div>
+            <div>📦 Caja = 10</div>
           </div>
 
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-amber-400">Simétrica (nivel 2)</p>
-            <p className="text-white/70">Pulsa <strong className="text-amber-400">Intercambiar</strong> para swap los platos. Si A = B, entonces B = A.</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-emerald-400">Transitiva (nivel 3)</p>
-            <p className="text-white/70">Equilibra la primera balanza con objetos del cajón, luego encuentra <strong className="text-white">otra combinación</strong> que también sume lo mismo. Si A = B y B = C, entonces A = C.</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-violet-400">Adición (niveles 4-5)</p>
-            <p className="text-white/70">Agrega objetos a un lado para <strong className="text-white">romper el equilibrio</strong>, luego agrega lo mismo al otro lado para restaurarlo. Si A = B, entonces A + C = B + C.</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-rose-400">Multiplicación (nivel 6)</p>
-            <p className="text-white/70">Usa <strong className="text-teal-400">×2</strong> o <strong className="text-teal-400">×3</strong> para duplicar/triplicar <strong className="text-white">ambos lados</strong>. Prueba también multiplicar solo un lado para ver cómo se desequilibra.</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-sky-400">División (nivel 7)</p>
-            <p className="text-white/70">Usa <strong className="text-violet-400">÷2</strong> o <strong className="text-violet-400">÷4</strong> para dividir ambos lados. ¡Intenta <strong className="text-red-400">÷0</strong> para ver qué pasa!</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-3 space-y-2">
-            <p className="font-bold text-white">Libre (nivel 8)</p>
-            <p className="text-white/70">Experimenta libremente. <strong className="text-white">Arrastra</strong> objetos desde el cajón a los platos, o <strong className="text-white">toca</strong> un objeto en un plato para retirarlo.</p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-2.5 space-y-1.5">
-            <p className="font-bold text-white text-xs uppercase tracking-wide">Controles</p>
-            <ul className="list-disc list-inside space-y-1 text-white/60 text-xs">
-              <li><strong className="text-white/80">Arrastra</strong> objetos del cajón a un plato, o entre platos.</li>
-              <li><strong className="text-white/80">Toca</strong> un objeto en un plato para retirarlo.</li>
-              <li>Usa <strong className="text-white/80">Ver matemática</strong> para ver la ecuación y los pesos.</li>
-              <li>El <strong className="text-white/80">Historial</strong> registra cada acción realizada.</li>
-            </ul>
-          </div>
+          <ol className="space-y-1.5 list-decimal list-inside pl-1 text-[11px]">
+            <li><strong className="text-teal-300">Reflexiva</strong>: Coloca los mismos objetos en el plato derecho ($a = a$).</li>
+            <li><strong className="text-amber-300">Simétrica</strong>: Usa Swap para intercambiar platos ($A = B \implies B = A$).</li>
+            <li><strong className="text-emerald-300">Transitiva</strong>: Equilibra la primera balanza y luego busca otra combinación igual.</li>
+            <li><strong className="text-violet-300">Adición</strong>: Agrega lo mismo a ambos lados ($A + C = B + C$).</li>
+            <li><strong className="text-sky-300">Multiplicación</strong>: Duplica o triplica ambos lados ($A \times C = B \times C$).</li>
+            <li><strong className="text-rose-300">División</strong>: Divide ambos platos en partes iguales ($A \div C = B \div C$).</li>
+          </ol>
         </div>
       </ModalHelp>
     </div>

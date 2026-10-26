@@ -107,7 +107,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/igualdad-balanza',
-        element: <Layout><IgualdadBalanzaView /></Layout>
+        element: <IgualdadBalanzaView />
     },
     {
         path: '/balanza-ecuacion',
