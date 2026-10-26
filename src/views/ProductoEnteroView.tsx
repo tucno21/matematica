@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
 
@@ -13,51 +13,74 @@ interface Chip {
     y: number;
     exploding: boolean;
     exploded: boolean;
-    groupIndex: number; // Para saber a qué grupo pertenece
+    groupIndex: number; // -1: unassigned, 0..a-1: assigned group
+}
+
+interface PresetCase {
+    id: string;
+    label: string;
+    equation: string;
+    a: { sign: "positive" | "negative"; count: number };
+    b: { sign: "positive" | "negative"; count: number };
+    description: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const CHIP_SIZE = 50;
+const CHIP_SIZE = 42;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Exactamente 3 casos pedagógicos representativos de la regla de signos
+const PRESET_CASES: PresetCase[] = [
+    {
+        id: "c1",
+        label: "Caso 1",
+        equation: "(+3) × (−2)",
+        a: { sign: "positive", count: 3 },
+        b: { sign: "negative", count: 2 },
+        description: "3 veces (−2): 3 grupos de 2 rojas = −6",
+    },
+    {
+        id: "c2",
+        label: "Caso 2",
+        equation: "(−2) × (+3)",
+        a: { sign: "negative", count: 2 },
+        b: { sign: "positive", count: 3 },
+        description: "−2 veces (+3): 2 grupos de 3 azules se invierten a rojas = −6",
+    },
+    {
+        id: "c3",
+        label: "Caso 3",
+        equation: "(−2) × (−3)",
+        a: { sign: "negative", count: 2 },
+        b: { sign: "negative", count: 3 },
+        description: "−2 veces (−3): 2 grupos de 3 rojas se invierten a azules = +6",
+    },
+];
+
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-/** Build chips scattered randomly (not grouped) */
-function buildScatteredChips(
-    numGroups: number,
-    chipsPerGroup: number,
-    color: ChipColor,
-    areaW: number,
-    areaH: number,
-): Chip[] {
-    if (numGroups === 0 || chipsPerGroup === 0) return [];
-
-    const totalChips = numGroups * chipsPerGroup;
-    const chips: Chip[] = [];
-
-    for (let i = 0; i < totalChips; i++) {
-        const x = Math.max(10, Math.min(areaW - CHIP_SIZE - 10,
-            Math.random() * (areaW - CHIP_SIZE - 20) + 10));
-        const y = Math.max(10, Math.min(areaH - CHIP_SIZE - 10,
-            Math.random() * (areaH - CHIP_SIZE - 20) + 10));
-
-        chips.push({
-            id: uid(),
-            color,
-            x,
-            y,
-            exploding: false,
-            exploded: false,
-            groupIndex: -1, // Not assigned to any group yet
-        });
-    }
-
-    return chips;
+function generateRandomValues(): {
+    aSign: "positive" | "negative";
+    bSign: "positive" | "negative";
+    aVal: number;
+    bVal: number;
+} {
+    const signs: ("positive" | "negative")[] = ["positive", "negative"];
+    return {
+        aSign: signs[Math.floor(Math.random() * 2)],
+        bSign: signs[Math.floor(Math.random() * 2)],
+        aVal: Math.floor(Math.random() * 3) + 2,
+        bVal: Math.floor(Math.random() * 3) + 2,
+    };
 }
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 const TOKEN = {
     blue: {
+        bg: "bg-blue-500/10",
+        border: "border-blue-500/25",
+        text: "text-blue-300",
+        dot: "bg-blue-500",
+        btn: "bg-blue-500 hover:bg-blue-400",
         chipGrad: "from-blue-400 to-blue-600",
         chipShadow: "shadow-blue-500/40",
         chipBorder: "border-blue-300/30",
@@ -65,6 +88,11 @@ const TOKEN = {
         particle: "#60a5fa",
     },
     red: {
+        bg: "bg-red-500/10",
+        border: "border-red-500/25",
+        text: "text-red-300",
+        dot: "bg-red-500",
+        btn: "bg-red-500 hover:bg-red-400",
         chipGrad: "from-red-400 to-red-600",
         chipShadow: "shadow-red-500/40",
         chipBorder: "border-red-300/30",
@@ -73,268 +101,156 @@ const TOKEN = {
     },
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SignToggle({ value, onChange }: { value: "positive" | "negative"; onChange: (v: "positive" | "negative") => void }) {
-    return (
-        <div className="flex rounded-xl overflow-hidden border border-white/10 shrink-0">
-            <button onClick={() => onChange("positive")}
-                className={`px-3 py-1.5 text-xs font-black transition-all duration-200
-          ${value === "positive" ? "bg-blue-500/20 text-blue-300" : "bg-transparent text-white/35 hover:text-white/55"}`}>+</button>
-            <button onClick={() => onChange("negative")}
-                className={`px-3 py-1.5 text-xs font-black transition-all duration-200
-          ${value === "negative" ? "bg-red-500/20 text-red-300" : "bg-transparent text-white/35 hover:text-white/55"}`}>−</button>
-        </div>
-    );
-}
-
-function NumberInputCard({ label, sublabel, sign, count, onSignChange, onCountChange }: {
-    label: string; sublabel: string;
-    sign: "positive" | "negative"; count: number;
-    onSignChange: (v: "positive" | "negative") => void;
-    onCountChange: (v: number) => void;
-}) {
-    // Colores basados en el signo (+ = azul, - = rojo)
-    const signColor: ChipColor = sign === "positive" ? "blue" : "red";
-
-    const colorMap = {
-        blue: { text: "text-blue-300", bg: "bg-blue-500/10", border: "border-blue-500/25", dot: "bg-blue-500", btn: "bg-blue-500 hover:bg-blue-400" },
-        red: { text: "text-red-300", bg: "bg-red-500/10", border: "border-red-500/25", dot: "bg-red-500", btn: "bg-red-500 hover:bg-red-400" },
-    };
-    const c = colorMap[signColor];
-    const t = TOKEN[signColor];
-
-    return (
-        <div className={`rounded-2xl border ${c.border} ${c.bg} p-4 flex flex-col gap-3 transition-colors duration-300`}>
-            {/* Row 1: label + color toggle */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${c.dot}`} />
-                    <div>
-                        <span className="text-[11px] font-black tracking-widest text-white/40 uppercase">{label}</span>
-                        <p className="text-[10px] text-white/25">{sublabel}</p>
-                    </div>
-                </div>
-                <SignToggle value={sign} onChange={onSignChange} />
-            </div>
-
-            {/* Row 2: mini chip dots + counter controls */}
-            <div className="flex items-center justify-between gap-3">
-                {/* Mini chip preview */}
-                <div className="flex flex-wrap gap-1.5 flex-1 min-h-7 content-center">
-                    {count === 0 ? (
-                        <span className="text-white/20 text-xs italic">Sin fichas aún</span>
-                    ) : (
-                        Array.from({ length: Math.min(count, 10) }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-5 h-5 rounded-full bg-linear-to-br ${t.chipGrad} flex items-center justify-center shadow-sm`}
-                            >
-                                <span className="text-white text-[8px] font-black leading-none">
-                                    {sign === "positive" ? "+" : "−"}
-                                </span>
-                            </div>
-                        ))
-                    )}
-                    {count > 10 && <span className={`text-xs font-bold ${c.text} opacity-60`}>+{count - 10}</span>}
-                </div>
-
-                {/* Counter */}
-                <div className="flex items-center gap-2 shrink-0">
-                    <button
-                        className={`w-9 h-9 rounded-xl ${c.btn} active:scale-90 text-white text-xl font-black shadow transition-all duration-100 disabled:opacity-20 disabled:cursor-not-allowed`}
-                        onClick={() => onCountChange(Math.max(0, count - 1))}
-                        disabled={count === 0}
-                    >−</button>
-                    <span className={`w-8 text-center text-2xl font-black tabular-nums ${c.text}`}>
-                        {count}
-                    </span>
-                    <button
-                        className={`w-9 h-9 rounded-xl ${c.btn} active:scale-90 text-white text-xl font-black shadow transition-all duration-100 disabled:opacity-20 disabled:cursor-not-allowed`}
-                        onClick={() => onCountChange(Math.min(9, count + 1))}
-                        disabled={count === 9}
-                    >+</button>
-                </div>
-            </div>
-
-            {/* Row 3: summary label */}
-            {count > 0 && (
-                <p className={`text-xs font-semibold ${c.text} opacity-60 leading-none`}>
-                    {count} ficha{count !== 1 ? "s" : ""} {sign === "positive" ? "positiva" : "negativa"}{count !== 1 ? "s" : ""} ({sign === "positive" ? "+1" : "−1"})
-                </p>
-            )}
-        </div>
-    );
-}
-
-function ChipEl({ chip, isFlipping, canDrag, dragging, onPointerDown }: {
-    chip: Chip;
-    isFlipping: boolean;
-    canDrag: boolean;
-    dragging: boolean;
-    onPointerDown: (e: React.PointerEvent, id: string) => void;
-}) {
-    if (chip.exploded) return null;
-    const t = TOKEN[chip.color];
-
-    return (
-        <div
-            className={`absolute select-none
-        ${chip.exploding ? "animate-explode" : ""}
-        ${isFlipping ? "animate-flip" : ""}
-        ${dragging ? "scale-125 z-50" : ""}
-        ${!dragging && canDrag ? "z-10 hover:scale-110 cursor-grab active:cursor-grabbing" : "z-10"}
-      `}
-            style={{ width: CHIP_SIZE, height: CHIP_SIZE, left: chip.x, top: chip.y, touchAction: "none" }}
-            onPointerDown={(e) => onPointerDown(e, chip.id)}
-        >
-            <div className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-lg ${t.chipShadow} flex items-center justify-center`}>
-                <span className="text-white font-black text-[14px] leading-none select-none">{t.sign}</span>
-            </div>
-            {chip.exploding && <ExplosionParticles color={chip.color} />}
-        </div>
-    );
-}
-
-function ExplosionParticles({ color }: { color: ChipColor }) {
-    return (
-        <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: 8 }, (_, i) => (
-                <div key={i} className="absolute w-2 h-2 rounded-full animate-particle"
-                    style={{ background: TOKEN[color].particle, left: "50%", top: "50%", "--angle": `${i * 45}deg` } as React.CSSProperties} />
-            ))}
-        </div>
-    );
-}
-
-// ─── Main View ────────────────────────────────────────────────────────────────
 export default function ProductoEnteroView() {
     const navigate = useNavigate();
 
-    // a = número de grupos, b = cantidad en cada grupo
+    // Inputs: a = número de grupos, b = cantidad por grupo
     const [aSign, setASign] = useState<"positive" | "negative">("positive");
-    const [aValue, setAValue] = useState(0);
-    const [bSign, setBSign] = useState<"positive" | "negative">("positive");
-    const [bValue, setBValue] = useState(0);
+    const [aValue, setAValue] = useState<number>(3);
+    const [bSign, setBSign] = useState<"positive" | "negative">("negative");
+    const [bValue, setBValue] = useState<number>(2);
 
+    const [activePreset, setActivePreset] = useState<string | null>("c1");
+
+    // Phase management
     const [phase, setPhase] = useState<Phase>("setup");
-    const areaRef = useRef<HTMLDivElement>(null);
     const [chips, setChips] = useState<Chip[]>([]);
-    const [flipping, setFlipping] = useState(false);
-    const [flippingIds, setFlippingIds] = useState<Set<string>>(new Set());
-    const [counting, setCounting] = useState(false);
-    const [resultValue, setResultValue] = useState(0);
-    const [showHelp, setShowHelp] = useState(false);
-
-    // Dragging state
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
-    const NUM_COLUMNS = 9;
+    const [flippingIds, setFlippingIds] = useState<Set<string>>(new Set());
+    const [isFlippingAll, setIsFlippingAll] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
-    // ── Computed ──────────────────────────────────────────────────────────────
+    const areaRef = useRef<HTMLDivElement>(null);
+
+    // ── Computed Values ───────────────────────────────────────────────────────
     const aActual = aSign === "positive" ? aValue : -aValue;
     const bActual = bSign === "positive" ? bValue : -bValue;
+    const numGroups = Math.max(1, Math.abs(aActual));
+    const chipsPerGroup = Math.abs(bActual);
+    const totalChips = numGroups * chipsPerGroup;
+    const resultValue = aActual * bActual;
+    const signsSame = (aActual >= 0) === (bActual >= 0);
 
-    const aColor: ChipColor = aActual >= 0 ? "blue" : "red";
-    const bColor: ChipColor = bActual >= 0 ? "blue" : "red";
-
-    const canGenerate = aValue > 0 || bValue > 0;
+    const initialChipColor: ChipColor = bActual >= 0 ? "blue" : "red";
+    const canGenerate = aValue > 0 && bValue > 0;
 
     const activeChips = chips.filter((c) => !c.exploded && !c.exploding);
     const liveBlue = activeChips.filter((c) => c.color === "blue").length;
     const liveRed = activeChips.filter((c) => c.color === "red").length;
 
-    const resultBigColor = resultValue > 0 ? "text-blue-400" : resultValue < 0 ? "text-red-400" : "text-purple-400";
-    const resultTextColor = resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-purple-300";
+    const formatNum = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+    const formatExpr = (n: number) => (n >= 0 ? `(+${n})` : `(${n})`);
 
-    const formatNum = (n: number) => n >= 0 ? `+${n}` : `${n}`;
-    const formatExpr = (n: number) => n >= 0 ? `(+${n})` : `(${n})`;
+    // ── Group Status & Validation ─────────────────────────────────────────────
+    const chipsInGroup = useCallback(
+        (groupIndex: number) => chips.filter((c) => c.groupIndex === groupIndex).length,
+        [chips]
+    );
 
-    const signsSame = (aActual >= 0) === (bActual >= 0);
+    const allGroupsFormed = Array.from({ length: numGroups }).every(
+        (_, i) => chipsInGroup(i) === chipsPerGroup
+    );
 
-    // ── Column and Group Detection ─────────────────────────────────────────────
-    const getColumnForChip = (chipX: number, areaW: number): number => {
-        const columnWidth = areaW / NUM_COLUMNS;
-        return Math.floor(chipX / columnWidth);
+    // ── Presets ───────────────────────────────────────────────────────────────
+    const applyPreset = (preset: PresetCase) => {
+        setASign(preset.a.sign);
+        setAValue(preset.a.count);
+        setBSign(preset.b.sign);
+        setBValue(preset.b.count);
+        setActivePreset(preset.id);
+        if (phase !== "setup") handleReset();
     };
 
-    const countChipsInColumns = useCallback(() => {
-        const rect = areaRef.current?.getBoundingClientRect();
-        if (!rect) return new Array(NUM_COLUMNS).fill(0);
+    const handleRandomCase = useCallback(() => {
+        const rand = generateRandomValues();
+        setASign(rand.aSign);
+        setAValue(rand.aVal);
+        setBSign(rand.bSign);
+        setBValue(rand.bVal);
+        setActivePreset(null);
+        setChips([]);
+        setDraggingId(null);
+        setFlippingIds(new Set());
+        setIsFlippingAll(false);
+        setPhase("setup");
+    }, []);
 
-        const counts = new Array(NUM_COLUMNS).fill(0);
-        activeChips.forEach((chip) => {
-            const col = getColumnForChip(chip.x, rect.width);
-            if (col >= 0 && col < NUM_COLUMNS) {
-                counts[col]++;
-            }
-        });
-        return counts;
-    }, [activeChips]);
-
-    const validColumnCount = countChipsInColumns().filter(count => count === Math.abs(bActual)).length;
-    const groupsAreCorrect = validColumnCount === Math.abs(aActual);
-
-    // ── Setup → Build ──────────────────────────────────────────────────────────
+    // ── Generar Fichas (Setup -> Build) ───────────────────────────────────────
     const handleGenerate = () => {
+        if (!canGenerate) return;
         setPhase("build");
     };
 
-    // ── Generar grupos después de que el área esté disponible ─────────────────────
     useEffect(() => {
-        if (phase === "build" && chips.length === 0 && (aValue > 0 || bValue > 0)) {
-            setTimeout(() => {
+        if (phase === "build" && chips.length === 0 && canGenerate) {
+            const timer = setTimeout(() => {
                 const rect = areaRef.current?.getBoundingClientRect();
-                const w = rect?.width ?? Math.min(window.innerWidth - 24, 520);
-                const h = rect?.height ?? Math.max(400, window.innerHeight - 280);
+                const w = rect?.width ?? 480;
+                const h = rect?.height ?? 300;
 
-                const numGroups = Math.abs(aValue);
-                const chipsPerGroup = Math.abs(bValue);
-                const color = bColor;
+                const newChips: Chip[] = [];
+                for (let i = 0; i < totalChips; i++) {
+                    const spacing = Math.min(CHIP_SIZE + 6, (w - 24) / Math.max(1, totalChips));
+                    const x = Math.max(8, Math.min(w - CHIP_SIZE - 8, 12 + i * spacing));
+                    const y = Math.max(h * 0.72, Math.min(h - CHIP_SIZE - 6, h * 0.78));
 
-                const built = buildScatteredChips(numGroups, chipsPerGroup, color, w, h);
-                setChips(built);
-                // No cambiar de fase automáticamente - el usuario debe formar los grupos manualmente
-            }, 100);
-        }
-    }, [phase, aValue, bValue, aColor, bColor, chips.length]);
-
-    // ── Flip: Cambiar color de todas las fichas ─────────────────────────────
-    const handleFlipAll = useCallback(() => {
-        setFlipping(true);
-        const toFlip = chips.filter((c) => !c.exploded && !c.exploding);
-
-        // Primero, agregar todos los IDs a flippingIds
-        setFlippingIds(new Set(toFlip.map((c) => c.id)));
-
-        // Luego, cambiar los colores uno por uno
-        setTimeout(() => {
-            let idx = 0;
-            const interval = setInterval(() => {
-                if (idx >= toFlip.length) {
-                    clearInterval(interval);
-                    setFlipping(false);
-                    setFlippingIds(new Set());
-                    setPhase("count");
-                } else {
-                    const chip = toFlip[idx];
-                    setChips((prev) => prev.map((c) =>
-                        c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue" } : c
-                    ));
-                    idx++;
+                    newChips.push({
+                        id: uid(),
+                        color: initialChipColor,
+                        x,
+                        y,
+                        exploding: false,
+                        exploded: false,
+                        groupIndex: -1,
+                    });
                 }
-            }, 200);
-        }, 100);
-    }, [chips]);
+                setChips(newChips);
+            }, 60);
+            return () => clearTimeout(timer);
+        }
+    }, [phase, canGenerate, totalChips, initialChipColor, chips.length]);
 
-    // ── Drag Handlers ───────────────────────────────────────────────────────
-    const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
-        if (phase !== "build") return;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        const chip = chips.find((c) => c.id === id);
-        if (!chip || chip.exploded || chip.exploding) return;
+    // ── Auto-Agrupar Instantáneo ──────────────────────────────────────────────
+    const handleAutoGroup = () => {
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
+        const w = rect.width;
+        const colW = w / numGroups;
+
+        setChips((prev) => {
+            const updated = [...prev];
+            let chipIdx = 0;
+            for (let g = 0; g < numGroups; g++) {
+                const colCenter = g * colW + colW / 2;
+                for (let c = 0; c < chipsPerGroup; c++) {
+                    if (chipIdx < updated.length) {
+                        const targetX = colCenter - CHIP_SIZE / 2;
+                        const targetY = 32 + c * (CHIP_SIZE + 6);
+                        updated[chipIdx] = {
+                            ...updated[chipIdx],
+                            x: targetX,
+                            y: targetY,
+                            groupIndex: g,
+                        };
+                        chipIdx++;
+                    }
+                }
+            }
+            return updated;
+        });
+    };
+
+    // ── Drag & Drop Handlers (Touch & Mouse) ───────────────────────────────────
+    const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
+        if (phase !== "build") return;
+        const chip = chips.find((c) => c.id === id);
+        if (!chip || chip.exploded || chip.exploding) return;
+
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const rect = areaRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
         dragOffset.current = { x: e.clientX - rect.left - chip.x, y: e.clientY - rect.top - chip.y };
         setDraggingId(id);
     }, [chips, phase]);
@@ -343,566 +259,845 @@ export default function ProductoEnteroView() {
         if (!draggingId) return;
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
-        setChips((prev) => prev.map((c) => c.id === draggingId ? {
-            ...c,
-            x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
-            y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
-        } : c));
+
+        setChips((prev) =>
+            prev.map((c) =>
+                c.id === draggingId
+                    ? {
+                        ...c,
+                        x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
+                        y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
+                    }
+                    : c
+            )
+        );
     }, [draggingId]);
 
     const handlePointerUp = useCallback(() => {
         if (!draggingId) return;
-
-        // Snap chip to column center
         const rect = areaRef.current?.getBoundingClientRect();
         if (rect) {
             const chip = chips.find((c) => c.id === draggingId);
             if (chip) {
-                const col = getColumnForChip(chip.x, rect.width);
-                const columnWidth = rect.width / NUM_COLUMNS;
-                const targetX = col * columnWidth + (columnWidth - CHIP_SIZE) / 2;
+                const colW = rect.width / numGroups;
+                // Si la ficha está en la zona superior de columnas (< 70% de altura)
+                if (chip.y < rect.height * 0.7) {
+                    const targetGroup = Math.max(0, Math.min(numGroups - 1, Math.floor(chip.x / colW)));
+                    const chipsAlreadyInGroup = chips.filter(
+                        (c) => c.id !== draggingId && c.groupIndex === targetGroup
+                    ).length;
 
-                setChips((prev) => prev.map((c) =>
-                    c.id === draggingId ? { ...c, x: targetX } : c
-                ));
+                    // Alinear centrada en la columna
+                    const snapX = targetGroup * colW + (colW - CHIP_SIZE) / 2;
+                    const snapY = 32 + chipsAlreadyInGroup * (CHIP_SIZE + 6);
+
+                    setChips((prev) =>
+                        prev.map((c) =>
+                            c.id === draggingId
+                                ? { ...c, x: snapX, y: snapY, groupIndex: targetGroup }
+                                : c
+                        )
+                    );
+                } else {
+                    // Queda en la bandeja sin grupo
+                    setChips((prev) =>
+                        prev.map((c) => (c.id === draggingId ? { ...c, groupIndex: -1 } : c))
+                    );
+                }
             }
         }
-
         setDraggingId(null);
-    }, [draggingId, chips]);
+    }, [draggingId, chips, numGroups]);
 
-    // ── Count: Contar fichas ─────────────────────────────────────
-    const handleCount = useCallback(() => {
-        setCounting(true);
+    // ── Flip Phase (Invertir al Opuesto cuando a < 0) ─────────────────────────
+    const handleFlipAll = async () => {
+        setIsFlippingAll(true);
+        const toFlip = chips.filter((c) => !c.exploded && !c.exploding);
 
-        // Calcular el resultado directamente
-        setTimeout(() => {
-            const active = chips.filter((c) => !c.exploded && !c.exploding);
-            const b = active.filter((c) => c.color === "blue").length;
-            const r = active.filter((c) => c.color === "red").length;
-            const quantity = b + r;
-            const sign = signsSame ? 1 : -1;
-            setResultValue(quantity * sign);
-            setCounting(false);
+        for (const chip of toFlip) {
+            setFlippingIds((prev) => new Set(prev).add(chip.id));
+            await new Promise((r) => setTimeout(r, 120));
+            setChips((prev) =>
+                prev.map((c) =>
+                    c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue" } : c
+                )
+            );
+            await new Promise((r) => setTimeout(r, 60));
+            setFlippingIds((prev) => {
+                const n = new Set(prev);
+                n.delete(chip.id);
+                return n;
+            });
+            await new Promise((r) => setTimeout(r, 30));
+        }
+        setIsFlippingAll(false);
+    };
 
-            // Transición automática a result
-            setPhase("result");
-        }, 500);
-    }, [chips, signsSame]);
+    // ── Avanzar desde Build ───────────────────────────────────────────────────
+    const handleContinueFromBuild = () => {
+        if (!allGroupsFormed) return;
+        // Si el factor 'a' es negativo, se debe voltear; si es positivo, se cuenta directamente
+        if (aActual < 0) {
+            setPhase("flip");
+        } else {
+            setPhase("count");
+        }
+    };
 
     // ── Reset ─────────────────────────────────────────────────────────────────
     const handleReset = () => {
-        setASign("positive"); setAValue(0);
-        setBSign("positive"); setBValue(0);
-        setChips([]); setFlipping(false);
-        setFlippingIds(new Set()); setCounting(false);
-        setResultValue(0);
+        setChips([]);
+        setDraggingId(null);
+        setFlippingIds(new Set());
+        setIsFlippingAll(false);
         setPhase("setup");
     };
 
     const getResultText = () => {
-        const quantity = Math.abs(aValue) * Math.abs(bValue);
-        if (resultValue === 0) return `¡Contaste ${quantity} fichas! Todas se cancelaron perfectamente. El resultado es cero.`;
-        if (resultValue > 0) return `Contaste ${quantity} fichas. Son todas positivas. El resultado es +${resultValue}.`;
-        return `Contaste ${quantity} fichas. Son todas negativas. El resultado es ${resultValue}.`;
+        if (resultValue === 0) return "Cero multiplicado por cualquier número es 0.";
+        if (resultValue > 0)
+            return `Obtuviste ${resultValue} fichas positivas. Signos iguales → resultado POSITIVO (+${resultValue}).`;
+        return `Obtuviste ${Math.abs(resultValue)} fichas negativas. Signos distintos → resultado NEGATIVO (${resultValue}).`;
     };
 
-    const phaseList: Phase[] = ["setup", "build", "flip", "count", "result"];
+    const phaseLabels: Record<Phase, string> = {
+        setup: "1. Planteo",
+        build: "2. Grupos",
+        flip: "3. Invertir",
+        count: "3. Conteo",
+        result: "4. Resultado",
+    };
+    const phaseKeys: Phase[] = ["setup", "build", ...(aActual < 0 ? (["flip"] as Phase[]) : []), "count", "result"];
 
-    // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white flex flex-col" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        @keyframes explode {
-          0%   { transform: scale(1);   opacity: 1; }
-          45%  { transform: scale(1.7); opacity: 0.7; }
-          100% { transform: scale(0);   opacity: 0; }
-        }
-        .animate-explode { animation: explode 0.48s ease-out forwards; }
-        @keyframes particle {
-          0%   { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0);     opacity: 1; }
-          100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(-44px); opacity: 0; }
-        }
-        .animate-particle { animation: particle 0.48s ease-out forwards; }
-        @keyframes floatChip {
-          0%,100% { transform: translateY(0) rotate(-4deg); }
-          50%      { transform: translateY(-10px) rotate(4deg); }
-        }
-        .animate-float { animation: floatChip 2.6s ease-in-out infinite; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .anim-up  { animation: fadeUp 0.42s ease-out both; }
-        @keyframes popIn {
-          0%   { transform: scale(0.72); opacity: 0; }
-          70%  { transform: scale(1.06); }
-          100% { transform: scale(1);    opacity: 1; }
-        }
-        .anim-pop { animation: popIn 0.38s ease-out both; }
-        @keyframes glowTeal {
-          0%,100% { box-shadow: 0 0 18px rgba(20,184,166,.35); }
-          50%      { box-shadow: 0 0 36px rgba(20,184,166,.7); }
-        }
-        .glow-teal { animation: glowTeal 2.2s ease-in-out infinite; }
-        @keyframes glowAmber {
-          0%,100% { box-shadow: 0 0 18px rgba(245,158,11,.35); }
-          50%      { box-shadow: 0 0 36px rgba(245,158,11,.7); }
-        }
-        .glow-amber { animation: glowAmber 2.2s ease-in-out infinite; }
-        @keyframes flipChip {
-          0%   { transform: scaleX(1) scale(1.1); }
-          50%  { transform: scaleX(0) scale(1.3); }
-          100% { transform: scaleX(1) scale(1); }
-        }
-        .animate-flip { animation: flipChip 0.35s ease-in-out; }
-      `}</style>
+                @keyframes explode {
+                    0%   { transform: scale(1);   opacity: 1; }
+                    45%  { transform: scale(1.6); opacity: 0.7; }
+                    100% { transform: scale(0);   opacity: 0; }
+                }
+                .animate-explode { animation: explode 0.45s ease-out forwards; }
+                @keyframes particle {
+                    0%   { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0); opacity: 1; }
+                    100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(-40px); opacity: 0; }
+                }
+                .animate-particle { animation: particle 0.45s ease-out forwards; }
+                @keyframes floatChip {
+                    0%, 100% { transform: translateY(0) rotate(-3deg); }
+                    50%      { transform: translateY(-6px) rotate(3deg); }
+                }
+                .animate-float { animation: floatChip 2.4s ease-in-out infinite; }
+                @keyframes flipChip {
+                    0%   { transform: scaleX(1) scale(1.05); }
+                    50%  { transform: scaleX(0) scale(1.25); }
+                    100% { transform: scaleX(1) scale(1); }
+                }
+                .animate-flip { animation: flipChip 0.36s ease-in-out; }
+            `}</style>
 
-            {/* ── Top bar ── */}
-            <header className="flex items-center gap-3 px-4 pt-4 pb-2 shrink-0">
-                <button onClick={() => navigate(-1)}
-                    className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-xl px-3 py-2 text-sm font-bold border border-white/10 shrink-0 active:scale-95">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="hidden sm:inline">Volver</span>
-                </button>
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">Producto de Enteros</h1>
-                    <p className="text-[10px] text-white/30 font-semibold">a veces b = agrupación y conteo</p>
+            {/* 1. Header (34-44px) */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        title="Volver"
+                    >
+                        <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white truncate">
+                        Multiplicación de Números Enteros
+                    </h1>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    {phaseList.map((p, i) => (
-                        <div key={p} className={`h-1.5 rounded-full transition-all duration-300
-              ${phase === p ? "w-5 bg-teal-400" : phaseList.indexOf(phase) > i ? "w-2.5 bg-white/25" : "w-2.5 bg-white/8"}`} />
-                    ))}
+
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <div className="hidden xs:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-white/60">
+                        {phaseKeys.map((p, idx) => (
+                            <span
+                                key={p}
+                                className={`px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                                    phase === p ? "bg-teal-500/30 text-teal-300" : "opacity-40"
+                                }`}
+                            >
+                                {idx + 1}
+                            </span>
+                        ))}
+                        <span className="font-semibold ml-1 text-white/80">{phaseLabels[phase]}</span>
+                    </div>
+
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        title="Ayuda didáctica"
                     >
                         ?
                     </button>
                 </div>
             </header>
 
-            {/* ══════════════════ SETUP ══════════════════ */}
-            {phase === "setup" && (
-                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto">
-                    <div className="flex-1 flex flex-col gap-4">
-                        <div className="text-center anim-up pt-1">
-                            <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">Multiplicación de enteros</p>
-                            <p className="text-white/45 text-sm whitespace-nowrap">
-                                a × b se lee como <span className="text-teal-400 font-bold">"a veces el b"</span> · Ejemplo: 3 × 5 = "3 veces el 5"
+            {/* 2. Barra de Casos de Aprendizaje (Exactamente 3 casos pedagógicos) */}
+            <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline mr-1">
+                        Casos clave:
+                    </span>
+                    {PRESET_CASES.map((preset) => {
+                        const isSelected = activePreset === preset.id && phase === "setup";
+                        return (
+                            <button
+                                key={preset.id}
+                                onClick={() => applyPreset(preset)}
+                                className={`px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold transition-all shrink-0 border ${
+                                    isSelected
+                                        ? "bg-teal-500/25 border-teal-400/50 text-teal-200 shadow-xs"
+                                        : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                                title={preset.description}
+                            >
+                                {preset.label}: <span className="opacity-90">{preset.equation}</span>
+                            </button>
+                        );
+                    })}
+                    <button
+                        onClick={handleRandomCase}
+                        className="px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold bg-white/5 border border-white/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/40 transition-all shrink-0 active:scale-95"
+                        title="Generar caso aleatorio"
+                    >
+                        🎲 Aleatorio
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                    <div className="flex items-center gap-1 text-[11px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        <span className={aActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                            {formatExpr(aActual)}
+                        </span>
+                        <span className="text-white/40">×</span>
+                        <span className={bActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                            {formatExpr(bActual)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. Área Central de Trabajo (Fases) */}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-1 sm:p-2 lg:p-3 overflow-hidden">
+                {/* ── FASE 1: SETUP ── */}
+                {phase === "setup" && (
+                    <div className="w-full max-w-[620px] flex flex-col justify-center gap-2 lg:gap-3 flex-1 min-h-0">
+                        {/* Concept pill */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-2.5 py-1 text-center shrink-0">
+                            <p className="text-[11px] lg:text-xs text-teal-300 font-bold">
+                                💡 Significado: <span className="underline font-black">{Math.abs(aActual)} veces el {formatExpr(bActual)}</span>
+                            </p>
+                            <p className="text-[10px] text-white/50 leading-tight">
+                                El primer factor <span className="font-mono text-white font-bold">a</span> indica cuántos grupos formar. Si es negativo, los grupos se invierten al opuesto.
                             </p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-stretch gap-2 anim-up" style={{ animationDelay: "0.05s" }}>
-                            <div className="flex-1">
-                                <NumberInputCard
-                                    label="a (grupos)" sublabel="Número de grupos"
-                                    sign={aSign} count={aValue}
-                                    onSignChange={setASign} onCountChange={setAValue}
-                                />
+                        {/* Two Columns Grid for Factors a and b */}
+                        <div className="grid grid-cols-2 gap-2 lg:gap-3 shrink-0">
+                            {/* Factor a (Número de grupos) */}
+                            <div className={`rounded-xl border ${aSign === "positive" ? TOKEN.blue.border : TOKEN.red.border} ${aSign === "positive" ? TOKEN.blue.bg : TOKEN.red.bg} p-2 sm:p-2.5 flex flex-col justify-between`}>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                        <div className={`w-2 h-2 rounded-full ${aSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/70 truncate">
+                                            Factor a (Grupos)
+                                        </span>
+                                    </div>
+                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                        <button
+                                            onClick={() => { setASign("positive"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${aSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            +
+                                        </button>
+                                        <button
+                                            onClick={() => { setASign("negative"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${aSign === "negative" ? "bg-red-500/30 text-red-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            −
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="py-1">
+                                    <span className="text-[10px] text-white/50 block">Número de grupos:</span>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() => { setAValue((v) => Math.max(1, v - 1)); setActivePreset(null); }}
+                                                disabled={aValue <= 1}
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                            >
+                                                −
+                                            </button>
+                                            <span className="w-5 text-center font-mono font-bold text-sm">
+                                                {aValue}
+                                            </span>
+                                            <button
+                                                onClick={() => { setAValue((v) => Math.min(5, v + 1)); setActivePreset(null); }}
+                                                disabled={aValue >= 5}
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white/40">
+                                            {aValue} grupo{aValue > 1 ? "s" : ""}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-center shrink-0 sm:w-8 py-1">
-                                <span className="text-white/30 text-3xl font-black">×</span>
-                            </div>
+                            {/* Factor b (Fichas por grupo) */}
+                            <div className={`rounded-xl border ${bSign === "positive" ? TOKEN.blue.border : TOKEN.red.border} ${bSign === "positive" ? TOKEN.blue.bg : TOKEN.red.bg} p-2 sm:p-2.5 flex flex-col justify-between`}>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                        <div className={`w-2 h-2 rounded-full ${bSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/70 truncate">
+                                            Factor b (Fichas)
+                                        </span>
+                                    </div>
+                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                        <button
+                                            onClick={() => { setBSign("positive"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${bSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            +
+                                        </button>
+                                        <button
+                                            onClick={() => { setBSign("negative"); setActivePreset(null); }}
+                                            className={`px-1.5 py-0.5 text-[10px] font-black ${bSign === "negative" ? "bg-red-500/30 text-red-300 font-bold" : "text-white/40"}`}
+                                        >
+                                            −
+                                        </button>
+                                    </div>
+                                </div>
 
-                            <div className="flex-1">
-                                <NumberInputCard
-                                    label="b (cantidad)" sublabel="Fichas en cada grupo"
-                                    sign={bSign} count={bValue}
-                                    onSignChange={setBSign} onCountChange={setBValue}
-                                />
+                                <div className="py-1">
+                                    <span className="text-[10px] text-white/50 block">Fichas en cada grupo:</span>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() => { setBValue((v) => Math.max(1, v - 1)); setActivePreset(null); }}
+                                                disabled={bValue <= 1}
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                            >
+                                                −
+                                            </button>
+                                            <span className="w-5 text-center font-mono font-bold text-sm">
+                                                {bValue}
+                                            </span>
+                                            <button
+                                                onClick={() => { setBValue((v) => Math.min(5, v + 1)); setActivePreset(null); }}
+                                                disabled={bValue >= 5}
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white/40">
+                                            {bValue} {bSign === "positive" ? "(+1)" : "(−1)"}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {canGenerate && (
-                            <div className="anim-up anim-pop bg-white/4 border border-white/8 rounded-2xl px-4 py-4" style={{ animationDelay: "0.18s" }}>
-                                <p className="text-center text-white/25 text-[10px] uppercase tracking-widest mb-3 font-bold">Interpretación</p>
-                                <div className="flex items-center justify-center gap-2 text-xl font-black mb-2">
-                                    <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                                    <span className="text-white/30">×</span>
-                                    <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
-                                </div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex-1 h-px bg-white/8" />
-                                    <span className="text-teal-400 text-xs font-black uppercase">=</span>
-                                    <span className="text-teal-300 text-sm font-black">"{Math.abs(aActual)} veces el {Math.abs(bActual)}"</span>
-                                    <div className="flex-1 h-px bg-white/8" />
-                                </div>
+                        {/* Summary Pill */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs shrink-0">
+                            <span className="text-white/40 text-[10px]">Total de fichas:</span>
+                            <div className="flex items-center gap-2 font-mono font-bold text-xs lg:text-sm">
+                                <span>{aValue} × {bValue} = <span className="text-amber-300">{totalChips} fichas</span></span>
+                                <span className="text-white/30">|</span>
+                                <span className="text-teal-300">{aActual < 0 ? "Se invertirán" : "Mantendrán su signo"}</span>
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    <div className="anim-up pt-4" style={{ animationDelay: "0.24s" }}>
+                        {/* Generate Button */}
                         <button
                             disabled={!canGenerate}
                             onClick={handleGenerate}
-                            className={`w-full py-4 rounded-2xl text-base font-black transition-all duration-200
-                ${canGenerate
-                                ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-[1.02] active:scale-[0.97] glow-teal"
-                                : "bg-white/6 text-white/20 cursor-not-allowed"
-                            }`}>
-                            Generar Grupos ✨
+                            className={`w-full h-8 lg:h-9 rounded-xl text-xs lg:text-sm font-black transition-all shrink-0 ${
+                                canGenerate
+                                    ? "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-98 cursor-pointer"
+                                    : "bg-white/5 text-white/25 cursor-not-allowed"
+                            }`}
+                        >
+                            Comenzar Agrupación ✨
                         </button>
                     </div>
-                </main>
-            )}
+                )}
 
-            {/* ══════════════════ BUILD ══════════════════ */}
-            {phase === "build" && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl px-3 py-2.5 shrink-0 anim-up">
-                        <p className="text-teal-300 font-black text-xs text-center">
-                            Paso 1: Arrastra las fichas a las columnas para crear {Math.abs(aActual)} grupos
-                        </p>
-                    </div>
-
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0 flex-wrap">
-                        <span className="text-white/40 text-base font-bold">grupos ←</span>
-                        <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                        <span className="text-white/30">×</span>
-                        <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
-                        <span className="text-white/40 text-base font-bold">→ fichas por grupo</span>
-                    </div>
-
-                    {/* Progreso de grupos */}
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-4 py-2.5 shrink-0">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-white/35 text-xs font-semibold">
-                                Grupos formados: <span className={groupsAreCorrect ? "text-emerald-400 font-black" : "text-amber-400 font-black"}>{validColumnCount}</span> / {Math.abs(aActual)}
-                            </span>
-                            <span className={`text-xs font-bold ${groupsAreCorrect ? "text-emerald-400" : "text-amber-400"}`}>
-                                {groupsAreCorrect ? "✅ Correcto" : "❌ Incompleto"}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                    >
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }} />
-
-                        {/* Column grid lines - more visible */}
-                        <div className="absolute inset-0 pointer-events-none">
-                            {Array.from({ length: NUM_COLUMNS - 1 }).map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="absolute w-0.5 bg-white/15 shadow-[0_0_8px_rgba(255,255,255,0.1)]"
-                                    style={{
-                                        left: `calc(${((i + 1) / NUM_COLUMNS) * 100}% - 2px)`,
-                                        height: '100%'
-                                    }}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Column numbers */}
-                        <div className="absolute top-3 left-0 right-0 pointer-events-none flex justify-around px-2">
-                            {Array.from({ length: NUM_COLUMNS }).map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="text-white/50 text-[11px] font-black flex items-center justify-center"
-                                    style={{ width: `calc(100% / ${NUM_COLUMNS})` }}
+                {/* ── FASE 2: BUILD (Formar Grupos) ── */}
+                {phase === "build" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        {/* Group Progress Bar */}
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-white/60 text-[10px] font-bold">Objetivo:</span>
+                                <span className="font-mono text-teal-300 font-bold text-xs">
+                                    {numGroups} grupos de {chipsPerGroup} fichas
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold ${allGroupsFormed ? "text-emerald-400" : "text-amber-400"}`}>
+                                    {allGroupsFormed ? "✅ ¡Grupos completados!" : "⏳ Arrastra a las columnas"}
+                                </span>
+                                <button
+                                    onClick={handleAutoGroup}
+                                    className="h-6 px-2 text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-md transition-all active:scale-95"
                                 >
-                                    {i + 1}
-                                </div>
-                            ))}
+                                    Auto-agrupar ⚡
+                                </button>
+                            </div>
                         </div>
 
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                isFlipping={flippingIds.has(chip.id)}
-                                canDrag={true}
-                                dragging={draggingId === chip.id}
-                                onPointerDown={handlePointerDown}
-                            />
-                        ))}
+                        {/* Interactive Drag Arena */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                        >
+                            {/* Columns Dividers and Headings */}
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: numGroups }).map((_, i) => {
+                                    const count = chipsInGroup(i);
+                                    const isComplete = count === chipsPerGroup;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={`flex-1 border-r border-white/10 last:border-r-0 flex flex-col justify-between p-1.5 ${
+                                                isComplete ? "bg-emerald-500/[0.04]" : "bg-transparent"
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between text-[10px] font-bold">
+                                                <span className="text-white/40">Grupo {i + 1}</span>
+                                                <span className={isComplete ? "text-emerald-400" : "text-amber-400"}>
+                                                    {count}/{chipsPerGroup}
+                                                </span>
+                                            </div>
+                                            {/* Bottom tray border */}
+                                            <div className="border-t border-dashed border-white/10 pt-1 text-center">
+                                                <span className="text-[9px] text-white/20">Zona del grupo</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Separator line for unassigned chips tray at the bottom */}
+                            <div className="absolute bottom-[28%] left-0 right-0 h-px bg-white/10 pointer-events-none" />
+                            <div className="absolute bottom-1 right-2 pointer-events-none">
+                                <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider">
+                                    Bandeja de fichas
+                                </span>
+                            </div>
+
+                            {/* Chips */}
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                const isDragging = draggingId === chip.id;
+
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        onPointerDown={(e) => handlePointerDown(e, chip.id)}
+                                        className={`absolute select-none ${
+                                            isDragging ? "scale-125 z-50 shadow-2xl cursor-grabbing" : "z-20 cursor-grab hover:scale-105"
+                                        }`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
+                )}
 
-                    <p className="text-center text-white/20 text-[11px] shrink-0">
-                        Arrastra las fichas a las columnas. Cada columna debe tener {Math.abs(bActual)} fichas.
-                    </p>
-
-                    <div className="shrink-0">
-                        <button
-                            onClick={() => setPhase(aActual < 0 ? "flip" : "count")}
-                            disabled={!groupsAreCorrect}
-                            className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200
-                ${!groupsAreCorrect
-                                    ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                    : "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 hover:scale-[1.01] active:scale-[0.98] glow-teal"
-                                }`}>
-                            {!groupsAreCorrect ? "⏳ Forma los grupos primero" : "✅ ¡Listo! Siguiente paso →"}
-                        </button>
-                    </div>
-                </main>
-            )}
-
-            {/* ══════════════════ FLIP ══════════════════ */}
-            {phase === "flip" && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl px-3 py-2.5 shrink-0 anim-up">
-                        <div className="flex items-center gap-2.5">
-                            <span className="text-xl shrink-0">⚠️</span>
-                            <div>
-                                <p className="text-amber-300 font-black text-xs">¡Atención! El primer número es negativo</p>
-                                <p className="text-amber-200/55 text-[11px] leading-snug mt-0.5">
-                                    Antes de contar, todas las fichas deben cambiar de color.<br />
-                                    Cuando el primer número es negativo, todas las fichas se invierten.
+                {/* ── FASE 3: FLIP (Inversión cuando a < 0) ── */}
+                {phase === "flip" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded-xl shrink-0 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm">⚠️</span>
+                                <p className="text-[11px] text-amber-200 truncate">
+                                    El factor <span className="font-bold text-amber-400">a = {formatExpr(aActual)}</span> es negativo: ¡todas las fichas se invierten al signo opuesto!
                                 </p>
                             </div>
+                            <button
+                                disabled={isFlippingAll}
+                                onClick={handleFlipAll}
+                                className="h-6 px-2 text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-md transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-xs"
+                            >
+                                {isFlippingAll ? "Invirtiendo…" : "Invertir todas 🔄"}
+                            </button>
+                        </div>
+
+                        {/* Interactive Board */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                        >
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: numGroups }).map((_, i) => (
+                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                const isFlipping = flippingIds.has(chip.id);
+
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        className={`absolute select-none transition-transform duration-100 ${
+                                            isFlipping ? "animate-flip z-30" : "z-10"
+                                        }`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
+                )}
 
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0 flex-wrap">
-                        <span className="text-white/40 text-base font-bold">grupos ←</span>
-                        <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                        <span className="text-white/30">×</span>
-                        <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
-                        <span className="text-white/40 text-base font-bold">→ fichas por grupo</span>
-                    </div>
+                {/* ── FASE 4: COUNT (Conteo) ── */}
+                {phase === "count" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                                    <span className="font-bold text-blue-300 font-mono text-xs">{liveBlue}</span>
+                                    <span className="text-white/40 text-[10px]">positivas</span>
+                                </div>
+                                <div className="w-px h-3 bg-white/10" />
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                                    <span className="font-bold text-red-300 font-mono text-xs">{liveRed}</span>
+                                    <span className="text-white/40 text-[10px]">negativas</span>
+                                </div>
+                            </div>
 
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                    >
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }} />
-
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                isFlipping={flippingIds.has(chip.id)}
-                                canDrag={false}
-                                dragging={false}
-                                onPointerDown={() => { }}
-                            />
-                        ))}
-                    </div>
-
-                    <div className="shrink-0">
-                        <button
-                            onClick={handleFlipAll}
-                            disabled={flipping}
-                            className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200
-                ${flipping
-                                    ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                    : "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.98] glow-amber"
-                                }`}>
-                            {flipping ? "Cambiando colores..." : "🔄 Cambiar color de todas las fichas"}
-                        </button>
-                    </div>
-                </main>
-            )}
-
-            {/* ══════════════════ COUNT ══════════════════ */}
-            {phase === "count" && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0 flex-wrap">
-                        <span className="text-white/40 text-base font-bold">grupos ←</span>
-                        <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                        <span className="text-white/30">×</span>
-                        <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
-                        <span className="text-white/40 text-base font-bold">→ fichas por grupo</span>
-                    </div>
-
-                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl px-3 py-2.5 shrink-0 anim-up">
-                        <p className="text-teal-300 font-black text-xs text-center">
-                            {aActual < 0 ? "Paso 3: Contar las fichas con nuevo color" : "Paso 2: Contar todas las fichas"}
-                        </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 bg-white/4 border border-white/8 rounded-2xl px-4 py-2.5 shrink-0">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/60 shrink-0" />
-                            <span className="text-blue-300 font-black text-lg tabular-nums">{liveBlue}</span>
-                            <span className="text-white/25 text-xs hidden sm:inline">positivas</span>
+                            <span className="text-teal-300 text-[10px] font-bold font-mono">
+                                Total: {totalChips} fichas ({signsSame ? "POSITIVO" : "NEGATIVO"})
+                            </span>
                         </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/60 shrink-0" />
-                            <span className="text-red-300 font-black text-lg tabular-nums">{liveRed}</span>
-                            <span className="text-white/25 text-xs hidden sm:inline">negativas</span>
+
+                        {/* Board */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                        >
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: numGroups }).map((_, i) => (
+                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        className="absolute select-none z-10"
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <span className="text-white/35 text-xs">
-                            <span className="font-bold text-white/55">{liveBlue + liveRed}</span> fichas
-                        </span>
-                        <span className="text-teal-400/80 text-xs font-bold">
-                            ({Math.abs(aActual)} × {Math.abs(bActual)})
-                        </span>
                     </div>
+                )}
 
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                    >
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }} />
-
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                isFlipping={false}
-                                canDrag={false}
-                                dragging={false}
-                                onPointerDown={() => { }}
-                            />
-                        ))}
-                    </div>
-
-                    <p className="text-center text-white/20 text-[11px] shrink-0">
-                        {counting ? "Calculando resultado..." : "Listo para contar"}
-                    </p>
-
-                    <button
-                        onClick={handleCount}
-                        disabled={counting}
-                        className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
-              ${counting
-                                ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                : "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 hover:scale-[1.01] active:scale-[0.98]"
-                            }`}>
-                        {counting ? "Contando..." : "✅ Contar fichas y ver resultado"}
-                    </button>
-                </main>
-            )}
-
-            {/* ══════════════════ RESULT ══════════════════ */}
-            {phase === "result" && (
-                <main className="flex-1 flex flex-col items-center justify-center gap-5 px-4 py-6 overflow-y-auto">
-                    <div className="flex flex-wrap justify-center gap-2.5 min-h-14 items-center anim-up max-w-xs">
-                        {resultValue === 0
-                            ? <div className="text-5xl animate-float">⚖️</div>
-                            : Array.from({ length: Math.min(Math.abs(resultValue), 16) }).map((_, i) => (
+                {/* ── FASE 5: RESULTADO ── */}
+                {phase === "result" && (
+                    <div className="w-full max-w-[560px] flex flex-col items-center justify-center gap-2 lg:gap-3 flex-1 min-h-0 text-center py-1">
+                        {/* Remaining chips row */}
+                        <div className="flex flex-wrap justify-center gap-1.5 min-h-[36px] items-center max-w-sm">
+                            {chips.slice(0, 16).map((c, i) => (
                                 <div
-                                    key={i}
-                                    className={`w-11 h-11 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-sm shadow-lg animate-float
-                    ${resultValue > 0 ? "from-blue-400 to-blue-600 shadow-blue-500/40" : "from-red-400 to-red-600 shadow-red-500/40"}`}
-                                    style={{ animationDelay: `${i * 0.1}s` }}
+                                    key={c.id}
+                                    className={`w-8 h-8 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-[11px] shadow-md animate-float ${
+                                        c.color === "blue"
+                                            ? "from-blue-400 to-blue-600 shadow-blue-500/40"
+                                            : "from-red-400 to-red-600 shadow-red-500/40"
+                                    }`}
+                                    style={{ animationDelay: `${i * 0.08}s` }}
                                 >
-                                    {resultValue > 0 ? "+1" : "−1"}
+                                    {c.color === "blue" ? "+1" : "−1"}
                                 </div>
                             ))}
-                        {Math.abs(resultValue) > 16 && <span className="text-white/30 text-xs font-bold">+{Math.abs(resultValue) - 16}</span>}
-                    </div>
-
-                    <div className="text-center anim-up anim-pop" style={{ animationDelay: "0.1s" }}>
-                        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest mb-1">Resultado</p>
-                        <div className={`text-[72px] sm:text-8xl font-black tabular-nums leading-none ${resultBigColor} drop-shadow-2xl`}>
-                            {formatNum(resultValue)}
+                            {chips.length > 16 && (
+                                <span className="text-white/40 text-xs font-bold font-mono">
+                                    +{chips.length - 16}
+                                </span>
+                            )}
                         </div>
-                    </div>
 
-                    <div className="anim-up bg-white/4 border border-white/8 rounded-2xl px-5 py-4 max-w-xs w-full text-center" style={{ animationDelay: "0.2s" }}>
-                        <p className={`font-bold text-sm leading-relaxed ${resultTextColor}`}>{getResultText()}</p>
-                        {resultValue === 0 && <p className="text-purple-300/50 text-xs mt-1.5">¡Perfecto equilibrio! 🎉</p>}
-                    </div>
-
-                    <div className="anim-up bg-teal-500/8 border border-teal-500/20 rounded-2xl px-4 py-3 max-w-xs w-full" style={{ animationDelay: "0.26s" }}>
-                        <p className="text-teal-400/60 text-[10px] font-black uppercase tracking-widest mb-2 text-center">Lo que aprendimos</p>
-                        <div className="flex flex-col gap-1.5 text-sm font-black text-center">
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={aColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(aActual)}</span>
-                                <span className="text-white/30">×</span>
-                                <span className={bColor === "blue" ? "text-blue-300" : "text-red-300"}>{formatExpr(bActual)}</span>
+                        {/* Result number */}
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40 block mb-0.5">
+                                Resultado del Producto
+                            </span>
+                            <div
+                                className={`text-4xl lg:text-6xl font-black font-mono leading-none ${
+                                    resultValue > 0
+                                        ? "text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]"
+                                        : resultValue < 0
+                                        ? "text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]"
+                                        : "text-slate-300 drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]"
+                                }`}
+                            >
+                                {resultValue > 0 ? `+${resultValue}` : resultValue}
                             </div>
-                            <span className="text-teal-400/50 text-xs">↓ {Math.abs(aActual)} veces el {Math.abs(bActual)}</span>
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={aActual < 0 ? "text-red-300" : "text-blue-300"}>{Math.abs(aActual)} grupos de {Math.abs(bActual)} fichas</span>
-                                {aActual < 0 && <span className="text-amber-400 ml-2">→ cambiadas a {aActual < 0 ? "rojas" : "azules"}</span>}
-                            </div>
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={`text-sm font-bold ${signsSame ? "text-blue-300" : "text-red-300"}`}>Contamos {Math.abs(aActual) * Math.abs(bActual)} fichas</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <span className={`text-sm font-bold ${signsSame ? "text-blue-300" : "text-red-300"}`}>Signos {signsSame ? "iguales" : "diferentes"} → Resultado {signsSame ? "POSITIVO" : "NEGATIVO"}</span>
-                            </div>
-                            <span className="text-white/30 text-base">=</span>
-                            <span className={`text-lg font-black ${resultBigColor}`}>{formatNum(resultValue)}</span>
                         </div>
+
+                        {/* Feedback text badge */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 max-w-sm w-full">
+                            <p
+                                className={`font-bold text-xs ${
+                                    resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-slate-300"
+                                }`}
+                            >
+                                {getResultText()}
+                            </p>
+                        </div>
+
+                        {/* Law of signs rule card */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-3 py-2 max-w-sm w-full text-[11px] font-mono">
+                            <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1 text-center font-sans">
+                                Ley de Signos en la Multiplicación
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
+                                <span className={aActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(aActual)}
+                                </span>
+                                <span className="text-white/40">×</span>
+                                <span className={bActual >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(bActual)}
+                                </span>
+                                <span className="text-white/40">=</span>
+                                <span
+                                    className={
+                                        resultValue > 0
+                                            ? "text-blue-400"
+                                            : resultValue < 0
+                                            ? "text-red-400"
+                                            : "text-slate-300"
+                                    }
+                                >
+                                    {formatNum(resultValue)}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-teal-300 mt-1 text-center font-sans">
+                                {signsSame ? "(+) × (+) o (−) × (−) = (+)" : "(+) × (−) o (−) × (+) = (−)"}
+                            </div>
+                        </div>
+
+                        {/* New Exercise button */}
+                        <button
+                            onClick={handleReset}
+                            className="h-8 lg:h-9 px-4 rounded-xl text-xs lg:text-sm font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-95 transition-all cursor-pointer"
+                        >
+                            Nuevo Ejercicio 🔄
+                        </button>
                     </div>
+                )}
+            </div>
 
-                    <button onClick={handleReset}
-                        className="px-8 py-3.5 rounded-2xl text-base font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-105 active:scale-95 transition-all duration-200 glow-teal anim-up"
-                        style={{ animationDelay: "0.34s" }}>
-                        Nuevo Ejercicio 🔄
-                    </button>
-                </main>
-            )}
+            {/* 4. Barra Inferior de Acción y Feedback (40-48px) */}
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {phase === "setup" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Elige uno de los 3 casos clave o ajusta los factores a y b.
+                        </p>
+                    )}
+                    {phase === "build" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            {allGroupsFormed
+                                ? "¡Excelente! Cada grupo tiene exactamente la cantidad correspondiente."
+                                : "Arrastra las fichas de la bandeja inferior a cada grupo."}
+                        </p>
+                    )}
+                    {phase === "flip" && (
+                        <p className="text-[10px] lg:text-[11px] text-amber-300/80 truncate">
+                            Al ser a negativo, las fichas se invierten al signo opuesto.
+                        </p>
+                    )}
+                    {phase === "count" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Contando el total de fichas agrupadas.
+                        </p>
+                    )}
+                    {phase === "result" && (
+                        <p className="text-[10px] lg:text-[11px] text-emerald-400/90 truncate font-semibold">
+                            Multiplicación completada exitosamente.
+                        </p>
+                    )}
+                </div>
 
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {phase === "setup" && (
+                        <button
+                            disabled={!canGenerate}
+                            onClick={handleGenerate}
+                            className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
+                                canGenerate
+                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                            }`}
+                        >
+                            Comenzar →
+                        </button>
+                    )}
+
+                    {phase === "build" && (
+                        <button
+                            disabled={!allGroupsFormed}
+                            onClick={handleContinueFromBuild}
+                            className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
+                                allGroupsFormed
+                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                            }`}
+                        >
+                            {aActual < 0 ? "Invertir signos →" : "Contar fichas →"}
+                        </button>
+                    )}
+
+                    {phase === "flip" && (
+                        <button
+                            onClick={() => setPhase("count")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Siguiente: Conteo →
+                        </button>
+                    )}
+
+                    {phase === "count" && (
+                        <button
+                            onClick={() => setPhase("result")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Ver Resultado ✅
+                        </button>
+                    )}
+
+                    {phase === "result" && (
+                        <button
+                            onClick={handleReset}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Nuevo Reto 🔄
+                        </button>
+                    )}
+                </div>
+            </footer>
+
+            {/* Modal de Ayuda */}
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
-                title="¿Cómo multiplicar enteros con fichas?"
+                title="¿Cómo multiplicar números enteros?"
                 bgColor="#080c18"
                 buttonColor="bg-teal-500 hover:bg-teal-400"
             >
-                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
+                <div className="space-y-3 text-white/80 text-xs leading-relaxed">
+                    <div className="rounded-lg p-2.5 bg-teal-500/10 border border-teal-500/20">
+                        <p className="font-bold text-teal-300 mb-1">💡 La Ley de Signos</p>
+                        <ul className="space-y-1 font-mono text-teal-200">
+                            <li>(+) × (+) = (+) &nbsp;|&nbsp; (−) × (−) = (+)  <span className="font-sans text-white/60">(Signos iguales dan positivo)</span></li>
+                            <li>(+) × (−) = (−) &nbsp;|&nbsp; (−) × (+) = (−)  <span className="font-sans text-white/60">(Signos distintos dan negativo)</span></li>
+                        </ul>
+                    </div>
+
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Configura</p>
-                        <ol className="space-y-2 list-decimal list-inside">
-                            <li>En <strong className="text-white">a (grupos)</strong> elige el signo y cuántos grupos formar.</li>
-                            <li>En <strong className="text-white">b (cantidad)</strong> elige el signo y cuántas fichas van en cada grupo.</li>
-                            <li>Presiona <strong className="text-white">Generar Grupos ✨</strong>.</li>
+                        <p className="font-bold text-white/40 uppercase tracking-wider text-[10px] mb-1">
+                            Pasos del método interactivo:
+                        </p>
+                        <ol className="space-y-1.5 list-decimal list-inside text-white/70">
+                            <li>
+                                <strong className="text-white">1. Planteo:</strong> Ingresa cuántos grupos formar (factor a) y cuántas fichas van en cada grupo (factor b).
+                            </li>
+                            <li>
+                                <strong className="text-white">2. Formar Grupos:</strong> Arrastra las fichas de la bandeja inferior a cada columna. Puedes usar <strong className="text-amber-400">Auto-agrupar ⚡</strong>.
+                            </li>
+                            <li>
+                                <strong className="text-white">3. Invertir:</strong> Si el factor a es negativo, todas las fichas se invierten al color opuesto.
+                            </li>
+                            <li>
+                                <strong className="text-white">4. Conteo:</strong> Suma el total de fichas resultantes.
+                            </li>
                         </ol>
                     </div>
 
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Forma los grupos</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li><strong className="text-white">Arrastra</strong> las fichas a las columnas para crear los grupos.</li>
-                            <li>Cada columna debe tener exactamente <strong className="text-teal-400">|b|</strong> fichas.</li>
-                            <li>Cuando todos los grupos estén correctos, pulsa <strong className="text-teal-400">✅ ¡Listo! Siguiente paso →</strong>.</li>
-                        </ul>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Voltear (si a es negativo)</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li>Si <strong className="text-white">a</strong> es negativo, todas las fichas cambian de color: <span className="text-blue-400 font-bold">+1</span> → <span className="text-red-400 font-bold">−1</span> y viceversa.</li>
-                            <li>Si <strong className="text-white">a</strong> es positivo, se salta este paso.</li>
-                        </ul>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 4 — Contar y resultado</p>
-                        <ul className="space-y-2 list-disc list-inside">
-                            <li>Presiona <strong className="text-teal-400">✅ Contar fichas y ver resultado</strong>.</li>
-                            <li>Se cuentan todas las fichas y se muestra el <strong className="text-white">valor final</strong>.</li>
-                        </ul>
-                    </div>
-
-                    <div className="rounded-xl p-3" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)" }}>
-                        <p className="text-xs font-bold mb-1 text-teal-400">💡 Idea clave</p>
-                        <p className="text-xs text-white/60">Multiplicar es hacer <strong className="text-teal-400">grupos iguales</strong>. Signos iguales → resultado <span className="text-blue-400 font-bold">positivo</span>. Signos diferentes → resultado <span className="text-red-400 font-bold">negativo</span>.</p>
+                    <div className="rounded-lg p-2 bg-white/5 border border-white/10 text-[11px]">
+                        <span className="font-bold text-white">Convención de colores:</span>
+                        <div className="flex items-center gap-3 mt-1">
+                            <span className="text-blue-300 flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" /> Positivos (+1)
+                            </span>
+                            <span className="text-red-300 flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Negativos (−1)
+                            </span>
+                        </div>
                     </div>
                 </div>
             </ModalHelp>

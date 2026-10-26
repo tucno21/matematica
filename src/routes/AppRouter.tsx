@@ -57,11 +57,11 @@ const router = createBrowserRouter([
     },
     {
         path: '/producto-enteros',
-        element: <Layout><ProductoEnteroView /></Layout>
+        element: <ProductoEnteroView />
     },
     {
         path: '/division-enteros',
-        element: <Layout><DivisionEnterosView /></Layout>
+        element: <DivisionEnterosView />
     },
     {
         path: '/tres-jarras',

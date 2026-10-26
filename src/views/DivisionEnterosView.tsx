@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
 
-// ─── TIPOS ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "setup" | "predict" | "build" | "flip" | "count" | "result";
 type ChipColor = "blue" | "red";
 
@@ -13,363 +13,268 @@ interface Chip {
     y: number;
     exploding: boolean;
     exploded: boolean;
+    groupIndex: number; // -1: unassigned, 0..absDivisor-1
 }
 
-interface Exercise {
-    dividend: number;  // total de fichas (con signo)
-    divisor: number;   // número de GRUPOS (con signo)
+interface ExerciseCase {
+    id: string;
+    label: string;
+    equation: string;
+    dividend: number; // Total fichas con signo
+    divisor: number;  // Número de grupos con signo
     story: string;
-    chipLabel: (color: ChipColor) => string;
-    resultLabel: (value: number) => string;
+    resultLabel: (v: number) => string;
 }
 
-// ─── CONSTANTES ──────────────────────────────────────────────────────────────
-const CHIP_SIZE = 46;
-const uid = () => Math.random().toString(36).slice(2, 9);
+// ─── Constants ────────────────────────────────────────────────────────────────
+const CHIP_SIZE = 42;
 
-/*
- * LÓGICA CORRECTA DE DIVISIÓN:
- *   dividendo ÷ divisor = cociente
- *   |divisor|  = número de GRUPOS que se forman
- *   |cociente| = fichas por grupo
- *
- *   Ejemplo: (+6) ÷ (+2) = +3
- *     → 6 fichas azules, repartidas en 2 grupos → 3 fichas por grupo → resultado +3
- */
-
-const EXERCISES: Exercise[] = [
+// Exactamente 3 casos pedagógicos para la regla de signos de la división
+const PRESET_CASES: ExerciseCase[] = [
     {
-        dividend: 6, divisor: 2,
-        story: "Ganas s/6 en un juego y los repartes entre 2 amigos por igual. ¿Cuánto recibe cada amigo?",
-        chipLabel: (c) => c === "blue" ? "s/1 ganado" : "s/1 perdido",
-        resultLabel: (v) => v > 0 ? `Cada amigo recibe s/${v}` : `Cada amigo pierde s/${Math.abs(v)}`,
+        id: "c1",
+        label: "Caso 1",
+        equation: "(+6) ÷ (+2)",
+        dividend: 6,
+        divisor: 2,
+        story: "Ganas s/6 en un juego y los repartes entre 2 amigos por igual. ¿Cuánto recibe cada uno?",
+        resultLabel: (v) => `Cada amigo recibe s/${v} de ganancia.`,
     },
     {
-        dividend: 8, divisor: -4,
-        story: "Tienes s/8 de ganancia y debes pagar 4 deudas iguales. Si usas tu ganancia para pagarlas, ¿cuánto pagas por cada deuda?",
-        chipLabel: (c) => c === "blue" ? "s/1 ganado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Sobra s/${v} por deuda` : `Pagas s/${Math.abs(v)} por deuda`,
+        id: "c2",
+        label: "Caso 2",
+        equation: "(−6) ÷ (+2)",
+        dividend: -6,
+        divisor: 2,
+        story: "Dos amigos perdieron juntos s/6 en un torneo en partes iguales. ¿Cuánto perdió cada uno?",
+        resultLabel: (v) => `Cada amigo perdió s/${Math.abs(v)}.`,
     },
     {
-        dividend: -12, divisor: 3,
-        story: "3 amigos perdieron juntos s/12 en un torneo. Si la pérdida es igual para todos, ¿cuánto perdió cada uno?",
-        chipLabel: (c) => c === "blue" ? "s/1 ganado" : "s/1 perdido",
-        resultLabel: (v) => v > 0 ? `Cada uno ganó s/${v}` : `Cada uno perdió s/${Math.abs(v)}`,
-    },
-    {
-        dividend: -10, divisor: -5,
-        story: "Tienes una deuda de s/10. Si cada semana reduces s/5, ¿cuántas semanas tardarás en llegar a s/0?",
-        chipLabel: (c) => c === "blue" ? "s/1 pagado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Tardarás ${v} semanas` : `Tardarás ${Math.abs(v)} semanas`,
-    },
-    {
-        dividend: 12, divisor: 3,
-        story: "Subes 12 pisos en 3 viajes iguales en ascensor. ¿Cuántos pisos subes por viaje?",
-        chipLabel: (c) => c === "blue" ? "↑ 1 piso" : "↓ 1 piso",
-        resultLabel: (v) => v > 0 ? `Subes ${v} pisos por viaje` : `Bajas ${Math.abs(v)} pisos por viaje`,
-    },
-    {
-        dividend: 6, divisor: -2,
-        story: "Tienes 6 puntos a favor pero cometiste 2 faltas graves. Si te descuentan puntos por igual, ¿cuánto pierdes por falta?",
-        chipLabel: (c) => c === "blue" ? "+1 punto" : "−1 punto",
-        resultLabel: (v) => v > 0 ? `Ganas ${v} puntos por falta` : `Pierdes ${Math.abs(v)} puntos por falta`,
-    },
-    {
-        dividend: -8, divisor: 4,
-        story: "La temperatura bajó 8°C en 4 horas. Si bajó la misma cantidad cada hora, ¿cuánto bajó por hora?",
-        chipLabel: (c) => c === "blue" ? "+1°C" : "−1°C",
-        resultLabel: (v) => v > 0 ? `Subió ${v}°C por hora` : `Bajó ${Math.abs(v)}°C por hora`,
-    },
-    {
-        dividend: -12, divisor: -3,
-        story: "Tienes una deuda de s/12. Si cada semana reduces s/3, ¿cuántas semanas tardarás en llegar a s/0?",
-        chipLabel: (c) => c === "blue" ? "s/1 pagado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Tardarás ${v} semanas` : `Tardarás ${Math.abs(v)} semanas`,
-    },
-    {
-        dividend: 8, divisor: 4,
-        story: "Tienes 8 manzanas para repartir en 4 canastas iguales. ¿Cuántas manzanas van en cada canasta?",
-        chipLabel: (c) => c === "blue" ? "🍎 +1" : "🍎 −1",
-        resultLabel: (v) => v > 0 ? `${v} manzanas por canasta` : `Faltan ${Math.abs(v)} por canasta`,
-    },
-    {
-        dividend: 10, divisor: -5,
-        story: "Ganaste 10 puntos en un juego pero cometiste 5 faltas. Si te descuentan puntos por igual, ¿cuánto pierdes por falta?",
-        chipLabel: (c) => c === "blue" ? "+1 punto" : "−1 punto",
-        resultLabel: (v) => v > 0 ? `Ganas ${v} puntos por falta` : `Pierdes ${Math.abs(v)} puntos por falta`,
-    },
-    {
-        dividend: -6, divisor: 2,
-        story: "Perdiste s/6 en total repartidos en 2 días iguales. ¿Cuánto perdiste cada día?",
-        chipLabel: (c) => c === "blue" ? "s/1 ganado" : "s/1 perdido",
-        resultLabel: (v) => v > 0 ? `Ganaste s/${v} por día` : `Perdiste s/${Math.abs(v)} por día`,
-    },
-    {
-        dividend: -8, divisor: -4,
-        story: "Tienes una deuda de s/8. Si cada semana reduces s/4, ¿cuántas semanas tardarás en llegar a s/0?",
-        chipLabel: (c) => c === "blue" ? "s/1 pagado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Tardarás ${v} semanas` : `Tardarás ${Math.abs(v)} semanas`,
-    },
-    {
-        dividend: 10, divisor: 5,
-        story: "Un equipo anota 10 goles en 5 partidos iguales. ¿Cuántos goles anota por partido?",
-        chipLabel: (c) => c === "blue" ? "⚽ +1" : "⚽ −1",
-        resultLabel: (v) => v > 0 ? `${v} goles por partido` : `${Math.abs(v)} goles en contra por partido`,
-    },
-    {
-        dividend: 12, divisor: -3,
-        story: "Ahorraste s/12 pero tienes 3 cuentas que pagar iguales. ¿Cuánto pagas por cada cuenta?",
-        chipLabel: (c) => c === "blue" ? "s/1 ahorrado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Sobra s/${v} por cuenta` : `Pagas s/${Math.abs(v)} por cuenta`,
-    },
-    {
-        dividend: -10, divisor: 5,
-        story: "Un submarino baja 10 metros en 5 minutos iguales. ¿Cuánto baja por minuto?",
-        chipLabel: (c) => c === "blue" ? "🐟 +1m" : "🐟 −1m",
-        resultLabel: (v) => v > 0 ? `Sube ${v}m por minuto` : `Baja ${Math.abs(v)}m por minuto`,
-    },
-    {
-        dividend: -6, divisor: -2,
-        story: "Tienes una deuda de s/6. Si cada semana reduces s/2, ¿cuántas semanas tardarás en llegar a s/0?",
-        chipLabel: (c) => c === "blue" ? "s/1 pagado" : "s/1 deuda",
-        resultLabel: (v) => v > 0 ? `Tardarás ${v} semanas` : `Tardarás ${Math.abs(v)} semanas`,
+        id: "c3",
+        label: "Caso 3",
+        equation: "(−6) ÷ (−2)",
+        dividend: -6,
+        divisor: -2,
+        story: "Tienes una deuda de s/6 y pagas cuotas semanales de s/2. ¿En cuántas semanas se salda?",
+        resultLabel: (v) => `Se necesitan ${v} cuotas para saldar la deuda.`,
     },
 ];
 
-// ─── UTILIDADES ──────────────────────────────────────────────────────────────
-function buildChipsForGroup(
-    totalChips: number,
-    color: ChipColor,
-    _numGroups: number,
-    areaW: number,
-    areaH: number,
-): Chip[] {
-    // Coloca las fichas en la zona de "sin grupo" (derecha de la pantalla o en la base)
-    // Zona de origen: franja inferior de la pantalla
-    if (totalChips === 0) return [];
-    const chips: Chip[] = [];
-    const cols = Math.ceil(Math.sqrt(totalChips));
-    for (let i = 0; i < totalChips; i++) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const startX = areaW * 0.55 + col * (CHIP_SIZE + 6);
-        const startY = 10 + row * (CHIP_SIZE + 6);
-        chips.push({
-            id: uid(),
-            color,
-            x: Math.min(startX, areaW - CHIP_SIZE - 4),
-            y: Math.min(startY, areaH - CHIP_SIZE - 4),
-            exploding: false,
-            exploded: false,
-        });
-    }
-    return chips;
+const RANDOM_BANK: Array<{ dividend: number; divisor: number; story: string; resultLabel: (v: number) => string }> = [
+    {
+        dividend: 8,
+        divisor: 2,
+        story: "Repartes 8 puntos a favor entre 2 equipos por igual.",
+        resultLabel: (v) => `Cada equipo recibe ${v} puntos a favor.`,
+    },
+    {
+        dividend: 8,
+        divisor: -4,
+        story: "Tienes 8 puntos ganados pero tienes 4 sanciones iguales por pagar.",
+        resultLabel: (v) => `Pagas ${Math.abs(v)} puntos por sanción.`,
+    },
+    {
+        dividend: -8,
+        divisor: 4,
+        story: "La temperatura descendió 8°C de manera constante en 4 horas.",
+        resultLabel: (v) => `La temperatura bajó ${Math.abs(v)}°C cada hora.`,
+    },
+    {
+        dividend: -8,
+        divisor: -2,
+        story: "Tienes una deuda de s/8 y descuentas s/2 por semana.",
+        resultLabel: (v) => `Se cancela en ${v} semanas.`,
+    },
+];
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function pickRandomExercise(): ExerciseCase {
+    const item = RANDOM_BANK[Math.floor(Math.random() * RANDOM_BANK.length)];
+    const format = (n: number) => (n >= 0 ? `(+${n})` : `(${n})`);
+    return {
+        id: `rand-${Date.now()}`,
+        label: "Aleatorio",
+        equation: `${format(item.dividend)} ÷ ${format(item.divisor)}`,
+        dividend: item.dividend,
+        divisor: item.divisor,
+        story: item.story,
+        resultLabel: item.resultLabel,
+    };
 }
 
-// ─── COMPONENTES MENORES ──────────────────────────────────────────────────────
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 const TOKEN = {
     blue: {
-        grad: "from-blue-400 to-blue-600",
-        shadow: "shadow-blue-500/40",
-        border: "border-blue-300/30",
+        bg: "bg-blue-500/10",
+        border: "border-blue-500/25",
+        text: "text-blue-300",
+        dot: "bg-blue-500",
+        btn: "bg-blue-500 hover:bg-blue-400",
+        chipGrad: "from-blue-400 to-blue-600",
+        chipShadow: "shadow-blue-500/40",
+        chipBorder: "border-blue-300/30",
+        sign: "+1",
         particle: "#60a5fa",
     },
     red: {
-        grad: "from-red-400 to-red-600",
-        shadow: "shadow-red-500/40",
-        border: "border-red-300/30",
+        bg: "bg-red-500/10",
+        border: "border-red-500/25",
+        text: "text-red-300",
+        dot: "bg-red-500",
+        btn: "bg-red-500 hover:bg-red-400",
+        chipGrad: "from-red-400 to-red-600",
+        chipShadow: "shadow-red-500/40",
+        chipBorder: "border-red-300/30",
+        sign: "−1",
         particle: "#f87171",
     },
 };
 
-function ChipEl({
-    chip, isFlipping, canDrag, dragging, onPointerDown, label,
-}: {
-    chip: Chip;
-    isFlipping: boolean;
-    canDrag: boolean;
-    dragging: boolean;
-    onPointerDown: (e: React.PointerEvent, id: string) => void;
-    label?: string;
-}) {
-    if (chip.exploded) return null;
-    const t = TOKEN[chip.color];
-    return (
-        <div
-            className={`absolute select-none touch-none
-                ${chip.exploding ? "animate-explode" : ""}
-                ${isFlipping ? "animate-flip" : ""}
-                ${dragging ? "scale-125 z-50" : "z-10"}
-                ${canDrag && !dragging ? "hover:scale-110 cursor-grab active:cursor-grabbing" : ""}
-            `}
-            style={{ width: CHIP_SIZE, height: CHIP_SIZE, left: chip.x, top: chip.y }}
-            onPointerDown={(e) => onPointerDown(e, chip.id)}
-        >
-            <div className={`w-full h-full rounded-full bg-linear-to-br ${t.grad} border-2 ${t.border} shadow-lg ${t.shadow} flex items-center justify-center`}>
-                <span className="text-white font-black text-[13px] leading-none select-none">
-                    {label ?? (chip.color === "blue" ? "+1" : "−1")}
-                </span>
-            </div>
-            {chip.exploding && (
-                <div className="absolute inset-0 pointer-events-none">
-                    {Array.from({ length: 8 }, (_, i) => (
-                        <div key={i} className="absolute w-2 h-2 rounded-full animate-particle"
-                            style={{ background: t.particle, left: "50%", top: "50%", "--angle": `${i * 45}deg` } as React.CSSProperties} />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function MiniChip({ positive }: { positive: boolean }) {
-    return (
-        <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[9px] font-black text-white
-            ${positive ? "bg-blue-500" : "bg-red-500"}`}>
-            {positive ? "+" : "−"}
-        </span>
-    );
-}
-
-// ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DivisionEnterosView() {
     const navigate = useNavigate();
 
-    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-    const [exercisePage, setExercisePage] = useState(0);
+    // Estado del ejercicio actual
+    const [currentCase, setCurrentCase] = useState<ExerciseCase>(PRESET_CASES[0]);
+    const [activePreset, setActivePreset] = useState<string | null>("c1");
+
     const [phase, setPhase] = useState<Phase>("setup");
 
     // Predicción
     const [userPrediction, setUserPrediction] = useState<"positive" | "negative" | null>(null);
     const [predictionResult, setPredictionResult] = useState<"correct" | "wrong" | null>(null);
-    const [predictionAttempts, setPredictionAttempts] = useState(0);
 
-    // Fichas y área
+    // Fichas y columnas
     const areaRef = useRef<HTMLDivElement>(null);
     const [chips, setChips] = useState<Chip[]>([]);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
 
-    // Columnas dinámicas: el usuario empieza con 1 y va añadiendo
-    // Cada columna representa un GRUPO
-    const [numColumns, setNumColumns] = useState(1);
-
-    // Flip
-    const [flipping, setFlipping] = useState(false);
     const [flippingIds, setFlippingIds] = useState<Set<string>>(new Set());
-
-    // Resultado
-    const [counting, setCounting] = useState(false);
-    const [resultValue, setResultValue] = useState(0);
+    const [isFlippingAll, setIsFlippingAll] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
-    const [discoveries, setDiscoveries] = useState<Array<{ dividend: number; divisor: number; result: number }>>([]);
 
-    // ── Valores derivados ─────────────────────────────────────────────────────
-    const dividend = selectedExercise?.dividend ?? 0;
-    const divisor = selectedExercise?.divisor ?? 0;
+    // ── Computed Values ───────────────────────────────────────────────────────
+    const dividend = currentCase.dividend;
+    const divisor = currentCase.divisor;
     const quotient = divisor !== 0 ? dividend / divisor : 0;
 
     const absDividend = Math.abs(dividend);
-    const absDivisor = Math.abs(divisor);   // número correcto de grupos
-    const absQuotient = Math.abs(quotient); // fichas por grupo
+    const absDivisor = Math.max(1, Math.abs(divisor)); // Grupos a formar
+    const absQuotient = Math.abs(quotient);            // Fichas por grupo
 
-    const activeChips = chips.filter(c => !c.exploded && !c.exploding);
-    const liveBlue = activeChips.filter(c => c.color === "blue").length;
-    const liveRed = activeChips.filter(c => c.color === "red").length;
-
-    const signsSame = (dividend >= 0) === (divisor >= 0);
     const needFlip = divisor < 0;
-    const correctSign: "positive" | "negative" = quotient >= 0 ? "positive" : "negative";
+    const signsSame = (dividend >= 0) === (divisor >= 0);
+    const initialChipColor: ChipColor = dividend >= 0 ? "blue" : "red";
 
-    const resultBigColor = resultValue > 0 ? "text-blue-400" : resultValue < 0 ? "text-red-400" : "text-purple-400";
-    const resultTextColor = resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-purple-300";
-    const dividendTextColor = dividend >= 0 ? "text-blue-300" : "text-red-300";
-    const divisorTextColor = divisor >= 0 ? "text-blue-300" : "text-red-300";
+    const activeChips = chips.filter((c) => !c.exploded && !c.exploding);
+    const liveBlue = activeChips.filter((c) => c.color === "blue").length;
+    const liveRed = activeChips.filter((c) => c.color === "red").length;
 
-    const formatNum = (n: number) => n >= 0 ? `+${n}` : `${n}`;
-    const formatExpr = (n: number) => n >= 0 ? `(+${n})` : `(${n})`;
+    const formatNum = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+    const formatExpr = (n: number) => (n >= 0 ? `(+${n})` : `(${n})`);
 
-    // ── LÓGICA DE GRUPOS ──────────────────────────────────────────────────────
-    /*
-     * REGLA CORREGIDA:
-     *   - El divisor indica CUÁNTOS GRUPOS se forman (|divisor| columnas)
-     *   - El cociente indica CUÁNTAS FICHAS hay en cada grupo (|quotient|)
-     *   - Validación: cada columna activa debe tener exactamente |quotient| fichas
-     *     Y el número de columnas con fichas debe ser exactamente |divisor|
-     */
-    const getColumnForChip = useCallback((chipX: number, areaW: number): number => {
-        if (numColumns === 0) return 0;
-        return Math.floor(chipX / (areaW / numColumns));
-    }, [numColumns]);
+    // ── Group Status & Validation ─────────────────────────────────────────────
+    const chipsInGroup = useCallback(
+        (groupIndex: number) => chips.filter((c) => c.groupIndex === groupIndex).length,
+        [chips]
+    );
 
-    const chipsPerColumn = useCallback((): number[] => {
-        const rect = areaRef.current?.getBoundingClientRect();
-        if (!rect || numColumns === 0) return [];
-        const counts = new Array(numColumns).fill(0);
-        activeChips.forEach(chip => {
-            const col = getColumnForChip(chip.x, rect.width);
-            if (col >= 0 && col < numColumns) counts[col]++;
-        });
-        return counts;
-    }, [activeChips, numColumns, getColumnForChip]);
+    const allGroupsFormed = Array.from({ length: absDivisor }).every(
+        (_, i) => chipsInGroup(i) === absQuotient
+    );
 
-    // Un grupo es válido si tiene exactamente absQuotient fichas
-    const columnCounts = chipsPerColumn();
-    const validGroups = columnCounts.filter(c => c === absQuotient).length;
-    // La tarea está completa cuando:
-    //   - el número de columnas = absDivisor (número correcto de grupos)
-    //   - cada columna tiene absQuotient fichas
-    const groupsAreCorrect = numColumns === absDivisor && validGroups === absDivisor && activeChips.length === absDividend;
-
-    // ── HANDLERS ──────────────────────────────────────────────────────────────
-    const handleSelectExercise = (exercise: Exercise) => {
-        setSelectedExercise(exercise);
+    // ── Presets ───────────────────────────────────────────────────────────────
+    const applyPreset = (preset: ExerciseCase) => {
+        setCurrentCase(preset);
+        setActivePreset(preset.id);
         setUserPrediction(null);
         setPredictionResult(null);
-        setPredictionAttempts(0);
-        setNumColumns(1);
-        setPhase("predict");
+        setChips([]);
+        setPhase("setup");
     };
 
-    const handlePredict = (prediction: "positive" | "negative") => {
-        setUserPrediction(prediction);
-        if (prediction === correctSign) {
-            setPredictionResult("correct");
-        } else {
-            setPredictionResult("wrong");
-            setPredictionAttempts(a => a + 1);
-        }
-    };
+    const handleRandomCase = useCallback(() => {
+        const rand = pickRandomExercise();
+        setCurrentCase(rand);
+        setActivePreset(null);
+        setUserPrediction(null);
+        setPredictionResult(null);
+        setChips([]);
+        setPhase("setup");
+    }, []);
 
-    const handleContinueFromPredict = () => {
-        setPhase("build");
-    };
-
-    // Construir fichas cuando entramos a "build"
+    // ── Generar Fichas (Build) ────────────────────────────────────────────────
     useEffect(() => {
-        if (phase === "build" && chips.length === 0 && selectedExercise) {
-            setTimeout(() => {
+        if (phase === "build" && chips.length === 0) {
+            const timer = setTimeout(() => {
                 const rect = areaRef.current?.getBoundingClientRect();
-                const w = rect?.width ?? Math.min(window.innerWidth - 24, 520);
-                const h = rect?.height ?? 320;
-                const color: ChipColor = dividend >= 0 ? "blue" : "red";
-                setChips(buildChipsForGroup(absDividend, color, absDivisor, w, h));
-            }, 120);
-        }
-    }, [phase, absDividend, absDivisor, dividend, selectedExercise, chips.length]);
+                const w = rect?.width ?? 480;
+                const h = rect?.height ?? 300;
 
-    // Drag & drop
-    const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
-        if (phase !== "build") return;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        const chip = chips.find(c => c.id === id);
-        if (!chip || chip.exploded || chip.exploding) return;
+                const newChips: Chip[] = [];
+                for (let i = 0; i < absDividend; i++) {
+                    const spacing = Math.min(CHIP_SIZE + 6, (w - 24) / Math.max(1, absDividend));
+                    const x = Math.max(8, Math.min(w - CHIP_SIZE - 8, 12 + i * spacing));
+                    const y = Math.max(h * 0.72, Math.min(h - CHIP_SIZE - 6, h * 0.78));
+
+                    newChips.push({
+                        id: uid(),
+                        color: initialChipColor,
+                        x,
+                        y,
+                        exploding: false,
+                        exploded: false,
+                        groupIndex: -1,
+                    });
+                }
+                setChips(newChips);
+            }, 60);
+            return () => clearTimeout(timer);
+        }
+    }, [phase, absDividend, initialChipColor, chips.length]);
+
+    // ── Auto-repartir equitativamente ─────────────────────────────────────────
+    const handleAutoDistribute = () => {
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
-        dragOffset.current = {
-            x: e.clientX - rect.left - chip.x,
-            y: e.clientY - rect.top - chip.y,
-        };
+        const w = rect.width;
+        const colW = w / absDivisor;
+
+        setChips((prev) => {
+            const updated = [...prev];
+            let chipIdx = 0;
+            for (let g = 0; g < absDivisor; g++) {
+                const colCenter = g * colW + colW / 2;
+                for (let c = 0; c < absQuotient; c++) {
+                    if (chipIdx < updated.length) {
+                        const targetX = colCenter - CHIP_SIZE / 2;
+                        const targetY = 32 + c * (CHIP_SIZE + 6);
+                        updated[chipIdx] = {
+                            ...updated[chipIdx],
+                            x: targetX,
+                            y: targetY,
+                            groupIndex: g,
+                        };
+                        chipIdx++;
+                    }
+                }
+            }
+            return updated;
+        });
+    };
+
+    // ── Drag & Drop Handlers ──────────────────────────────────────────────────
+    const handlePointerDown = useCallback((e: React.PointerEvent, id: string) => {
+        if (phase !== "build") return;
+        const chip = chips.find((c) => c.id === id);
+        if (!chip || chip.exploded || chip.exploding) return;
+
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const rect = areaRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        dragOffset.current = { x: e.clientX - rect.left - chip.x, y: e.clientY - rect.top - chip.y };
         setDraggingId(id);
     }, [chips, phase]);
 
@@ -377,790 +282,846 @@ export default function DivisionEnterosView() {
         if (!draggingId) return;
         const rect = areaRef.current?.getBoundingClientRect();
         if (!rect) return;
-        setChips(prev => prev.map(c => c.id === draggingId ? {
-            ...c,
-            x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
-            y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
-        } : c));
+
+        setChips((prev) =>
+            prev.map((c) =>
+                c.id === draggingId
+                    ? {
+                        ...c,
+                        x: Math.max(0, Math.min(rect.width - CHIP_SIZE, e.clientX - rect.left - dragOffset.current.x)),
+                        y: Math.max(0, Math.min(rect.height - CHIP_SIZE, e.clientY - rect.top - dragOffset.current.y)),
+                    }
+                    : c
+            )
+        );
     }, [draggingId]);
 
     const handlePointerUp = useCallback(() => {
         if (!draggingId) return;
         const rect = areaRef.current?.getBoundingClientRect();
-        if (rect && numColumns > 0) {
-            const chip = chips.find(c => c.id === draggingId);
+        if (rect) {
+            const chip = chips.find((c) => c.id === draggingId);
             if (chip) {
-                const col = getColumnForChip(chip.x, rect.width);
-                const columnWidth = rect.width / numColumns;
-                const snapX = col * columnWidth + (columnWidth - CHIP_SIZE) / 2;
-                setChips(prev => prev.map(c =>
-                    c.id === draggingId ? { ...c, x: Math.max(0, Math.min(rect.width - CHIP_SIZE, snapX)) } : c
-                ));
+                const colW = rect.width / absDivisor;
+                if (chip.y < rect.height * 0.7) {
+                    const targetGroup = Math.max(0, Math.min(absDivisor - 1, Math.floor(chip.x / colW)));
+                    const chipsAlreadyInGroup = chips.filter(
+                        (c) => c.id !== draggingId && c.groupIndex === targetGroup
+                    ).length;
+
+                    const snapX = targetGroup * colW + (colW - CHIP_SIZE) / 2;
+                    const snapY = 32 + chipsAlreadyInGroup * (CHIP_SIZE + 6);
+
+                    setChips((prev) =>
+                        prev.map((c) =>
+                            c.id === draggingId
+                                ? { ...c, x: snapX, y: snapY, groupIndex: targetGroup }
+                                : c
+                        )
+                    );
+                } else {
+                    setChips((prev) =>
+                        prev.map((c) => (c.id === draggingId ? { ...c, groupIndex: -1 } : c))
+                    );
+                }
             }
         }
         setDraggingId(null);
-    }, [draggingId, chips, numColumns, getColumnForChip]);
+    }, [draggingId, chips, absDivisor]);
 
-    // Cambiar número de columnas — re-distribuir fichas cuando cambia
-    const handleChangeColumns = useCallback((delta: number) => {
-        setNumColumns(prev => {
-            const next = Math.max(1, Math.min(absDivisor + 2, prev + delta));
-            return next;
-        });
-    }, [absDivisor]);
+    // ── Predict Handlers ──────────────────────────────────────────────────────
+    const handlePredict = (prediction: "positive" | "negative") => {
+        setUserPrediction(prediction);
+        const correctSign = quotient >= 0 ? "positive" : "negative";
+        if (prediction === correctSign) {
+            setPredictionResult("correct");
+        } else {
+            setPredictionResult("wrong");
+        }
+    };
 
-    // Flip
-    const handleFlipAll = useCallback(() => {
-        setFlipping(true);
-        const toFlip = chips.filter(c => !c.exploded && !c.exploding);
-        setFlippingIds(new Set(toFlip.map(c => c.id)));
-        setTimeout(() => {
-            let idx = 0;
-            const interval = setInterval(() => {
-                if (idx >= toFlip.length) {
-                    clearInterval(interval);
-                    setFlipping(false);
-                    setFlippingIds(new Set());
-                    setPhase("count");
-                } else {
-                    const chip = toFlip[idx];
-                    setChips(prev => prev.map(c =>
-                        c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue" } : c
-                    ));
-                    idx++;
-                }
-            }, 180);
-        }, 80);
-    }, [chips]);
+    // ── Flip Phase (Inversión cuando divisor < 0) ──────────────────────────────
+    const handleFlipAll = async () => {
+        setIsFlippingAll(true);
+        const toFlip = chips.filter((c) => !c.exploded && !c.exploding);
 
-    // Contar y resultado
-    const handleCount = useCallback(() => {
-        setCounting(true);
-        setTimeout(() => {
-            setResultValue(quotient);
-            setDiscoveries(prev => [...prev, { dividend, divisor, result: quotient }]);
-            setCounting(false);
-            setPhase("result");
-        }, 500);
-    }, [quotient, dividend, divisor]);
+        for (const chip of toFlip) {
+            setFlippingIds((prev) => new Set(prev).add(chip.id));
+            await new Promise((r) => setTimeout(r, 120));
+            setChips((prev) =>
+                prev.map((c) =>
+                    c.id === chip.id ? { ...c, color: c.color === "blue" ? "red" : "blue" } : c
+                )
+            );
+            await new Promise((r) => setTimeout(r, 60));
+            setFlippingIds((prev) => {
+                const n = new Set(prev);
+                n.delete(chip.id);
+                return n;
+            });
+            await new Promise((r) => setTimeout(r, 30));
+        }
+        setIsFlippingAll(false);
+    };
 
+    // ── Reset ─────────────────────────────────────────────────────────────────
     const handleReset = () => {
-        setSelectedExercise(null);
         setChips([]);
-        setFlipping(false);
+        setDraggingId(null);
         setFlippingIds(new Set());
-        setCounting(false);
-        setResultValue(0);
         setUserPrediction(null);
         setPredictionResult(null);
-        setPredictionAttempts(0);
-        setNumColumns(1);
         setPhase("setup");
     };
 
-    // ── DATOS DE UI ───────────────────────────────────────────────────────────
-    const phaseList: Phase[] = ["setup", "predict", "build", "flip", "count", "result"];
-    const pageExercises = EXERCISES.slice(exercisePage * 4, exercisePage * 4 + 4);
-    const totalPages = Math.ceil(EXERCISES.length / 4);
-    const chipLabel = selectedExercise?.chipLabel;
+    const getResultText = () => {
+        if (quotient === 0) return "Cero dividido entre cualquier número es 0.";
+        if (quotient > 0)
+            return `Cada grupo contiene ${absQuotient} fichas positivas. Signos iguales → resultado POSITIVO (+${quotient}).`;
+        return `Cada grupo contiene ${absQuotient} fichas negativas. Signos distintos → resultado NEGATIVO (${quotient}).`;
+    };
 
-    // Feedback de grupos en tiempo real
-    const groupFeedback = (() => {
-        if (numColumns < absDivisor) return `Divide la pantalla en ${absDivisor} grupos`;
-        if (numColumns > absDivisor) return `Tienes ${numColumns - absDivisor} grupo${numColumns - absDivisor > 1 ? "s" : ""} de más (necesitas ${absDivisor})`;
-        const wrong = columnCounts.filter(c => c !== absQuotient).length;
-        if (wrong > 0) return `Cada grupo debe tener ${absQuotient} ficha${absQuotient > 1 ? "s" : ""}`;
-        return "✅ ¡Perfecto!";
-    })();
+    const phaseLabels: Record<Phase, string> = {
+        setup: "1. Planteo",
+        predict: "2. Predicción",
+        build: "3. Reparto",
+        flip: "4. Invertir",
+        count: "4. Conteo",
+        result: "5. Resultado",
+    };
+    const phaseKeys: Phase[] = [
+        "setup",
+        "predict",
+        "build",
+        ...(needFlip ? (["flip"] as Phase[]) : []),
+        "count",
+        "result",
+    ];
 
-    // ── RENDER ────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-dvh bg-[#080c18] text-white flex flex-col" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
                 @keyframes explode {
                     0%   { transform: scale(1);   opacity: 1; }
-                    45%  { transform: scale(1.7); opacity: 0.7; }
+                    45%  { transform: scale(1.6); opacity: 0.7; }
                     100% { transform: scale(0);   opacity: 0; }
                 }
-                .animate-explode { animation: explode 0.48s ease-out forwards; }
-                @keyframes particle {
-                    0%   { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0); opacity: 1; }
-                    100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(-44px); opacity: 0; }
-                }
-                .animate-particle { animation: particle 0.48s ease-out forwards; }
+                .animate-explode { animation: explode 0.45s ease-out forwards; }
                 @keyframes floatChip {
-                    0%,100% { transform: translateY(0) rotate(-4deg); }
-                    50%     { transform: translateY(-10px) rotate(4deg); }
+                    0%, 100% { transform: translateY(0) rotate(-3deg); }
+                    50%      { transform: translateY(-6px) rotate(3deg); }
                 }
-                .animate-float { animation: floatChip 2.6s ease-in-out infinite; }
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(18px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-                .anim-up { animation: fadeUp 0.42s ease-out both; }
-                @keyframes popIn {
-                    0%   { transform: scale(0.72); opacity: 0; }
-                    70%  { transform: scale(1.06); }
-                    100% { transform: scale(1);    opacity: 1; }
-                }
-                .anim-pop { animation: popIn 0.38s ease-out both; }
-                @keyframes glowTeal {
-                    0%,100% { box-shadow: 0 0 18px rgba(20,184,166,.35); }
-                    50%     { box-shadow: 0 0 36px rgba(20,184,166,.7); }
-                }
-                .glow-teal { animation: glowTeal 2.2s ease-in-out infinite; }
-                @keyframes glowAmber {
-                    0%,100% { box-shadow: 0 0 18px rgba(245,158,11,.35); }
-                    50%     { box-shadow: 0 0 36px rgba(245,158,11,.7); }
-                }
-                .glow-amber { animation: glowAmber 2.2s ease-in-out infinite; }
+                .animate-float { animation: floatChip 2.4s ease-in-out infinite; }
                 @keyframes flipChip {
-                    0%   { transform: scaleX(1) scale(1.1); }
-                    50%  { transform: scaleX(0) scale(1.3); }
+                    0%   { transform: scaleX(1) scale(1.05); }
+                    50%  { transform: scaleX(0) scale(1.25); }
                     100% { transform: scaleX(1) scale(1); }
                 }
-                .animate-flip { animation: flipChip 0.35s ease-in-out; }
-                @keyframes shake {
-                    0%,100% { transform: translateX(0); }
-                    20%     { transform: translateX(-6px); }
-                    40%     { transform: translateX(6px); }
-                    60%     { transform: translateX(-4px); }
-                    80%     { transform: translateX(4px); }
-                }
-                .animate-shake { animation: shake 0.4s ease-in-out; }
+                .animate-flip { animation: flipChip 0.36s ease-in-out; }
             `}</style>
 
-            {/* ── HEADER ─────────────────────────────────────────────────────── */}
-            <header className="flex items-center gap-3 px-4 pt-4 pb-2 shrink-0">
-                <button onClick={() => navigate(-1)}
-                    className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-xl px-3 py-2 text-sm font-bold border border-white/10 shrink-0 active:scale-95">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="hidden sm:inline">Volver</span>
-                </button>
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-[15px] sm:text-lg font-black tracking-tight leading-tight truncate">División de Enteros</h1>
-                    <p className="text-[10px] text-white/30 font-semibold">Predice → Agrupa → Descubre</p>
+            {/* 1. Header (34-44px) */}
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        title="Volver"
+                    >
+                        <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white truncate">
+                        División de Números Enteros
+                    </h1>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    {phaseList.map((p, i) => (
-                        <div key={p} className={`h-1.5 rounded-full transition-all duration-300
-                            ${phase === p ? "w-5 bg-teal-400" : phaseList.indexOf(phase) > i ? "w-2.5 bg-white/25" : "w-2.5 bg-white/8"}`} />
-                    ))}
-                    <button onClick={() => setShowHelp(true)}
-                        className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-bold flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95">
+
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <div className="hidden xs:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-white/60">
+                        {phaseKeys.map((p, idx) => (
+                            <span
+                                key={p}
+                                className={`px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                                    phase === p ? "bg-teal-500/30 text-teal-300" : "opacity-40"
+                                }`}
+                            >
+                                {idx + 1}
+                            </span>
+                        ))}
+                        <span className="font-semibold ml-1 text-white/80">{phaseLabels[phase]}</span>
+                    </div>
+
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        title="Ayuda didáctica"
+                    >
                         ?
                     </button>
                 </div>
             </header>
 
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: SETUP
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "setup" && (
-                <main className="flex-1 flex flex-col px-4 pb-6 overflow-y-auto gap-4">
-                    <div className="text-center anim-up pt-1">
-                        <p className="text-white/35 text-xs font-bold uppercase tracking-widest mb-1">División de enteros</p>
-                        <p className="text-white/50 text-sm">Primero predices el signo, luego lo compruebas con fichas</p>
-                    </div>
+            {/* 2. Barra de Casos de Aprendizaje (Exactamente 3 casos representativos) */}
+            <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline mr-1">
+                        Casos clave:
+                    </span>
+                    {PRESET_CASES.map((preset) => {
+                        const isSelected = activePreset === preset.id && phase === "setup";
+                        return (
+                            <button
+                                key={preset.id}
+                                onClick={() => applyPreset(preset)}
+                                className={`px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold transition-all shrink-0 border ${
+                                    isSelected
+                                        ? "bg-teal-500/25 border-teal-400/50 text-teal-200 shadow-xs"
+                                        : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
+                                }`}
+                                title={preset.story}
+                            >
+                                {preset.label}: <span className="opacity-90">{preset.equation}</span>
+                            </button>
+                        );
+                    })}
+                    <button
+                        onClick={handleRandomCase}
+                        className="px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold bg-white/5 border border-white/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/40 transition-all shrink-0 active:scale-95"
+                        title="Generar caso aleatorio"
+                    >
+                        🎲 Aleatorio
+                    </button>
+                </div>
 
-                    {/* Tabla de descubrimientos */}
-                    {discoveries.length > 0 && (
-                        <div className="anim-up bg-white/4 border border-white/8 rounded-2xl px-4 py-3">
-                            <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-2 text-center">
-                                Lo que descubriste ({discoveries.length} ejercicio{discoveries.length > 1 ? "s" : ""})
-                            </p>
-                            <div className="flex flex-col gap-1.5">
-                                {discoveries.slice(-4).map((d, i) => (
-                                    <div key={i} className="flex items-center justify-between gap-2 text-xs">
-                                        <div className="flex items-center gap-1">
-                                            <MiniChip positive={d.dividend >= 0} />
-                                            <span className="text-white/30">÷</span>
-                                            <MiniChip positive={d.divisor >= 0} />
-                                        </div>
-                                        <span className="text-white/20 text-[10px]">
-                                            signos {(d.dividend >= 0) === (d.divisor >= 0) ? "iguales" : "distintos"}
-                                        </span>
-                                        <span className={d.result >= 0 ? "text-blue-400 font-black" : "text-red-400 font-black"}>
-                                            {d.result >= 0 ? "POSITIVO" : "NEGATIVO"}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                            {discoveries.length >= 3 && (
-                                <div className="mt-2 pt-2 border-t border-white/8 text-center">
-                                    <p className="text-teal-400 text-[11px] font-black">
-                                        💡 Signos iguales → positivo · Signos distintos → negativo
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="text-center">
-                        <span className="text-white/25 text-[10px] font-black uppercase tracking-widest">
-                            Página {exercisePage + 1} / {totalPages}
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                    <div className="flex items-center gap-1 text-[11px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        <span className={dividend >= 0 ? "text-blue-400" : "text-red-400"}>
+                            {formatExpr(dividend)}
+                        </span>
+                        <span className="text-white/40">÷</span>
+                        <span className={divisor >= 0 ? "text-blue-400" : "text-red-400"}>
+                            {formatExpr(divisor)}
                         </span>
                     </div>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-2 gap-3 anim-up">
-                        {pageExercises.map((ex, idx) => {
-                            const same = (ex.dividend >= 0) === (ex.divisor >= 0);
-                            const dText = ex.dividend >= 0 ? "text-blue-300" : "text-red-300";
-                            const dsText = ex.divisor >= 0 ? "text-blue-300" : "text-red-300";
-                            return (
-                                <button key={idx} onClick={() => handleSelectExercise(ex)}
-                                    className={`border rounded-2xl p-3.5 text-left transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] flex flex-col gap-2
-                                        ${same
-                                            ? "bg-blue-500/10 border-blue-500/25 hover:border-blue-400/50"
-                                            : "bg-amber-500/10 border-amber-500/25 hover:border-amber-400/50"}`}>
-                                    <div className="flex items-center justify-center gap-2 text-2xl font-black">
-                                        <span className={dText}>{ex.dividend >= 0 ? `(+${ex.dividend})` : `(${ex.dividend})`}</span>
-                                        <span className="text-white/30">÷</span>
-                                        <span className={dsText}>{ex.divisor >= 0 ? `(+${ex.divisor})` : `(${ex.divisor})`}</span>
-                                    </div>
-                                    <p className="text-white/40 text-xs text-center font-semibold leading-snug line-clamp-2">
-                                        {ex.story.split(".")[0]}
-                                    </p>
+            {/* 3. Área Central de Trabajo (Fases) */}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-1 sm:p-2 lg:p-3 overflow-hidden">
+                {/* ── FASE 1: SETUP ── */}
+                {phase === "setup" && (
+                    <div className="w-full max-w-[620px] flex flex-col justify-center gap-2 lg:gap-3 flex-1 min-h-0">
+                        {/* Concept pill */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-2.5 py-1 text-center shrink-0">
+                            <p className="text-[11px] lg:text-xs text-teal-300 font-bold">
+                                💡 Significado: Repartir {absDividend} fichas en {absDivisor} grupos iguales
+                            </p>
+                            <p className="text-[10px] text-white/50 leading-tight">
+                                El <strong className="text-white">divisor</strong> define el número de grupos. El <strong className="text-teal-300">cociente</strong> es cuántas fichas recibe cada grupo.
+                            </p>
+                        </div>
+
+                        {/* Story Card */}
+                        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 shrink-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-xs">📖</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300/80">
+                                    Situación en la vida real
+                                </span>
+                            </div>
+                            <p className="text-xs lg:text-sm text-white/90 leading-relaxed font-semibold">
+                                {currentCase.story}
+                            </p>
+                            <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                                <span className="text-white/40 text-[10px]">Expresión matemática:</span>
+                                <div className="font-mono font-bold text-sm lg:text-base">
+                                    <span className={dividend >= 0 ? "text-blue-400" : "text-red-400"}>
+                                        {formatExpr(dividend)}
+                                    </span>
+                                    <span className="text-white/40 mx-1">÷</span>
+                                    <span className={divisor >= 0 ? "text-blue-400" : "text-red-400"}>
+                                        {formatExpr(divisor)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Two Columns Preview */}
+                        <div className="grid grid-cols-2 gap-2 lg:gap-3 shrink-0">
+                            <div className={`rounded-xl border ${dividend >= 0 ? TOKEN.blue.border : TOKEN.red.border} ${dividend >= 0 ? TOKEN.blue.bg : TOKEN.red.bg} p-2 text-center`}>
+                                <span className="text-[10px] font-black uppercase text-white/60 block mb-0.5">
+                                    Dividendo (Fichas Totales)
+                                </span>
+                                <span className={`text-xl lg:text-2xl font-black font-mono ${dividend >= 0 ? "text-blue-400" : "text-red-400"}`}>
+                                    {formatExpr(dividend)}
+                                </span>
+                                <span className="text-[10px] text-white/40 block mt-0.5">
+                                    {absDividend} ficha{absDividend > 1 ? "s" : ""} {dividend >= 0 ? "positivas" : "negativas"}
+                                </span>
+                            </div>
+
+                            <div className={`rounded-xl border ${divisor >= 0 ? TOKEN.blue.border : TOKEN.red.border} ${divisor >= 0 ? TOKEN.blue.bg : TOKEN.red.bg} p-2 text-center`}>
+                                <span className="text-[10px] font-black uppercase text-white/60 block mb-0.5">
+                                    Divisor (Grupos)
+                                </span>
+                                <span className={`text-xl lg:text-2xl font-black font-mono ${divisor >= 0 ? "text-blue-400" : "text-red-400"}`}>
+                                    {formatExpr(divisor)}
+                                </span>
+                                <span className="text-[10px] text-white/40 block mt-0.5">
+                                    {absDivisor} grupo{absDivisor > 1 ? "s" : ""} {divisor < 0 ? "(invertirá signo)" : ""}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Start Button */}
+                        <button
+                            onClick={() => setPhase("predict")}
+                            className="w-full h-8 lg:h-9 rounded-xl text-xs lg:text-sm font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-98 transition-all cursor-pointer shrink-0"
+                        >
+                            Comenzar: Predecir el Signo →
+                        </button>
+                    </div>
+                )}
+
+                {/* ── FASE 2: PREDICT (Predicción Didáctica) ── */}
+                {phase === "predict" && (
+                    <div className="w-full max-w-[560px] flex flex-col justify-center gap-2.5 lg:gap-3.5 flex-1 min-h-0 text-center">
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 shrink-0">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40 block mb-0.5">
+                                ¿Qué signo tendrá el cociente?
+                            </span>
+                            <div className="flex items-center justify-center gap-1.5 font-mono font-bold text-lg lg:text-xl">
+                                <span className={dividend >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(dividend)}
+                                </span>
+                                <span className="text-white/40">÷</span>
+                                <span className={divisor >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(divisor)}
+                                </span>
+                                <span className="text-white/40">=</span>
+                                <span className="text-amber-300 font-bold">?</span>
+                            </div>
+                        </div>
+
+                        {predictionResult === null && (
+                            <div className="grid grid-cols-2 gap-2 lg:gap-3 shrink-0">
+                                <button
+                                    onClick={() => handlePredict("positive")}
+                                    className="p-3 lg:p-4 rounded-xl border-2 border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-400 text-blue-300 font-black transition-all active:scale-95 flex flex-col items-center gap-1 cursor-pointer"
+                                >
+                                    <span className="text-2xl">➕</span>
+                                    <span className="text-xs lg:text-sm">POSITIVO (+)</span>
+                                    <span className="text-[10px] text-blue-400/60 font-sans font-normal">Mayor que cero</span>
                                 </button>
-                            );
-                        })}
-                    </div>
+                                <button
+                                    onClick={() => handlePredict("negative")}
+                                    className="p-3 lg:p-4 rounded-xl border-2 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 hover:border-red-400 text-red-300 font-black transition-all active:scale-95 flex flex-col items-center gap-1 cursor-pointer"
+                                >
+                                    <span className="text-2xl">➖</span>
+                                    <span className="text-xs lg:text-sm">NEGATIVO (−)</span>
+                                    <span className="text-[10px] text-red-400/60 font-sans font-normal">Menor que cero</span>
+                                </button>
+                            </div>
+                        )}
 
-                    <div className="flex items-center justify-center gap-3 anim-up">
-                        <button onClick={() => setExercisePage(p => Math.max(0, p - 1))} disabled={exercisePage === 0}
-                            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-white/50 text-lg font-bold flex items-center justify-center hover:bg-white/10 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed">
-                            ‹
-                        </button>
-                        <div className="flex items-center gap-1.5">
-                            {Array.from({ length: totalPages }).map((_, i) => (
-                                <button key={i} onClick={() => setExercisePage(i)}
-                                    className={`h-2 rounded-full transition-all duration-200 ${i === exercisePage ? "bg-teal-400 w-5" : "bg-white/20 w-2"}`} />
-                            ))}
-                        </div>
-                        <button onClick={() => setExercisePage(p => Math.min(totalPages - 1, p + 1))} disabled={exercisePage === totalPages - 1}
-                            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-white/50 text-lg font-bold flex items-center justify-center hover:bg-white/10 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed">
-                            ›
-                        </button>
-                    </div>
-                </main>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: PREDICT
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "predict" && selectedExercise && (
-                <main className="flex-1 flex flex-col px-4 pb-6 gap-4 justify-center">
-                    {/* Historia */}
-                    <div className="anim-up bg-indigo-500/10 border border-indigo-500/25 rounded-2xl px-4 py-4">
-                        <p className="text-indigo-300/60 text-[10px] font-black uppercase tracking-widest mb-2">📖 Situación real</p>
-                        <p className="text-white/80 text-sm leading-relaxed font-semibold">{selectedExercise.story}</p>
-                        <div className="mt-3 flex items-center justify-center gap-2 text-xl font-black">
-                            <span className={dividendTextColor}>{formatExpr(dividend)}</span>
-                            <span className="text-white/30">÷</span>
-                            <span className={divisorTextColor}>{formatExpr(divisor)}</span>
-                            <span className="text-white/30 text-base">=</span>
-                            <span className="text-white/20 text-base font-bold">?</span>
-                        </div>
-                        <p className="text-white/25 text-[11px] text-center mt-2">
-                            {absDividend} fichas repartidas en {absDivisor} grupos → ¿cuántas fichas por grupo?
-                        </p>
-                    </div>
-
-                    <div className="anim-up text-center" style={{ animationDelay: "0.06s" }}>
-                        <p className="text-white font-black text-base mb-1">¿El resultado será…?</p>
-                        <p className="text-white/30 text-xs">Antes de usar fichas, intenta predecir el signo</p>
-                    </div>
-
-                    {predictionResult === null && (
-                        <div className="flex gap-3 anim-up" style={{ animationDelay: "0.1s" }}>
-                            <button onClick={() => handlePredict("positive")}
-                                className="flex-1 py-4 rounded-2xl border-2 border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-400/60 transition-all active:scale-95 flex flex-col items-center gap-1.5">
-                                <span className="text-3xl">😊</span>
-                                <span className="text-blue-300 font-black text-sm">POSITIVO</span>
-                                <span className="text-blue-400/50 text-[10px]">mayor que cero</span>
-                            </button>
-                            <button onClick={() => handlePredict("negative")}
-                                className="flex-1 py-4 rounded-2xl border-2 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 hover:border-red-400/60 transition-all active:scale-95 flex flex-col items-center gap-1.5">
-                                <span className="text-3xl">😰</span>
-                                <span className="text-red-300 font-black text-sm">NEGATIVO</span>
-                                <span className="text-red-400/50 text-[10px]">menor que cero</span>
-                            </button>
-                        </div>
-                    )}
-
-                    {predictionResult === "correct" && (
-                        <div className="anim-pop anim-up flex flex-col gap-3">
-                            <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-2xl px-4 py-4 text-center">
-                                <p className="text-2xl mb-1">🎉</p>
-                                <p className="text-emerald-400 font-black text-base">¡Predicción correcta!</p>
-                                <p className="text-emerald-300/60 text-xs mt-1">
-                                    {signsSame ? "Signos iguales → resultado positivo." : "Signos distintos → resultado negativo."}
+                        {predictionResult !== null && (
+                            <div className={`p-3 rounded-xl border shrink-0 ${predictionResult === "correct" ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-amber-500/15 border-amber-500/30 text-amber-300"}`}>
+                                <p className="font-black text-sm lg:text-base">
+                                    {predictionResult === "correct" ? "🎉 ¡Predicción acertada!" : "🤔 ¡Buen intento!"}
+                                </p>
+                                <p className="text-xs text-white/80 mt-1">
+                                    {signsSame
+                                        ? "Signos iguales ((+)÷(+) o (−)÷(−)) siempre dan POSITIVO (+)."
+                                        : "Signos distintos ((+)÷(−) o (−)÷(+)) siempre dan NEGATIVO (−)."}
                                 </p>
                             </div>
-                            <button onClick={handleContinueFromPredict}
-                                className="w-full py-3 rounded-2xl font-bold text-sm bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 glow-teal hover:scale-[1.01] active:scale-[0.98]">
-                                ✅ ¡Comprobarlo con fichas! →
+                        )}
+
+                        {predictionResult !== null && (
+                            <button
+                                onClick={() => setPhase("build")}
+                                className="h-8 lg:h-9 rounded-xl text-xs lg:text-sm font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+                            >
+                                Comprobar repartiendo con fichas →
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
+                )}
 
-                    {predictionResult === "wrong" && (
-                        <div className="anim-up flex flex-col gap-3">
-                            <div className="bg-red-500/10 border border-red-500/25 rounded-2xl px-4 py-4 text-center animate-shake">
-                                <p className="text-2xl mb-1">🤔</p>
-                                <p className="text-red-400 font-black text-sm">No exactamente...</p>
-                                {predictionAttempts === 1 && (
-                                    <p className="text-white/50 text-xs mt-1.5 leading-snug">
-                                        Pista: fíjate en los signos del dividendo y el divisor.
-                                        {signsSame ? " ¿Son iguales?" : " ¿Son distintos?"}
-                                    </p>
-                                )}
-                                {predictionAttempts >= 2 && (
-                                    <p className="text-amber-300/70 text-xs mt-1.5">
-                                        💡 Signos <strong>iguales</strong> → positivo · Signos <strong>distintos</strong> → negativo
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => { setUserPrediction(null); setPredictionResult(null); }}
-                                    className="flex-1 py-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 font-bold text-sm text-white/60 active:scale-95 transition-all">
-                                    Intentar de nuevo
-                                </button>
-                                <button onClick={handleContinueFromPredict}
-                                    className="flex-1 py-3 rounded-2xl font-bold text-sm bg-white/8 hover:bg-white/12 border border-white/10 text-white/50 active:scale-95 transition-all">
-                                    Ver con fichas →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </main>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: BUILD
-                Lógica: divisor = número de GRUPOS, cociente = fichas por grupo
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "build" && selectedExercise && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2 min-h-0 overflow-hidden">
-                    {/* Predicción recordatorio */}
-                    {userPrediction && (
-                        <div className={`shrink-0 anim-up rounded-xl px-3 py-1.5 flex items-center justify-between
-                            ${predictionResult === "correct" ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-amber-500/10 border border-amber-500/20"}`}>
-                            <p className="text-[11px] font-bold text-white/50">
-                                Tu predicción: <span className={userPrediction === "positive" ? "text-blue-300" : "text-red-300"}>
-                                    {userPrediction === "positive" ? "POSITIVO" : "NEGATIVO"}
+                {/* ── FASE 3: BUILD (Reparto Equitativo en Grupos) ── */}
+                {phase === "build" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        {/* Progress Bar */}
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-white/60 text-[10px] font-bold">Reparto:</span>
+                                <span className="font-mono text-teal-300 font-bold text-xs">
+                                    {absDividend} fichas en {absDivisor} grupos ({absQuotient} por grupo)
                                 </span>
-                            </p>
-                            <span className="text-xs">{predictionResult === "correct" ? "✅" : "❓"}</span>
-                        </div>
-                    )}
-
-                    {/* Instrucción */}
-                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl px-3 py-2 shrink-0 anim-up">
-                        <p className="text-teal-300 font-black text-xs text-center">
-                            Repartir {absDividend} fichas en <span className="text-teal-200">{absDivisor} grupos</span> iguales
-                        </p>
-                        <p className="text-teal-400/40 text-[10px] text-center mt-0.5">
-                            Cada ficha = {chipLabel ? chipLabel(dividend >= 0 ? "blue" : "red") : "una unidad"} · Usa los botones para ajustar el número de grupos
-                        </p>
-                    </div>
-
-                    {/* Expresión + Control de grupos */}
-                    <div className="shrink-0 flex flex-col sm:flex-row gap-2">
-                        <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0 flex-wrap sm:flex-1">
-                            <span className={dividendTextColor}>{formatExpr(dividend)}</span>
-                            <span className="text-white/30">÷</span>
-                            <span className={divisorTextColor}>{formatExpr(divisor)}</span>
-                            <span className="text-white/30 text-sm">=</span>
-                            <span className="text-white/20 text-sm">?</span>
-                        </div>
-
-                        <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-2 sm:flex-none">
-                            <p className={`text-xs font-bold text-center leading-snug
-                                ${groupsAreCorrect ? "text-emerald-400" : numColumns === absDivisor ? "text-amber-400" : "text-white/40"}`}>
-                                {groupFeedback}
-                            </p>
+                            </div>
                             <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold ${allGroupsFormed ? "text-emerald-400" : "text-amber-400"}`}>
+                                    {allGroupsFormed ? "✅ ¡Reparto completo!" : "⏳ Fichas pendientes"}
+                                </span>
                                 <button
-                                    onClick={() => handleChangeColumns(-1)}
-                                    disabled={numColumns <= 1}
-                                    className="w-9 h-9 rounded-xl bg-white/8 border border-white/12 text-white font-black text-xl flex items-center justify-center hover:bg-white/15 active:scale-90 transition-all disabled:opacity-20 disabled:cursor-not-allowed">
-                                    −
-                                </button>
-                                <div className="text-center min-w-[56px]">
-                                    <p className="text-white font-black text-lg leading-none">{numColumns}</p>
-                                    <p className="text-white/30 text-[9px]">grupo{numColumns > 1 ? "s" : ""}</p>
-                                </div>
-                                <button
-                                    onClick={() => handleChangeColumns(1)}
-                                    disabled={numColumns >= absDivisor + 2}
-                                    className="w-9 h-9 rounded-xl bg-white/8 border border-white/12 text-white font-black text-xl flex items-center justify-center hover:bg-white/15 active:scale-90 transition-all disabled:opacity-20 disabled:cursor-not-allowed">
-                                    +
+                                    onClick={handleAutoDistribute}
+                                    className="h-6 px-2 text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-md transition-all active:scale-95"
+                                >
+                                    Repartir equitativamente ⚡
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Área de fichas */}
-                    <div
-                        ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                    >
-                        {/* Fondo de puntos */}
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "26px 26px",
-                        }} />
+                        {/* Interactive Drag Arena */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                        >
+                            {/* Column Dividers */}
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: absDivisor }).map((_, i) => {
+                                    const count = chipsInGroup(i);
+                                    const isComplete = count === absQuotient;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={`flex-1 border-r border-white/10 last:border-r-0 flex flex-col justify-between p-1.5 ${
+                                                isComplete ? "bg-emerald-500/[0.04]" : "bg-transparent"
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between text-[10px] font-bold">
+                                                <span className="text-white/40">Grupo {i + 1}</span>
+                                                <span className={isComplete ? "text-emerald-400" : "text-amber-400"}>
+                                                    {count}/{absQuotient}
+                                                </span>
+                                            </div>
+                                            <div className="border-t border-dashed border-white/10 pt-1 text-center">
+                                                <span className="text-[9px] text-white/20">Grupo {i + 1}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                        {/* Líneas divisorias de grupos */}
-                        {numColumns > 1 && Array.from({ length: numColumns - 1 }).map((_, i) => (
-                            <div key={i}
-                                className="absolute top-0 bottom-0 w-px bg-white/20 pointer-events-none"
-                                style={{ left: `calc(${((i + 1) / numColumns) * 100}% - 0.5px)` }} />
-                        ))}
+                            {/* Separator line for unassigned chips tray */}
+                            <div className="absolute bottom-[28%] left-0 right-0 h-px bg-white/10 pointer-events-none" />
+                            <div className="absolute bottom-1 right-2 pointer-events-none">
+                                <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider">
+                                    Fichas a repartir
+                                </span>
+                            </div>
 
-                        {/* Etiquetas de grupos */}
-                        <div className="absolute top-2 left-0 right-0 pointer-events-none flex">
-                            {Array.from({ length: numColumns }).map((_, i) => {
-                                const count = columnCounts[i] ?? 0;
-                                const isOk = count === absQuotient;
+                            {/* Chips */}
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                const isDragging = draggingId === chip.id;
+
                                 return (
-                                    <div key={i} className="flex flex-col items-center"
-                                        style={{ width: `calc(100% / ${numColumns})` }}>
-                                        <span className={`text-[10px] font-black ${isOk ? "text-emerald-400" : "text-white/30"}`}>
-                                            Grupo {i + 1}
-                                        </span>
-                                        <span className={`text-[9px] font-bold ${isOk ? "text-emerald-400/60" : "text-white/15"}`}>
-                                            {count}/{absQuotient}
-                                        </span>
+                                    <div
+                                        key={chip.id}
+                                        onPointerDown={(e) => handlePointerDown(e, chip.id)}
+                                        className={`absolute select-none ${
+                                            isDragging ? "scale-125 z-50 shadow-2xl cursor-grabbing" : "z-20 cursor-grab hover:scale-105"
+                                        }`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
-
-                        {/* Fichas */}
-                        {chips.map((chip) => (
-                            <ChipEl
-                                key={chip.id}
-                                chip={chip}
-                                isFlipping={flippingIds.has(chip.id)}
-                                canDrag={true}
-                                dragging={draggingId === chip.id}
-                                onPointerDown={handlePointerDown}
-                            />
-                        ))}
                     </div>
+                )}
 
-                    <p className="text-center text-white/20 text-[10px] shrink-0">
-                        Arrastra las fichas · cada grupo debe tener exactamente {absQuotient} ficha{absQuotient > 1 ? "s" : ""}
-                    </p>
+                {/* ── FASE 4: FLIP (Inversión cuando divisor < 0) ── */}
+                {phase === "flip" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded-xl shrink-0 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm">⚠️</span>
+                                <p className="text-[11px] text-amber-200 truncate">
+                                    El divisor <span className="font-bold text-amber-400">{formatExpr(divisor)}</span> es negativo: ¡las fichas se invierten al signo opuesto!
+                                </p>
+                            </div>
+                            <button
+                                disabled={isFlippingAll}
+                                onClick={handleFlipAll}
+                                className="h-6 px-2 text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-md transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-xs"
+                            >
+                                {isFlippingAll ? "Invirtiendo…" : "Invertir todas 🔄"}
+                            </button>
+                        </div>
 
-                    <button
-                        onClick={() => setPhase(needFlip ? "flip" : "count")}
-                        disabled={!groupsAreCorrect}
-                        className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
-                            ${!groupsAreCorrect
-                                ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                : "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 hover:scale-[1.01] active:scale-[0.98] glow-teal"
-                            }`}>
-                        {!groupsAreCorrect ? "⏳ Completa los grupos primero" : "✅ ¡Listo! Siguiente paso →"}
-                    </button>
-                </main>
-            )}
+                        {/* Board */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                        >
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: absDivisor }).map((_, i) => (
+                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
 
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: FLIP (divisor negativo)
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "flip" && selectedExercise && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    {userPrediction && (
-                        <div className={`shrink-0 anim-up rounded-xl px-3 py-1.5 flex items-center justify-between
-                            ${predictionResult === "correct" ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-amber-500/10 border border-amber-500/20"}`}>
-                            <p className="text-[11px] font-bold text-white/50">
-                                Tu predicción: <span className={userPrediction === "positive" ? "text-blue-300" : "text-red-300"}>
-                                    {userPrediction === "positive" ? "POSITIVO" : "NEGATIVO"}
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                const isFlipping = flippingIds.has(chip.id);
+
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        className={`absolute select-none transition-transform duration-100 ${
+                                            isFlipping ? "animate-flip z-30" : "z-10"
+                                        }`}
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── FASE 5: COUNT (Conteo de 1 Grupo = Cociente) ── */}
+                {phase === "count" && (
+                    <div className="w-full h-full flex flex-col min-h-0 relative">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                                    <span className="font-bold text-blue-300 font-mono text-xs">{liveBlue}</span>
+                                    <span className="text-white/40 text-[10px]">positivas</span>
+                                </div>
+                                <div className="w-px h-3 bg-white/10" />
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                                    <span className="font-bold text-red-300 font-mono text-xs">{liveRed}</span>
+                                    <span className="text-white/40 text-[10px]">negativas</span>
+                                </div>
+                            </div>
+
+                            <span className="text-teal-300 text-[10px] font-bold font-mono">
+                                {absDivisor} grupos de {absQuotient} fichas → Cociente = {formatNum(quotient)}
+                            </span>
+                        </div>
+
+                        {/* Board */}
+                        <div
+                            ref={areaRef}
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            style={{ touchAction: "none" }}
+                        >
+                            <div className="absolute inset-0 pointer-events-none flex">
+                                {Array.from({ length: absDivisor }).map((_, i) => (
+                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {chips.map((chip) => {
+                                const t = TOKEN[chip.color];
+                                return (
+                                    <div
+                                        key={chip.id}
+                                        className="absolute select-none z-10"
+                                        style={{
+                                            width: CHIP_SIZE,
+                                            height: CHIP_SIZE,
+                                            left: chip.x,
+                                            top: chip.y,
+                                            touchAction: "none",
+                                        }}
+                                    >
+                                        <div
+                                            className={`w-full h-full rounded-full bg-linear-to-br ${t.chipGrad} border-2 ${t.chipBorder} shadow-md ${t.chipShadow} flex items-center justify-center`}
+                                        >
+                                            <span className="text-white font-black text-xs leading-none">
+                                                {t.sign}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── FASE 6: RESULTADO ── */}
+                {phase === "result" && (
+                    <div className="w-full max-w-[560px] flex flex-col items-center justify-center gap-2 lg:gap-3 flex-1 min-h-0 text-center py-1">
+                        {/* Chips of 1 group representing quotient */}
+                        <div className="flex flex-wrap justify-center gap-1.5 min-h-[36px] items-center max-w-sm">
+                            {Array.from({ length: absQuotient }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-8 h-8 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-[11px] shadow-md animate-float ${
+                                        quotient >= 0
+                                            ? "from-blue-400 to-blue-600 shadow-blue-500/40"
+                                            : "from-red-400 to-red-600 shadow-red-500/40"
+                                    }`}
+                                    style={{ animationDelay: `${i * 0.08}s` }}
+                                >
+                                    {quotient >= 0 ? "+1" : "−1"}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Result number */}
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40 block mb-0.5">
+                                Cociente (Fichas por grupo)
+                            </span>
+                            <div
+                                className={`text-4xl lg:text-6xl font-black font-mono leading-none ${
+                                    quotient > 0
+                                        ? "text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]"
+                                        : quotient < 0
+                                        ? "text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]"
+                                        : "text-slate-300 drop-shadow-[0_0_15px_rgba(203,213,225,0.5)]"
+                                }`}
+                            >
+                                {quotient > 0 ? `+${quotient}` : quotient}
+                            </div>
+                        </div>
+
+                        {/* Feedback text badge */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 max-w-sm w-full">
+                            <p
+                                className={`font-bold text-xs ${
+                                    quotient > 0 ? "text-blue-300" : quotient < 0 ? "text-red-300" : "text-slate-300"
+                                }`}
+                            >
+                                {getResultText()}
+                            </p>
+                            {userPrediction && (
+                                <p className="text-[10px] text-white/50 mt-0.5">
+                                    Predicción: <span className="font-bold">{userPrediction === "positive" ? "Positivo (+)" : "Negativo (−)"}</span> {predictionResult === "correct" ? "🎯 (¡Acertaste!)" : "📚 (Revisa la regla abajo)"}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Meaning card */}
+                        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-3 py-1.5 max-w-sm w-full">
+                            <p className="text-indigo-300/60 text-[9px] font-black uppercase tracking-wider">
+                                Conclusión del problema
+                            </p>
+                            <p className="font-bold text-xs text-white/90 mt-0.5">
+                                {currentCase.resultLabel(quotient)}
+                            </p>
+                        </div>
+
+                        {/* Law of signs rule card */}
+                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-3 py-2 max-w-sm w-full text-[11px] font-mono">
+                            <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1 text-center font-sans">
+                                Ley de Signos en la División
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
+                                <span className={dividend >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(dividend)}
                                 </span>
-                            </p>
-                            <span className="text-xs">{predictionResult === "correct" ? "✅" : "❓"}</span>
-                        </div>
-                    )}
-
-                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl px-3 py-3 shrink-0 anim-up">
-                        <div className="flex items-center gap-2.5">
-                            <span className="text-xl shrink-0">⚠️</span>
-                            <div>
-                                <p className="text-amber-300 font-black text-xs">¡El divisor es negativo!</p>
-                                <p className="text-amber-200/55 text-[11px] leading-snug mt-0.5">
-                                    Dividir entre un número negativo invierte el signo:
-                                    todas las fichas cambian de color.
-                                </p>
+                                <span className="text-white/40">÷</span>
+                                <span className={divisor >= 0 ? "text-blue-400" : "text-red-400"}>
+                                    {formatExpr(divisor)}
+                                </span>
+                                <span className="text-white/40">=</span>
+                                <span
+                                    className={
+                                        quotient > 0
+                                            ? "text-blue-400"
+                                            : quotient < 0
+                                            ? "text-red-400"
+                                            : "text-slate-300"
+                                    }
+                                >
+                                    {formatNum(quotient)}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-teal-300 mt-1 text-center font-sans">
+                                {signsSame ? "(+) ÷ (+) o (−) ÷ (−) = (+)" : "(+) ÷ (−) o (−) ÷ (+) = (−)"}
                             </div>
                         </div>
+
+                        {/* New Exercise button */}
+                        <button
+                            onClick={handleReset}
+                            className="h-8 lg:h-9 px-4 rounded-xl text-xs lg:text-sm font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-md shadow-teal-500/20 active:scale-95 transition-all cursor-pointer"
+                        >
+                            Nuevo Ejercicio 🔄
+                        </button>
                     </div>
+                )}
+            </div>
 
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0">
-                        <span className={dividendTextColor}>{formatExpr(dividend)}</span>
-                        <span className="text-white/30">÷</span>
-                        <span className={divisorTextColor}>{formatExpr(divisor)}</span>
-                    </div>
-
-                    <div ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}>
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "26px 26px",
-                        }} />
-                        {numColumns > 1 && Array.from({ length: numColumns - 1 }).map((_, i) => (
-                            <div key={i} className="absolute top-0 bottom-0 w-px bg-white/20 pointer-events-none"
-                                style={{ left: `calc(${((i + 1) / numColumns) * 100}% - 0.5px)` }} />
-                        ))}
-                        {chips.map((chip) => (
-                            <ChipEl key={chip.id} chip={chip} isFlipping={flippingIds.has(chip.id)}
-                                canDrag={false} dragging={false} onPointerDown={() => { }} />
-                        ))}
-                    </div>
-
-                    <button onClick={handleFlipAll} disabled={flipping}
-                        className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
-                            ${flipping
-                                ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                : "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.98] glow-amber"
-                            }`}>
-                        {flipping ? "Cambiando colores..." : "🔄 Invertir fichas — divisor negativo"}
-                    </button>
-                </main>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: COUNT
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "count" && selectedExercise && (
-                <main className="flex-1 flex flex-col px-3 pb-3 gap-2.5 min-h-0 overflow-hidden">
-                    <div className="bg-white/4 border border-white/8 rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-xl font-black shrink-0">
-                        <span className={dividendTextColor}>{formatExpr(dividend)}</span>
-                        <span className="text-white/30">÷</span>
-                        <span className={divisorTextColor}>{formatExpr(divisor)}</span>
-                    </div>
-
-                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl px-3 py-2.5 shrink-0 anim-up">
-                        <p className="text-teal-300 font-black text-xs text-center">
-                            {needFlip ? "Paso 3: " : "Paso 2: "}Conta los grupos formados
+            {/* 4. Barra Inferior de Acción y Feedback (40-48px) */}
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {phase === "setup" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Elige uno de los 3 casos pedagógicos de la barra superior.
                         </p>
-                        <p className="text-teal-400/40 text-[10px] text-center mt-0.5">
-                            {absDivisor} grupos × {absQuotient} ficha{absQuotient > 1 ? "s" : ""} cada uno = {absDividend} fichas totales
+                    )}
+                    {phase === "predict" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Predice si el resultado será positivo o negativo.
                         </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 bg-white/4 border border-white/8 rounded-2xl px-4 py-2.5 shrink-0">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/60 shrink-0" />
-                            <span className="text-blue-300 font-black text-lg tabular-nums">{liveBlue}</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/60 shrink-0" />
-                            <span className="text-red-300 font-black text-lg tabular-nums">{liveRed}</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10" />
-                        <span className="text-teal-400/80 text-xs font-bold">
-                            {absDivisor} grupos de {absQuotient}
-                        </span>
-                    </div>
-
-                    <div ref={areaRef}
-                        className="relative flex-1 rounded-2xl border border-white/[0.07] bg-white/2 overflow-hidden"
-                        style={{ touchAction: "none", minHeight: 0 }}>
-                        <div className="absolute inset-0 opacity-[0.025]" style={{
-                            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-                            backgroundSize: "26px 26px",
-                        }} />
-                        {numColumns > 1 && Array.from({ length: numColumns - 1 }).map((_, i) => (
-                            <div key={i} className="absolute top-0 bottom-0 w-px bg-white/20 pointer-events-none"
-                                style={{ left: `calc(${((i + 1) / numColumns) * 100}% - 0.5px)` }} />
-                        ))}
-                        <div className="absolute top-2 left-0 right-0 pointer-events-none flex">
-                            {Array.from({ length: numColumns }).map((_, i) => (
-                                <div key={i} className="flex flex-col items-center"
-                                    style={{ width: `calc(100% / ${numColumns})` }}>
-                                    <span className="text-emerald-400/60 text-[10px] font-black">Grupo {i + 1}</span>
-                                </div>
-                            ))}
-                        </div>
-                        {chips.map((chip) => (
-                            <ChipEl key={chip.id} chip={chip} isFlipping={false}
-                                canDrag={false} dragging={false} onPointerDown={() => { }} />
-                        ))}
-                    </div>
-
-                    <button onClick={handleCount} disabled={counting}
-                        className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-200 shrink-0
-                            ${counting
-                                ? "bg-white/6 text-white/20 cursor-not-allowed"
-                                : "bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-md shadow-teal-500/20 hover:scale-[1.01] active:scale-[0.98]"
-                            }`}>
-                        {counting ? "Contando..." : `✅ Son ${absDivisor} grupos de ${absQuotient} → ver resultado`}
-                    </button>
-                </main>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════════
-                FASE: RESULT
-            ══════════════════════════════════════════════════════════════════ */}
-            {phase === "result" && selectedExercise && (
-                <main className="flex-1 flex flex-col items-center justify-center gap-4 px-4 py-5 overflow-y-auto">
-                    {/* Fichas animadas */}
-                    <div className="flex flex-wrap justify-center gap-2 min-h-12 items-center anim-up max-w-xs">
-                        {resultValue === 0
-                            ? <div className="text-5xl animate-float">⚖️</div>
-                            : Array.from({ length: Math.min(Math.abs(resultValue), 12) }).map((_, i) => (
-                                <div key={i}
-                                    className={`w-10 h-10 rounded-full bg-linear-to-br flex items-center justify-center font-black text-white text-xs shadow-lg animate-float
-                                        ${resultValue > 0 ? "from-blue-400 to-blue-600 shadow-blue-500/40" : "from-red-400 to-red-600 shadow-red-500/40"}`}
-                                    style={{ animationDelay: `${i * 0.1}s` }}>
-                                    {resultValue > 0 ? "+1" : "−1"}
-                                </div>
-                            ))}
-                    </div>
-
-                    {/* Número resultado */}
-                    <div className="text-center anim-up anim-pop" style={{ animationDelay: "0.1s" }}>
-                        <p className="text-white/25 text-[10px] font-black uppercase tracking-widest mb-1">Resultado</p>
-                        <div className={`text-[68px] sm:text-8xl font-black tabular-nums leading-none ${resultBigColor} drop-shadow-2xl`}>
-                            {formatNum(resultValue)}
-                        </div>
-                    </div>
-
-                    {/* Narración contextual */}
-                    <div className="anim-up bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-4 py-3 max-w-xs w-full text-center" style={{ animationDelay: "0.15s" }}>
-                        <p className="text-indigo-300/50 text-[10px] font-black uppercase tracking-widest mb-1">📖 Lo que significa</p>
-                        <p className={`font-bold text-sm leading-relaxed ${resultTextColor}`}>
-                            {selectedExercise.resultLabel(resultValue)}
+                    )}
+                    {phase === "build" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            {allGroupsFormed
+                                ? "¡Excelente! Cada grupo tiene exactamente las mismas fichas."
+                                : "Arrastra las fichas para repartirlas equitativamente en los grupos."}
                         </p>
-                    </div>
+                    )}
+                    {phase === "flip" && (
+                        <p className="text-[10px] lg:text-[11px] text-amber-300/80 truncate">
+                            Al ser divisor negativo, las fichas se invierten al signo opuesto.
+                        </p>
+                    )}
+                    {phase === "count" && (
+                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                            Verificando cuántas fichas tiene cada grupo.
+                        </p>
+                    )}
+                    {phase === "result" && (
+                        <p className="text-[10px] lg:text-[11px] text-emerald-400/90 truncate font-semibold">
+                            División completada exitosamente.
+                        </p>
+                    )}
+                </div>
 
-                    {/* Verificación predicción */}
-                    {userPrediction && (
-                        <div className={`anim-up max-w-xs w-full rounded-2xl px-4 py-3 text-center border
-                            ${predictionResult === "correct" ? "bg-emerald-500/10 border-emerald-500/25" : "bg-amber-500/10 border-amber-500/20"}`}
-                            style={{ animationDelay: "0.2s" }}>
-                            <p className={`font-black text-sm ${predictionResult === "correct" ? "text-emerald-400" : "text-amber-400"}`}>
-                                {predictionResult === "correct" ? "🎯 ¡Predijiste correctamente!" : "📚 La predicción no fue correcta esta vez"}
-                            </p>
-                            <p className="text-white/35 text-xs mt-1">
-                                Predijiste: {userPrediction === "positive" ? "POSITIVO" : "NEGATIVO"} · Real: {resultValue >= 0 ? "POSITIVO" : "NEGATIVO"}
-                            </p>
-                        </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {phase === "setup" && (
+                        <button
+                            onClick={() => setPhase("predict")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Comenzar Reto →
+                        </button>
                     )}
 
-                    {/* Regla descubierta */}
-                    <div className="anim-up bg-teal-500/8 border border-teal-500/20 rounded-2xl px-4 py-3 max-w-xs w-full" style={{ animationDelay: "0.26s" }}>
-                        <p className="text-teal-400/60 text-[10px] font-black uppercase tracking-widest mb-2 text-center">Regla descubierta</p>
-                        <div className="flex flex-col gap-1.5 text-sm font-black text-center">
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap text-base">
-                                <span className={dividendTextColor}>{formatExpr(dividend)}</span>
-                                <span className="text-white/30">÷</span>
-                                <span className={divisorTextColor}>{formatExpr(divisor)}</span>
-                                <span className="text-white/30">=</span>
-                                <span className={`font-black ${resultBigColor}`}>{formatNum(resultValue)}</span>
-                            </div>
-                            <p className="text-white/35 text-xs">
-                                {absDividend} fichas ÷ {absDivisor} grupos = {absQuotient} fichas por grupo
-                            </p>
-                            {needFlip && (
-                                <p className="text-amber-400 text-xs">Divisor negativo → fichas cambiaron de color</p>
-                            )}
-                            <p className={`text-xs font-bold ${signsSame ? "text-blue-300" : "text-red-300"}`}>
-                                Signos {signsSame ? "iguales" : "distintos"} → resultado {signsSame ? "POSITIVO" : "NEGATIVO"}
-                            </p>
-                            {discoveries.length >= 2 && (
-                                <p className="text-white/25 text-[10px] mt-1">
-                                    {discoveries.length} ejercicios completados — ¡el patrón se repite!
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    {phase === "predict" && predictionResult !== null && (
+                        <button
+                            onClick={() => setPhase("build")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Ir a repartir →
+                        </button>
+                    )}
 
-                    <button onClick={handleReset}
-                        className="px-8 py-3.5 rounded-2xl text-base font-black bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 hover:scale-105 active:scale-95 transition-all duration-200 glow-teal anim-up"
-                        style={{ animationDelay: "0.34s" }}>
-                        Nuevo Ejercicio 🔄
-                    </button>
-                </main>
-            )}
+                    {phase === "build" && (
+                        <button
+                            disabled={!allGroupsFormed}
+                            onClick={() => setPhase(needFlip ? "flip" : "count")}
+                            className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
+                                allGroupsFormed
+                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                            }`}
+                        >
+                            {needFlip ? "Invertir signos →" : "Contar cociente →"}
+                        </button>
+                    )}
 
-            {/* ── MODAL AYUDA ────────────────────────────────────────────────── */}
+                    {phase === "flip" && (
+                        <button
+                            onClick={() => setPhase("count")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Siguiente: Conteo →
+                        </button>
+                    )}
+
+                    {phase === "count" && (
+                        <button
+                            onClick={() => setPhase("result")}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Ver Resultado ✅
+                        </button>
+                    )}
+
+                    {phase === "result" && (
+                        <button
+                            onClick={handleReset}
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            Nuevo Reto 🔄
+                        </button>
+                    )}
+                </div>
+            </footer>
+
+            {/* Modal de Ayuda */}
             <ModalHelp
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
-                title="¿Cómo funciona la división?"
+                title="¿Cómo dividir números enteros?"
                 bgColor="#080c18"
                 buttonColor="bg-teal-500 hover:bg-teal-400"
             >
-                <div className="space-y-4 text-white/80 text-sm leading-relaxed">
-                    <div className="rounded-xl p-3" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)" }}>
-                        <p className="text-teal-300 font-black text-xs mb-1">💡 Concepto clave</p>
-                        <p className="text-xs text-white/60">
-                            En <strong className="text-white">a ÷ b</strong>, el divisor <strong className="text-white">b</strong> es el <strong className="text-teal-300">número de grupos</strong> que se forman.
-                            El cociente es cuántas fichas tiene <strong className="text-teal-300">cada grupo</strong>.
-                        </p>
-                        <p className="text-xs text-white/40 mt-1">Ejemplo: (+6) ÷ (+2) → 2 grupos de 3 fichas → resultado +3</p>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 1 — Lee la situación y predice</p>
-                        <p>Cada ejercicio tiene un contexto real. Antes de ver las fichas, elige si el resultado será <strong className="text-blue-300">positivo</strong> o <strong className="text-red-300">negativo</strong>. Si fallas, recibes una pista.</p>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 2 — Forma los grupos</p>
-                        <ul className="space-y-1.5 text-xs text-white/60 list-disc list-inside">
-                            <li>Usa <strong className="text-white">−</strong> y <strong className="text-white">+</strong> para ajustar el número de columnas (grupos).</li>
-                            <li>El divisor indica <strong className="text-white">cuántos grupos</strong> necesitas.</li>
-                            <li>Arrastra fichas hasta que cada grupo tenga el mismo número de fichas.</li>
-                            <li>Cada grupo tiene tantas fichas como el <strong className="text-white">cociente</strong>.</li>
+                <div className="space-y-3 text-white/80 text-xs leading-relaxed">
+                    <div className="rounded-lg p-2.5 bg-teal-500/10 border border-teal-500/20">
+                        <p className="font-bold text-teal-300 mb-1">💡 La Ley de Signos en la División</p>
+                        <ul className="space-y-1 font-mono text-teal-200">
+                            <li>(+) ÷ (+) = (+) &nbsp;|&nbsp; (−) ÷ (−) = (+)  <span className="font-sans text-white/60">(Signos iguales dan positivo)</span></li>
+                            <li>(+) ÷ (−) = (−) &nbsp;|&nbsp; (−) ÷ (+) = (−)  <span className="font-sans text-white/60">(Signos distintos dan negativo)</span></li>
                         </ul>
                     </div>
 
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Paso 3 — Voltear (solo si el divisor es negativo)</p>
-                        <p className="text-xs text-white/60">Cuando el divisor es negativo, todas las fichas cambian de color. Esto explica la regla de signos.</p>
-                    </div>
-
-                    <div className="h-px" style={{ background: "rgba(255,255,255,.08)" }} />
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.35)" }}>Regla de signos</p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)" }}>
-                                <p className="text-blue-300 font-black">(+)÷(+) = <span className="text-blue-400">+</span></p>
-                                <p className="text-blue-400/50 text-[10px]">iguales → positivo</p>
-                            </div>
-                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)" }}>
-                                <p className="text-red-300 font-black">(+)÷(−) = <span className="text-red-400">−</span></p>
-                                <p className="text-red-400/50 text-[10px]">distintos → negativo</p>
-                            </div>
-                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)" }}>
-                                <p className="text-red-300 font-black">(−)÷(+) = <span className="text-red-400">−</span></p>
-                                <p className="text-red-400/50 text-[10px]">distintos → negativo</p>
-                            </div>
-                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)" }}>
-                                <p className="text-blue-300 font-black">(−)÷(−) = <span className="text-blue-400">+</span></p>
-                                <p className="text-blue-400/50 text-[10px]">iguales → positivo</p>
-                            </div>
-                        </div>
+                        <p className="font-bold text-white/40 uppercase tracking-wider text-[10px] mb-1">
+                            Pasos del método interactivo:
+                        </p>
+                        <ol className="space-y-1.5 list-decimal list-inside text-white/70">
+                            <li>
+                                <strong className="text-white">1. Planteo:</strong> Conoce la situación real y la división planteada.
+                            </li>
+                            <li>
+                                <strong className="text-white">2. Predicción:</strong> Intenta predecir si el cociente será positivo o negativo.
+                            </li>
+                            <li>
+                                <strong className="text-white">3. Reparto:</strong> Distribuye las fichas en partes iguales en cada grupo.
+                            </li>
+                            <li>
+                                <strong className="text-white">4. Invertir:</strong> Si el divisor es negativo, las fichas cambian de signo.
+                            </li>
+                            <li>
+                                <strong className="text-white">5. Resultado:</strong> La cantidad de fichas en un solo grupo es el resultado.
+                            </li>
+                        </ol>
                     </div>
                 </div>
             </ModalHelp>
