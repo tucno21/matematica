@@ -89,7 +89,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/recta-numerica-fracciones',
-        element: <Layout><RectaNumericaFraccionesView /></Layout>
+        element: <RectaNumericaFraccionesView />
     },
     {
         path: '/multiplicar-fracciones',
