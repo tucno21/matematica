@@ -533,10 +533,18 @@ export default function MedirAngulosView() {
   // Respuestas del estudiante por cada ángulo
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({})
 
-  // Montaje inicial y resize
+  // Montaje inicial y resize con detección de orientación vertical (portrait) vs horizontal (landscape)
+  const [isPortrait, setIsPortrait] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerHeight > window.innerWidth
+    }
+    return false
+  })
+
   const isFirstMount = useRef(true)
   useEffect(() => {
     const updateSize = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth)
       if (canvasRef.current) {
         const rect = canvasRef.current.getBoundingClientRect()
         const w = Math.max(300, rect.width)
@@ -553,7 +561,11 @@ export default function MedirAngulosView() {
     }
     updateSize()
     window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
+    window.addEventListener('orientationchange', updateSize)
+    return () => {
+      window.removeEventListener('resize', updateSize)
+      window.removeEventListener('orientationchange', updateSize)
+    }
   }, [generateChallenge])
 
   // Cargar nuevo reto
@@ -680,7 +692,7 @@ export default function MedirAngulosView() {
 
   // Pointer Down en el lienzo de trabajo
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button, input, [data-protractor-rotator]')) return
+    if ((e.target as HTMLElement).closest('button, input, [data-protractor-rotator], [data-protractor-body]')) return
     if (e.button !== 0 && e.pointerType === 'mouse') return
 
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -1023,53 +1035,100 @@ export default function MedirAngulosView() {
         </button>
       </header>
 
-      {/* ── 2. Área de Trabajo: Barra Lateral + Canvas Deslizable (flex-1 min-h-0) ── */}
-      <div className="flex-1 min-h-0 flex items-stretch overflow-hidden p-1 sm:p-1.5 lg:p-2 gap-1 sm:gap-2">
-        {/* Panel Lateral Izquierdo de Selección de Modo */}
-        <aside className="w-[50px] sm:w-[58px] lg:w-[136px] shrink-0 bg-[#0a0f1d] border border-white/10 rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-xl select-none">
-          <div className="w-full flex flex-col items-center gap-1 sm:gap-1.5">
-            <span className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b border-white/5">
-              Modos
-            </span>
-
-            {MODES.map(m => {
-              const active = mode === m.id
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => handleSelectMode(m.id)}
-                  title={m.desc}
-                  className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 ${
-                    active
-                      ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
-                      : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
-                  }`}
-                >
-                  <div className="shrink-0">
-                    <ModeIcon id={m.id} size={17} />
-                  </div>
-                  <span className="text-[8px] sm:text-[9px] lg:text-xs font-bold truncate max-w-full">
-                    <span className="lg:hidden">{m.shortLabel}</span>
-                    <span className="hidden lg:inline">{m.label}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Resetear posición de vista al 100% */}
-          <button
-            onClick={() => {
-              setPan({ x: 0, y: 0 })
-              setZoom(1)
-            }}
-            className="w-full py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 text-[9px] font-mono flex flex-col items-center justify-center gap-0.5 border border-white/5 active:scale-95 transition-all"
-            title="Centrar figura y restablecer zoom a 100%"
+      {/* ── 2. Área de Trabajo: Barra Superior (en vertical/portrait) o Barra Lateral (en horizontal/landscape) + Canvas Deslizable (flex-1 min-h-0) ── */}
+      <div className={`flex-1 min-h-0 flex ${isPortrait ? 'flex-col' : 'flex-row'} items-stretch overflow-hidden p-1 sm:p-1.5 lg:p-2 gap-1 sm:gap-2`}>
+        {isPortrait ? (
+          /* Barra Superior Horizontal de Modos (Para pantalla vertical / portrait) */
+          <nav
+            className="w-full shrink-0 bg-[#0a0f1d] border border-white/10 rounded-xl p-1 flex items-center justify-between gap-1 shadow-md select-none"
+            aria-label="Selección de modos"
           >
-            <Maximize2 size={13} />
-            <span className="hidden lg:inline text-[10px] font-bold">100% Centro</span>
-          </button>
-        </aside>
+            <div className="flex-1 min-w-0 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
+              {MODES.map(m => {
+                const active = mode === m.id
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSelectMode(m.id)}
+                    title={m.desc}
+                    className={`flex-1 h-7 sm:h-8 min-w-[46px] rounded-lg transition-all flex items-center justify-center gap-1 px-1 active:scale-95 ${
+                      active
+                        ? 'bg-cyan-500 text-black shadow font-black ring-1 ring-cyan-300'
+                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                    }`}
+                  >
+                    <div className="shrink-0">
+                      <ModeIcon id={m.id} size={15} />
+                    </div>
+                    <span className="text-[9px] sm:text-[10px] font-bold truncate">
+                      {m.shortLabel}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                setPan({ x: 0, y: 0 })
+                setZoom(1)
+              }}
+              className="h-7 sm:h-8 w-7 sm:w-8 shrink-0 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 flex items-center justify-center border border-white/5 active:scale-95 transition-all"
+              title="Centrar figura y restablecer zoom a 100%"
+            >
+              <Maximize2 size={13} />
+            </button>
+          </nav>
+        ) : (
+          /* Panel Lateral Izquierdo de Modos (Para pantalla horizontal / landscape) */
+          <aside
+            className="w-[50px] sm:w-[58px] lg:w-[136px] shrink-0 h-full bg-[#0a0f1d] border border-white/10 rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-xl select-none"
+            aria-label="Selección de modos"
+          >
+            <div className="w-full flex flex-col items-center gap-1 sm:gap-1.5">
+              <span className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b border-white/5">
+                Modos
+              </span>
+
+              {MODES.map(m => {
+                const active = mode === m.id
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSelectMode(m.id)}
+                    title={m.desc}
+                    className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 ${
+                      active
+                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
+                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                    }`}
+                  >
+                    <div className="shrink-0">
+                      <ModeIcon id={m.id} size={17} />
+                    </div>
+                    <span className="text-[8px] sm:text-[9px] lg:text-xs font-bold truncate max-w-full">
+                      <span className="lg:hidden">{m.shortLabel}</span>
+                      <span className="hidden lg:inline">{m.label}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Resetear posición de vista al 100% */}
+            <button
+              onClick={() => {
+                setPan({ x: 0, y: 0 })
+                setZoom(1)
+              }}
+              className="w-full py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 text-[9px] font-mono flex flex-col items-center justify-center gap-0.5 border border-white/5 active:scale-95 transition-all"
+              title="Centrar figura y restablecer zoom a 100%"
+            >
+              <Maximize2 size={13} />
+              <span className="hidden lg:inline text-[10px] font-bold">100% Centro</span>
+            </button>
+          </aside>
+        )}
 
         {/* Espacio del Plano Geométrico / Canvas deslizable (Pan y Zoom) */}
         <div
@@ -1264,7 +1323,7 @@ export default function MedirAngulosView() {
             <div
               ref={protRef}
               data-protractor
-              className="absolute cursor-move select-none pointer-events-auto"
+              className="absolute select-none pointer-events-none"
               style={{
                 left: `${protX}px`,
                 top: `${protY}px`,
@@ -1275,14 +1334,13 @@ export default function MedirAngulosView() {
                 touchAction: 'none',
                 filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.65))',
               }}
-              onPointerDown={handleProtractorPointerDown}
             >
               {/* SVG del Transportador Graduado Escolar */}
               <svg
                 width={protSize}
                 height={protSize}
                 viewBox="-160 -160 320 320"
-                className="drop-shadow-2xl overflow-visible pointer-events-auto"
+                className="drop-shadow-2xl overflow-visible pointer-events-none"
               >
                 <defs>
                   <radialGradient id="protractorGlass" cx="0%" cy="0%" r="100%">
@@ -1292,13 +1350,15 @@ export default function MedirAngulosView() {
                   </radialGradient>
                 </defs>
 
-                {/* Semicírculo de acrílico transparente */}
+                {/* Semicírculo de acrílico transparente (cuerpo interactivo arrastrable) */}
                 <path
                   d="M -150 0 A 150 150 0 0 1 150 0 L 150 16 L -150 16 Z"
                   fill="url(#protractorGlass)"
                   stroke="rgba(255, 255, 255, 0.45)"
                   strokeWidth="1.4"
-                  className="backdrop-blur-sm"
+                  className="backdrop-blur-sm pointer-events-auto cursor-move"
+                  data-protractor-body
+                  onPointerDown={handleProtractorPointerDown}
                 />
 
                 {/* Zona central recortada para visión clara */}
@@ -1307,13 +1367,33 @@ export default function MedirAngulosView() {
                   fill="rgba(8, 12, 24, 0.25)"
                   stroke="rgba(255, 255, 255, 0.2)"
                   strokeWidth="1"
+                  className="pointer-events-auto cursor-move"
+                  data-protractor-body
+                  onPointerDown={handleProtractorPointerDown}
+                />
+
+                {/* Línea divisoria concéntrica tenue entre escala exterior blanca y escala interior celeste */}
+                <path
+                  d="M -145 0 A 119 119 0 0 1 145 0"
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.15)"
+                  strokeWidth="0.8"
                 />
 
                 {/* Línea de base 0° - 180° */}
                 <line x1="-148" y1="0" x2="148" y2="0" stroke="#f8fafc" strokeWidth="1.3" opacity="0.85" />
                 <line x1="0" y1="-148" x2="0" y2="10" stroke="#38bdf8" strokeWidth="1" opacity="0.6" strokeDasharray="2,2" />
 
-                {/* Centro de mira reticular */}
+                {/* Centro de mira reticular con área táctil */}
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="16"
+                  fill="transparent"
+                  className="pointer-events-auto cursor-move"
+                  data-protractor-body
+                  onPointerDown={handleProtractorPointerDown}
+                />
                 <circle cx="0" cy="0" r="4.2" fill="none" stroke="#38bdf8" strokeWidth="1.5" />
                 <circle cx="0" cy="0" r="1.3" fill="#f8fafc" />
 
@@ -1336,7 +1416,8 @@ export default function MedirAngulosView() {
                   const y2 = rInner * sin
 
                   const textROuter = 126
-                  const textRInner = 78
+                  // Escala interior celeste cercana a la escala blanca exterior
+                  const textRInner = 110
 
                   return (
                     <g key={deg}>
@@ -1351,7 +1432,7 @@ export default function MedirAngulosView() {
 
                       {is10 && (
                         <>
-                          {/* Escala exterior (0° a 180°) */}
+                          {/* Escala exterior blanca (0° a 180°) */}
                           <text
                             x={textROuter * cos}
                             y={textROuter * sin + 3}
@@ -1364,7 +1445,7 @@ export default function MedirAngulosView() {
                             {deg}
                           </text>
 
-                          {/* Escala interior (180° a 0°) */}
+                          {/* Escala interior celeste (180° a 0°), ahora cercana a la blanca */}
                           <text
                             x={textRInner * cos}
                             y={textRInner * sin + 3}
@@ -1381,10 +1462,6 @@ export default function MedirAngulosView() {
                     </g>
                   )
                 })}
-
-                {/* Indicadores de 0° y 180° */}
-                <text x="142" y="-4" fontSize="8" fill="#34d399" fontWeight="black" textAnchor="end">0°</text>
-                <text x="-142" y="-4" fontSize="8" fill="#34d399" fontWeight="black" textAnchor="start">180°</text>
               </svg>
 
               {/* Manija táctil de Rotación */}
