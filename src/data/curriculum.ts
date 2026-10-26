@@ -187,6 +187,7 @@ export const topics: Topic[] = [
     { id: 'geoplano', competency: 'forma', path: '/geoplano', title: 'Geoplano', description: 'Figuras con ligas y retos', available: true },
     { id: 'angulos', competency: 'forma', path: '/angulos', title: 'Ángulos', description: 'Mide y gira ángulos', available: true },
     { id: 'medir-angulos', competency: 'forma', path: '/medir-angulos', title: 'Medición con Transportador', description: 'Mide ángulos con transportador interactivo y goniómetro', available: true },
+    { id: 'existencia-triangulo', competency: 'forma', path: '/existencia-triangulo', title: 'Existencia de un Triángulo', description: 'Teorema de la desigualdad triangular con segmentos interactivos', available: true },
 
     // ── Regularidad, equivalencia y cambio ───────────────────────────────────
     { id: 'igualdad-balanza', competency: 'regularidad', path: '/igualdad-balanza', title: 'Igualdad con Balanza', description: 'Propiedades de la igualdad', available: true },

@@ -49,6 +49,7 @@ src/
     ├── GeoplanoView.tsx       # Geoplano configurable con retos (pantalla completa)
     ├── AngulosView.tsx        # Explorador de ángulos: 6 modos interactivos (pantalla completa)
     ├── MedirAngulosView.tsx   # Medición con transportador y goniómetro interactivo (pantalla completa)
+    ├── ExistenciaTrianguloView.tsx # Teorema de existencia de triángulos y desigualdad triangular (pantalla completa)
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -136,6 +137,13 @@ public/
 - **6 modos de figuras y retos**: ángulos individuales, rectas secantes, ángulos suplementarios/llanos, triángulos y cuadriláteros con vértices al azar
 - **Validación pedagógica con tolerancia**: teclado virtual integrado, input numérico con verificación instantánea y mensajes formativos de alineación
 - **Pantalla completa y cero scroll**: optimizado según el estándar de tablets del gobierno y laptops sin wrapper `<Layout>`
+
+### 1.4 📐 Existencia de un Triángulo (`ExistenciaTrianguloView`)
+- **Manipulación física de segmentos**: tres varillas de longitudes fijas arrastrables por el cuerpo y rotativas desde sus extremos sin alterar su tamaño
+- **Efecto imán en extremos**: unión táctil instantánea al aproximar los vértices entre segmentos para intentar cerrar el polígono
+- **Teorema de la desigualdad triangular**: verificación interactiva en tiempo real ($a + b > c$, $a + c > b$, $b + c > a$) con casos predefinidos (válido, imposible, límite/degenerado, equilátero, pitagórico) y modo libre con sliders
+- **Círculos de alcance y auto-montaje**: arcos auxiliares para visualizar la intersección geométrica de radios y botón para montar la base horizontal automáticamente
+- **Lienzo fluido con zoom al cursor/dedos**: navegación multitáctil sin scroll exterior, adaptada a tablets verticales y horizontales
 
 ### 2. 🌡️ Introducción a Enteros (`IntroEnterosView`)
 - **Termómetro interactivo** arrastrable (rango: -20°C a 30°C)
@@ -355,6 +363,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
 | `/angulos` | `AngulosView` | Explorador de ángulos con 6 modos (pantalla completa) |
 | `/medir-angulos` | `MedirAngulosView` | Medición con transportador y goniómetro interactivo (pantalla completa) |
+| `/existencia-triangulo` | `ExistenciaTrianguloView` | Teorema de existencia de triángulos y desigualdad triangular (pantalla completa) |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

@@ -28,6 +28,7 @@ import PuenteEcuacionView from '../views/PuenteEcuacionView'
 import GeoplanoView from '../views/GeoplanoView'
 import AngulosView from '../views/AngulosView'
 import MedirAngulosView from '../views/MedirAngulosView'
+import ExistenciaTrianguloView from '../views/ExistenciaTrianguloView'
 
 const router = createBrowserRouter([
     {
@@ -145,6 +146,10 @@ const router = createBrowserRouter([
     {
         path: '/medir-angulos',
         element: <MedirAngulosView />
+    },
+    {
+        path: '/existencia-triangulo',
+        element: <ExistenciaTrianguloView />
     }
 ])
 
