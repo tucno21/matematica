@@ -29,6 +29,7 @@ import GeoplanoView from '../views/GeoplanoView'
 import AngulosView from '../views/AngulosView'
 import MedirAngulosView from '../views/MedirAngulosView'
 import ExistenciaTrianguloView from '../views/ExistenciaTrianguloView'
+import DescubrirFuncionView from '../views/DescubrirFuncionView'
 
 const router = createBrowserRouter([
     {
@@ -150,6 +151,10 @@ const router = createBrowserRouter([
     {
         path: '/existencia-triangulo',
         element: <ExistenciaTrianguloView />
+    },
+    {
+        path: '/descubrir-funcion',
+        element: <DescubrirFuncionView />
     }
 ])
 

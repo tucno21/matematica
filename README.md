@@ -66,6 +66,7 @@ src/
     ├── MaquinaEcuacionView.tsx    # Máquina de ecuaciones: operaciones inversas
     ├── BarrasEcuacionView.tsx     # Modelo de barras (método Singapur)
     ├── PuenteEcuacionView.tsx     # El puente del igual: transposición guiada
+    ├── DescubrirFuncionView.tsx   # Máquina de funciones: descubre la regla, tabla y plano interactivo
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
     └── PorcentajesView.tsx    # 🚧 Placeholder
@@ -379,6 +380,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/maquina-ecuacion` | `MaquinaEcuacionView` | Máquina con operaciones inversas |
 | `/barras-ecuacion` | `BarrasEcuacionView` | Modelo de barras estilo Singapur |
 | `/puente-ecuacion` | `PuenteEcuacionView` | El puente del igual con transposición |
+| `/descubrir-funcion` | `DescubrirFuncionView` | Máquina de funciones: descubre la regla, tabla y plano |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |

@@ -196,6 +196,7 @@ export const topics: Topic[] = [
     { id: 'maquina-ecuacion', competency: 'regularidad', path: '/maquina-ecuacion', title: 'Máquina de Ecuaciones', description: 'Desarmar ecuaciones con operaciones inversas', available: true },
     { id: 'barras-ecuacion', competency: 'regularidad', path: '/barras-ecuacion', title: 'Modelo de Barras', description: 'Método visual Singapur con barras de longitud', available: true },
     { id: 'puente-ecuacion', competency: 'regularidad', path: '/puente-ecuacion', title: 'El Puente del Igual', description: 'Transposición de términos y cambio de signos', available: true },
+    { id: 'descubrir-funcion', competency: 'regularidad', path: '/descubrir-funcion', title: 'Máquina de Funciones', description: 'Descubre la regla de la máquina, completa la tabla y grafica en el plano', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
