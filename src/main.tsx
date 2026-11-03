@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+// Inicializar tema temprano antes del primer render
+import './store/useThemeStore.ts'
 
 // El Service Worker cachea index.html y los assets: en desarrollo eso provoca
 // que se sigan viendo versiones antiguas de la app, así que solo se registra

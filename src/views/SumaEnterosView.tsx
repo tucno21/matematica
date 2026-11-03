@@ -705,9 +705,9 @@ export default function SumaEnterosView(): React.ReactElement {
 
                         {!hasPairs && liveBlue + liveRed > 0 && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="bg-black/80 backdrop-blur-md rounded-xl px-4 py-2 text-center border border-white/10 shadow-xl">
-                                    <p className="text-white font-bold text-xs sm:text-sm">✅ No quedan más pares</p>
-                                    <p className="text-white/40 text-[10px] mt-0.5">Pulsa para ver el resultado</p>
+                                <div className="bg-white/95 dark:bg-black/85 backdrop-blur-md rounded-2xl px-5 py-2.5 text-center border border-slate-300 dark:border-white/15 shadow-2xl">
+                                    <p className="text-slate-900 dark:text-white font-black text-xs sm:text-sm">✅ No quedan más pares</p>
+                                    <p className="text-slate-500 dark:text-white/60 text-[10px] font-semibold mt-0.5">Pulsa para ver el resultado</p>
                                 </div>
                             </div>
                         )}

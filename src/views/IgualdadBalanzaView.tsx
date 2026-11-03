@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
+import { useThemeStore } from '../store/useThemeStore'
 
 type ObjType = 'apple' | 'orange' | 'lemon' | 'pear' | 'watermelon' | 'box'
 type Side = 'left' | 'right'
@@ -152,7 +153,7 @@ function ObjIcon({ type, size = 32 }: { type: ObjType; size?: number }) {
     case 'lemon':
       return (
         <svg width={size} height={size} viewBox="0 0 40 40">
-          <ellipse cx="20" cy="22" rx="15" ry="11" fill="#eab308" />
+          <ellipse cx="20" cy="22" rx="15" ry="11" fill="#eab308" stroke="#ca8a04" strokeWidth="1" />
           <ellipse cx="20" cy="22" rx="12" ry="8" fill="#fde047" opacity=".4" />
         </svg>
       )
@@ -183,7 +184,7 @@ function ObjIcon({ type, size = 32 }: { type: ObjType; size?: number }) {
   }
 }
 
-function ScaleSVG({ angle, balanced }: { angle: number; balanced: boolean }) {
+function ScaleSVG({ angle, balanced, isDark }: { angle: number; balanced: boolean; isDark: boolean }) {
   const W = 600, H = 260
   const px = 300, py = 60
   const half = 205, chain = 75
@@ -202,25 +203,25 @@ function ScaleSVG({ angle, balanced }: { angle: number; balanced: boolean }) {
         </filter>
       </defs>
       {/* Base física */}
-      <polygon points={`${px - 45},${H - 6} ${px + 45},${H - 6} ${px},${H - 36}`} fill="#334155" />
-      <rect x={px - 5} y={py - 5} width={10} height={H - 36 - py + 6} rx="3" fill="#475569" />
+      <polygon points={`${px - 45},${H - 6} ${px + 45},${H - 6} ${px},${H - 36}`} fill={isDark ? "#334155" : "#64748b"} stroke={isDark ? "#475569" : "#475569"} strokeWidth="1.5" />
+      <rect x={px - 5} y={py - 5} width={10} height={H - 36 - py + 6} rx="3" fill={isDark ? "#475569" : "#64748b"} stroke={isDark ? "#64748b" : "#475569"} strokeWidth="1" />
 
       {/* Brazo oscilante */}
-      <line x1={lx} y1={ly} x2={rx} y2={ry} stroke="#94a3b8" strokeWidth="5" strokeLinecap="round" />
-      <circle cx={lx} cy={ly} r="5" fill="#94a3b8" />
-      <circle cx={rx} cy={ry} r="5" fill="#94a3b8" />
+      <line x1={lx} y1={ly} x2={rx} y2={ry} stroke={isDark ? "#94a3b8" : "#334155"} strokeWidth="5" strokeLinecap="round" />
+      <circle cx={lx} cy={ly} r="5" fill={isDark ? "#94a3b8" : "#334155"} />
+      <circle cx={rx} cy={ry} r="5" fill={isDark ? "#94a3b8" : "#334155"} />
 
       {/* Cadenas */}
-      <line x1={lx} y1={ly} x2={lx} y2={lpy} stroke="#64748b" strokeWidth="2" strokeDasharray="3,2" />
-      <line x1={rx} y1={ry} x2={rx} y2={rpy} stroke="#64748b" strokeWidth="2" strokeDasharray="3,2" />
+      <line x1={lx} y1={ly} x2={lx} y2={lpy} stroke={isDark ? "#64748b" : "#64748b"} strokeWidth="2" strokeDasharray="3,2" />
+      <line x1={rx} y1={ry} x2={rx} y2={rpy} stroke={isDark ? "#64748b" : "#64748b"} strokeWidth="2" strokeDasharray="3,2" />
 
       {/* Platillos (elipses) */}
-      <ellipse cx={lx} cy={lpy + 6} rx={58} ry={8} fill="#1e293b" stroke="#64748b" strokeWidth="2.5" />
-      <ellipse cx={rx} cy={rpy + 6} rx={58} ry={8} fill="#1e293b" stroke="#64748b" strokeWidth="2.5" />
+      <ellipse cx={lx} cy={lpy + 6} rx={58} ry={8} fill={isDark ? "#1e293b" : "#e2e8f0"} stroke={isDark ? "#64748b" : "#475569"} strokeWidth="2.5" />
+      <ellipse cx={rx} cy={rpy + 6} rx={58} ry={8} fill={isDark ? "#1e293b" : "#e2e8f0"} stroke={isDark ? "#64748b" : "#475569"} strokeWidth="2.5" />
 
       {/* Pivote central */}
-      <circle cx={px} cy={py} r="12" fill="#94a3b8" />
-      <circle cx={px} cy={py} r="7" fill="#334155" />
+      <circle cx={px} cy={py} r="12" fill={isDark ? "#94a3b8" : "#475569"} />
+      <circle cx={px} cy={py} r="7" fill={isDark ? "#334155" : "#cbd5e1"} />
       {balanced && (
         <circle cx={px} cy={py} r="16" fill="#22c55e" opacity=".5" filter="url(#glow)">
           <animate attributeName="opacity" values=".3;.7;.3" dur="2s" repeatCount="indefinite" />
@@ -233,6 +234,7 @@ function ScaleSVG({ angle, balanced }: { angle: number; balanced: boolean }) {
 export default function IgualdadBalanzaView() {
   const nav = useNavigate()
   const helpId = useId()
+  const isDark = useThemeStore(s => s.theme === 'dark')
 
   const [level, setLevel] = useState(1)
   const [leftPlate, setLeftPlate] = useState<Obj[]>(() => mks(LVLS[0].initL))
@@ -527,25 +529,39 @@ export default function IgualdadBalanzaView() {
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none"
+      className={`flex h-dvh flex-col overflow-hidden select-none ${
+        isDark ? "bg-[#080c18] text-white" : "bg-slate-100 text-slate-900"
+      }`}
       style={{ fontFamily: "'Nunito', sans-serif" }}
     >
       {/* ── 1. Cabecera (34-44px) ── */}
-      <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+      <header className={`flex h-9 lg:h-11 shrink-0 items-center justify-between border-b px-2 lg:px-4 ${
+        isDark ? "border-white/10 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"
+      }`}>
         <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => nav(-1)}
-            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all ${
+              isDark
+                ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs"
+            }`}
             aria-label="Volver"
             title="Volver"
           >
             <ArrowLeft size={15} />
           </button>
           <div className="flex items-center gap-1.5 min-w-0">
-            <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/90 truncate">
+            <h1 className={`text-[12px] sm:text-[13px] lg:text-[15px] font-bold truncate ${
+              isDark ? "text-white/90" : "text-slate-900"
+            }`}>
               Balanza de Igualdad
             </h1>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono bg-teal-400/10 text-teal-300 border border-teal-400/20">
+            <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono border ${
+              isDark
+                ? "bg-teal-400/10 text-teal-300 border-teal-400/20"
+                : "bg-teal-50 text-teal-800 border-teal-300 font-bold"
+            }`}>
               {cfg.prop}
             </span>
           </div>
@@ -553,18 +569,28 @@ export default function IgualdadBalanzaView() {
 
         {/* Prompt contextual en cabecera */}
         <div className="flex-1 max-w-md mx-2 hidden sm:block text-center truncate">
-          <span className="text-[11px] lg:text-xs text-amber-300 font-semibold bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20 truncate inline-block max-w-full">
+          <span className={`text-[11px] lg:text-xs font-semibold px-2.5 py-0.5 rounded-full border truncate inline-block max-w-full ${
+            isDark
+              ? "text-amber-300 bg-amber-400/10 border-amber-400/20"
+              : "text-amber-900 bg-amber-50 border-amber-300 shadow-xs font-bold"
+          }`}>
             {promptText}
           </span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] lg:text-xs text-white/40 font-mono hidden sm:inline">
+          <span className={`text-[10px] lg:text-xs font-mono hidden sm:inline ${
+            isDark ? "text-white/40" : "text-slate-500 font-semibold"
+          }`}>
             Nivel {level}/8
           </span>
           <button
             onClick={() => setShowHelp(true)}
-            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all ${
+              isDark
+                ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs"
+            }`}
             aria-label="Ayuda"
             title="Ayuda"
           >
@@ -574,7 +600,9 @@ export default function IgualdadBalanzaView() {
       </header>
 
       {/* ── 2. Barra de Navegación de Niveles y Utilidades (36-40px) ── */}
-      <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto custom-scrollbar">
+      <div className={`relative shrink-0 flex items-center justify-between gap-1.5 border-b px-2 lg:px-4 py-1 text-[11px] overflow-x-auto custom-scrollbar ${
+        isDark ? "border-white/5 bg-[#0d1424]" : "border-slate-300 bg-white shadow-xs"
+      }`}>
         {/* Selector de los 8 niveles */}
         <div className="flex items-center gap-1 shrink-0">
           {LVLS.map((l, i) => (
@@ -583,8 +611,8 @@ export default function IgualdadBalanzaView() {
               onClick={() => changeLevel(i + 1)}
               className={`h-7 px-2 sm:px-2.5 rounded-md text-[10px] sm:text-[11px] font-bold transition-all shrink-0 flex items-center gap-1 ${
                 level === i + 1
-                  ? 'bg-teal-500 text-black shadow-sm ring-1 ring-teal-400 font-black'
-                  : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  ? (isDark ? 'bg-teal-500 text-black shadow-sm ring-1 ring-teal-400 font-black' : 'bg-teal-600 text-white shadow-xs font-black')
+                  : (isDark ? 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 shadow-xs font-semibold')
               }`}
             >
               <span>{i + 1}.</span>
@@ -599,8 +627,8 @@ export default function IgualdadBalanzaView() {
             onClick={() => setShowMath(s => !s)}
             className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 transition-all ${
               showMath
-                ? 'bg-teal-500/20 border-teal-400 text-teal-300'
-                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                ? (isDark ? 'bg-teal-500/20 border-teal-400 text-teal-300' : 'bg-teal-50 border-teal-400 text-teal-800 shadow-xs font-bold')
+                : (isDark ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10' : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 shadow-xs')
             }`}
             title="Ver expresión matemática"
           >
@@ -612,8 +640,8 @@ export default function IgualdadBalanzaView() {
             onClick={() => setShowHist(s => !s)}
             className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 transition-all ${
               showHist
-                ? 'bg-violet-500/20 border-violet-400 text-violet-300'
-                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                ? (isDark ? 'bg-violet-500/20 border-violet-400 text-violet-300' : 'bg-violet-50 border-violet-400 text-violet-800 shadow-xs font-bold')
+                : (isDark ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10' : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 shadow-xs')
             }`}
             title="Historial de acciones"
           >
@@ -624,7 +652,9 @@ export default function IgualdadBalanzaView() {
           <button
             onClick={handleUndo}
             disabled={history.length === 0}
-            className="h-7 px-2 rounded-md bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] font-bold flex items-center gap-1 disabled:opacity-30 active:scale-95 transition-all"
+            className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 disabled:opacity-30 active:scale-95 transition-all ${
+              isDark ? "bg-white/5 hover:bg-white/10 text-white/70 border-white/10" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-xs"
+            }`}
             title="Deshacer última acción"
           >
             <Undo2 size={11} />
@@ -632,7 +662,9 @@ export default function IgualdadBalanzaView() {
 
           <button
             onClick={handleReset}
-            className="h-7 px-2 rounded-md bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+            className={`h-7 px-2 rounded-md border text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all ${
+              isDark ? "bg-white/5 hover:bg-white/10 text-white/70 border-white/10" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-xs"
+            }`}
             title="Reiniciar este nivel"
           >
             <RotateCcw size={11} />
@@ -647,8 +679,12 @@ export default function IgualdadBalanzaView() {
       >
         {/* PANEL IZQUIERDO: Estante de Objetos */}
         {trayTypes.length > 0 && (
-          <aside className="w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden shadow-inner">
-            <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-white/30 text-center">
+          <aside className={`w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 rounded-xl overflow-hidden border ${
+            isDark ? "bg-white/[0.02] border-white/10 shadow-inner" : "bg-white border-slate-300 shadow-sm"
+          }`}>
+            <span className={`text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-center ${
+              isDark ? "text-white/30" : "text-slate-500"
+            }`}>
               Cajón
             </span>
 
@@ -658,35 +694,53 @@ export default function IgualdadBalanzaView() {
                   key={`tray-${t}`}
                   onClick={() => tapTray(t)}
                   onPointerDown={e => startDrag(t, null, null, e)}
-                  className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 xl:w-14 xl:h-14 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 active:scale-90 transition-all flex flex-col items-center justify-center relative shadow-sm"
+                  className={`w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 xl:w-14 xl:h-14 rounded-lg border active:scale-90 transition-all flex flex-col items-center justify-center relative ${
+                    isDark
+                      ? "bg-white/5 border-white/10 hover:bg-white/10 shadow-sm"
+                      : "bg-slate-50 border-slate-300 hover:bg-slate-100 shadow-xs"
+                  }`}
                   title={`${DEFS[t].name} (peso ${DEFS[t].w})`}
                 >
                   <ObjIcon type={t} size={22 + DEFS[t].w * 2.2} />
-                  <span className="absolute bottom-0 right-1 text-[8px] lg:text-[9px] font-mono font-bold text-white/50">
+                  <span className={`absolute bottom-0 right-1 text-[8px] lg:text-[9px] font-mono font-bold ${
+                    isDark ? "text-white/50" : "text-slate-600"
+                  }`}>
                     {DEFS[t].w}
                   </span>
                 </button>
               ))}
             </div>
 
-            <span className="text-[7px] lg:text-[8px] text-white/30 text-center leading-tight">
+            <span className={`text-[7px] lg:text-[8px] text-center leading-tight ${
+              isDark ? "text-white/30" : "text-slate-500 font-semibold"
+            }`}>
               Toca / arrastra
             </span>
           </aside>
         )}
 
         {/* ESPACIO CENTRAL: La Balanza Dinámica Adaptativa */}
-        <main className="flex-1 min-w-0 flex flex-col items-center justify-between relative bg-gradient-to-b from-white/[0.01] to-white/[0.03] border border-white/5 rounded-xl p-1 sm:p-2 overflow-hidden">
+        <main className={`flex-1 min-w-0 flex flex-col items-center justify-between relative rounded-xl p-1 sm:p-2 overflow-hidden border ${
+          isDark
+            ? "bg-gradient-to-b from-white/[0.01] to-white/[0.03] border-white/5"
+            : "bg-white border-slate-300 shadow-sm"
+        }`}>
           
           {/* Banner de objetivo cumplido o prompt móvil */}
           <div className="h-6 sm:h-7 shrink-0 flex items-center justify-center w-full">
             {complete ? (
-              <div className="px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] sm:text-xs font-bold flex items-center gap-1.5 shadow-md animate-bounce">
-                <Sparkles size={12} className="text-emerald-300" />
+              <div className={`px-3 py-0.5 rounded-full border text-[10px] sm:text-xs font-bold flex items-center gap-1.5 shadow-md animate-bounce ${
+                isDark
+                  ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                  : "bg-emerald-50 border-emerald-400 text-emerald-800 shadow-xs"
+              }`}>
+                <Sparkles size={12} className={isDark ? "text-emerald-300" : "text-emerald-600"} />
                 <span>¡Equilibrio! {cfg.prop}: {cfg.sub}</span>
               </div>
             ) : (
-              <div className="text-[10px] sm:text-[11px] text-white/50 truncate text-center sm:hidden">
+              <div className={`text-[10px] sm:text-[11px] truncate text-center sm:hidden font-medium ${
+                isDark ? "text-white/50" : "text-slate-600"
+              }`}>
                 {promptText}
               </div>
             )}
@@ -700,9 +754,9 @@ export default function IgualdadBalanzaView() {
                 shakeScale ? 'animate-[shake_0.4s_ease-in-out]' : ''
               }`}
             >
-              <ScaleSVG angle={displayAngle} balanced={balanced} />
+              <ScaleSVG angle={displayAngle} balanced={balanced} isDark={isDark} />
 
-              {/* Plato Izquierdo: Las frutas se apoyan EXACTAMENTE sobre el platillo */}
+              {/* Plato Izquierdo */}
               <div
                 ref={leftRef}
                 className="absolute flex flex-wrap items-end justify-center content-end gap-1 px-1 transition-all"
@@ -711,9 +765,13 @@ export default function IgualdadBalanzaView() {
                   width: '26%',
                   top: `${leftY_pct - 27}%`,
                   height: '28%',
-                  border: leftLocked ? '1.5px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(45,212,191,0.4)',
+                  border: leftLocked
+                    ? (isDark ? '1.5px dashed rgba(255,255,255,0.1)' : '1.5px dashed rgba(100,116,139,0.3)')
+                    : (isDark ? '2px dashed rgba(45,212,191,0.5)' : '2px dashed rgba(13,148,136,0.7)'),
                   borderRadius: '12px 12px 4px 4px',
-                  background: leftLocked ? 'transparent' : 'rgba(45,212,191,0.03)',
+                  background: leftLocked
+                    ? 'transparent'
+                    : (isDark ? 'rgba(45,212,191,0.04)' : 'rgba(13,148,136,0.08)'),
                 }}
               >
                 {leftPlate.map(o => (
@@ -729,7 +787,7 @@ export default function IgualdadBalanzaView() {
                 ))}
               </div>
 
-              {/* Plato Derecho: Las frutas se apoyan EXACTAMENTE sobre el platillo */}
+              {/* Plato Derecho */}
               <div
                 ref={rightRef}
                 className="absolute flex flex-wrap items-end justify-center content-end gap-1 px-1 transition-all"
@@ -738,9 +796,13 @@ export default function IgualdadBalanzaView() {
                   width: '26%',
                   top: `${rightY_pct - 27}%`,
                   height: '28%',
-                  border: rightLocked ? '1.5px dashed rgba(255,255,255,0.1)' : '2px dashed rgba(167,139,250,0.4)',
+                  border: rightLocked
+                    ? (isDark ? '1.5px dashed rgba(255,255,255,0.1)' : '1.5px dashed rgba(100,116,139,0.3)')
+                    : (isDark ? '2px dashed rgba(167,139,250,0.5)' : '2px dashed rgba(124,58,237,0.7)'),
                   borderRadius: '12px 12px 4px 4px',
-                  background: rightLocked ? 'transparent' : 'rgba(167,139,250,0.03)',
+                  background: rightLocked
+                    ? 'transparent'
+                    : (isDark ? 'rgba(167,139,250,0.04)' : 'rgba(124,58,237,0.08)'),
                 }}
               >
                 {rightPlate.map(o => (
@@ -761,7 +823,11 @@ export default function IgualdadBalanzaView() {
                 className="absolute text-center font-bold font-mono text-[10px] sm:text-xs pointer-events-none -translate-x-1/2"
                 style={{ left: `${leftX_pct}%`, top: `${leftY_pct + 4}%` }}
               >
-                <span className={`px-2 py-0.5 rounded-full shadow-md ${leftW === rightW && leftW > 0 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-[#0f172a] text-teal-300 border border-teal-500/30'}`}>
+                <span className={`px-2 py-0.5 rounded-full shadow-md font-bold ${
+                  leftW === rightW && leftW > 0
+                    ? (isDark ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-400 ring-1 ring-emerald-400/30')
+                    : (isDark ? 'bg-[#0f172a] text-teal-300 border border-teal-500/30' : 'bg-white text-teal-800 border border-teal-400 shadow-xs')
+                }`}>
                   {leftW}
                 </span>
               </div>
@@ -771,28 +837,34 @@ export default function IgualdadBalanzaView() {
                 className="absolute text-center font-bold font-mono text-[10px] sm:text-xs pointer-events-none -translate-x-1/2"
                 style={{ left: `${rightX_pct}%`, top: `${rightY_pct + 4}%` }}
               >
-                <span className={`px-2 py-0.5 rounded-full shadow-md ${leftW === rightW && rightW > 0 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-[#0f172a] text-violet-300 border border-violet-500/30'}`}>
+                <span className={`px-2 py-0.5 rounded-full shadow-md font-bold ${
+                  leftW === rightW && rightW > 0
+                    ? (isDark ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 ring-1 ring-emerald-400/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-400 ring-1 ring-emerald-400/30')
+                    : (isDark ? 'bg-[#0f172a] text-violet-300 border border-violet-500/30' : 'bg-white text-violet-800 border border-violet-400 shadow-xs')
+                }`}>
                   {rightW}
                 </span>
               </div>
 
               {/* Display Matemático Flotante (overlay cuando está activo) */}
               {showMath && (
-                <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-[#0a0f1d]/90 backdrop-blur-md border border-white/15 rounded-xl px-3 py-1 text-center font-mono shadow-xl z-20 pointer-events-none">
-                  <div className="text-[10px] sm:text-xs text-white/80">
-                    <span className="text-teal-300 font-bold">{fmtMathSide(leftPlate)}</span>
-                    <span className="mx-1 text-white/50">=</span>
-                    <span className="text-violet-300 font-bold">{fmtMathSide(rightPlate)}</span>
+                <div className={`absolute top-1 left-1/2 -translate-x-1/2 backdrop-blur-md border rounded-xl px-3 py-1 text-center font-mono shadow-xl z-20 pointer-events-none ${
+                  isDark ? 'bg-[#0a0f1d]/90 border-white/15' : 'bg-white/95 border-slate-300 shadow-md text-slate-800'
+                }`}>
+                  <div className={`text-[10px] sm:text-xs font-semibold ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
+                    <span className={isDark ? "text-teal-300 font-bold" : "text-teal-700 font-bold"}>{fmtMathSide(leftPlate)}</span>
+                    <span className={`mx-1 ${isDark ? "text-white/50" : "text-slate-400"}`}>=</span>
+                    <span className={isDark ? "text-violet-300 font-bold" : "text-violet-700 font-bold"}>{fmtMathSide(rightPlate)}</span>
                   </div>
                   <div className="text-xs sm:text-sm font-black mt-0.5 flex items-center justify-center gap-1.5">
-                    <span className="text-teal-200">{leftW}</span>
-                    <span className={leftW === rightW ? 'text-emerald-400' : 'text-rose-400'}>
+                    <span className={isDark ? "text-teal-200" : "text-teal-700"}>{leftW}</span>
+                    <span className={leftW === rightW ? (isDark ? 'text-emerald-400' : 'text-emerald-600 font-black') : (isDark ? 'text-rose-400' : 'text-rose-600 font-black')}>
                       {leftW === rightW ? '=' : '≠'}
                     </span>
-                    <span className="text-violet-200">{rightW}</span>
+                    <span className={isDark ? "text-violet-200" : "text-violet-700"}>{rightW}</span>
                   </div>
                   {addedObj && (
-                    <div className="text-[9px] text-amber-300 mt-0.5">
+                    <div className={`text-[9px] font-semibold mt-0.5 ${isDark ? "text-amber-300" : "text-amber-800"}`}>
                       + {DEFS[addedObj].name} ({DEFS[addedObj].w}) en ambos lados
                     </div>
                   )}
@@ -801,16 +873,22 @@ export default function IgualdadBalanzaView() {
 
               {/* Panel de Historial Flotante (overlay cuando está activo) */}
               {showHist && (
-                <div className="absolute top-1 right-1 max-w-[210px] max-h-36 bg-[#0a0f1d]/95 backdrop-blur-md border border-white/20 rounded-xl p-2 text-[10px] text-white/70 overflow-y-auto shadow-2xl z-30 custom-scrollbar">
-                  <div className="font-bold text-white/90 border-b border-white/10 pb-0.5 mb-1 flex items-center justify-between">
+                <div className={`absolute top-1 right-1 max-w-[210px] max-h-36 backdrop-blur-md border rounded-xl p-2 text-[10px] overflow-y-auto shadow-2xl z-30 custom-scrollbar ${
+                  isDark ? 'bg-[#0a0f1d]/95 border-white/20 text-white/70' : 'bg-white/95 border-slate-300 text-slate-700 shadow-lg'
+                }`}>
+                  <div className={`font-bold border-b pb-0.5 mb-1 flex items-center justify-between ${
+                    isDark ? 'text-white/90 border-white/10' : 'text-slate-900 border-slate-200'
+                  }`}>
                     <span>Historial</span>
-                    <button onClick={() => setShowHist(false)} className="text-white/40 hover:text-white">✕</button>
+                    <button onClick={() => setShowHist(false)} className={isDark ? "text-white/40 hover:text-white" : "text-slate-400 hover:text-slate-800"}>✕</button>
                   </div>
                   {history.length === 0 ? (
-                    <div className="text-white/30 italic">Sin acciones aún</div>
+                    <div className={isDark ? "text-white/30 italic" : "text-slate-400 italic"}>Sin acciones aún</div>
                   ) : (
                     history.slice(-8).map((e, idx) => (
-                      <div key={idx} className="py-0.5 border-b border-white/5 last:border-0 truncate">
+                      <div key={idx} className={`py-0.5 border-b last:border-0 truncate ${
+                        isDark ? 'border-white/5' : 'border-slate-100'
+                      }`}>
                         {e.text}
                       </div>
                     ))
@@ -831,11 +909,17 @@ export default function IgualdadBalanzaView() {
           {/* Micro-leyenda o Cadena transitiva en nivel 3 */}
           <div className="shrink-0 pt-0.5">
             {cfg.mode === 'transitive' && phase >= 1 ? (
-              <div className="text-[10px] font-mono text-violet-300 bg-violet-500/10 px-2.5 py-0.5 rounded-full border border-violet-400/30">
+              <div className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
+                isDark
+                  ? "text-violet-300 bg-violet-500/10 border-violet-400/30"
+                  : "text-violet-800 bg-violet-50 border-violet-300 font-bold shadow-xs"
+              }`}>
                 Cadena: Sandía (5) = {rightPlate.map(o => DEFS[o.type].name).join(' + ')} ({wOf(rightPlate)})
               </div>
             ) : (
-              <div className="text-[9px] text-white/35 flex items-center justify-center gap-2">
+              <div className={`text-[9px] flex items-center justify-center gap-2 ${
+                isDark ? "text-white/35" : "text-slate-500 font-medium"
+              }`}>
                 <span>Plato izquierdo: {leftLocked ? 'Fijo' : 'Interactuable'}</span>
                 <span>•</span>
                 <span>Plato derecho: {rightLocked ? 'Fijo' : 'Interactuable'}</span>
@@ -846,8 +930,12 @@ export default function IgualdadBalanzaView() {
 
         {/* PANEL DERECHO: Herramientas de Operación especiales */}
         {hasSpecialActions && (
-          <aside className="w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden shadow-inner">
-            <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-white/30 text-center">
+          <aside className={`w-[52px] sm:w-[60px] lg:w-[72px] xl:w-[80px] shrink-0 flex flex-col items-center justify-between py-1 rounded-xl overflow-hidden border ${
+            isDark ? "bg-white/[0.02] border-white/10 shadow-inner" : "bg-white border-slate-300 shadow-sm"
+          }`}>
+            <span className={`text-[8px] lg:text-[10px] font-black uppercase tracking-wider text-center ${
+              isDark ? "text-white/30" : "text-slate-500"
+            }`}>
               Acción
             </span>
 
@@ -856,7 +944,11 @@ export default function IgualdadBalanzaView() {
               {cfg.mode === 'symmetric' && (
                 <button
                   onClick={handleSwap}
-                  className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-[10px] font-bold flex flex-col items-center justify-center active:scale-95 transition-all shadow-md"
+                  className={`w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg border text-[10px] font-bold flex flex-col items-center justify-center active:scale-95 transition-all shadow-md ${
+                    isDark
+                      ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-400/40 text-amber-200"
+                      : "bg-amber-50 hover:bg-amber-100 border-amber-400 text-amber-800 font-black shadow-xs"
+                  }`}
                   title="Intercambiar platos"
                 >
                   <Repeat size={15} />
@@ -871,7 +963,11 @@ export default function IgualdadBalanzaView() {
                     <button
                       key={`m${f}`}
                       onClick={() => handleMultiplyBoth(f)}
-                      className="w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-200 text-xs font-mono font-bold active:scale-95 transition-all"
+                      className={`w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg border text-xs font-mono font-bold active:scale-95 transition-all ${
+                        isDark
+                          ? "bg-teal-500/20 hover:bg-teal-500/30 border-teal-400/40 text-teal-200"
+                          : "bg-teal-50 hover:bg-teal-100 border-teal-400 text-teal-800 font-black shadow-xs"
+                      }`}
                       title={`Multiplicar ambos platos por ${f}`}
                     >
                       ×{f}
@@ -879,7 +975,11 @@ export default function IgualdadBalanzaView() {
                   ))}
                   <button
                     onClick={() => handleMultiplyOne('left', 2)}
-                    className="w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 text-rose-300 text-[8px] font-bold active:scale-95 transition-all"
+                    className={`w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg border text-[8px] font-bold active:scale-95 transition-all ${
+                      isDark
+                        ? "bg-rose-500/10 hover:bg-rose-500/20 border-rose-400/20 text-rose-300"
+                        : "bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-800 font-bold shadow-xs"
+                    }`}
                     title="Desequilibrar multiplicando solo un lado"
                   >
                     ×2 izq
@@ -894,7 +994,11 @@ export default function IgualdadBalanzaView() {
                     <button
                       key={`d${d}`}
                       onClick={() => handleDivideBoth(d)}
-                      className="w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-400/40 text-violet-200 text-xs font-mono font-bold active:scale-95 transition-all"
+                      className={`w-10 h-8 sm:w-11 sm:h-9 lg:w-13 lg:h-10 rounded-lg border text-xs font-mono font-bold active:scale-95 transition-all ${
+                        isDark
+                          ? "bg-violet-500/20 hover:bg-violet-500/30 border-violet-400/40 text-violet-200"
+                          : "bg-violet-50 hover:bg-violet-100 border-violet-400 text-violet-800 font-black shadow-xs"
+                      }`}
                       title={`Dividir ambos platos entre ${d}`}
                     >
                       ÷{d}
@@ -902,7 +1006,11 @@ export default function IgualdadBalanzaView() {
                   ))}
                   <button
                     onClick={() => handleDivideBoth(0)}
-                    className="w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 text-[9px] font-mono font-bold active:scale-95 transition-all"
+                    className={`w-10 h-7 sm:w-11 sm:h-7 lg:w-13 lg:h-8 rounded-lg border text-[9px] font-mono font-bold active:scale-95 transition-all ${
+                      isDark
+                        ? "bg-rose-500/20 hover:bg-rose-500/30 border-rose-400/30 text-rose-200"
+                        : "bg-rose-50 hover:bg-rose-100 border-rose-400 text-rose-800 font-bold shadow-xs"
+                    }`}
                     title="Dividir entre cero"
                   >
                     ÷0
@@ -917,7 +1025,11 @@ export default function IgualdadBalanzaView() {
                     <button
                       key={`ab${t}`}
                       onClick={() => handleAddBoth(t)}
-                      className="w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-200 flex flex-col items-center justify-center active:scale-95 transition-all"
+                      className={`w-10 h-10 sm:w-11 sm:h-11 lg:w-13 lg:h-13 rounded-lg border flex flex-col items-center justify-center active:scale-95 transition-all ${
+                        isDark
+                          ? "bg-teal-500/20 hover:bg-teal-500/30 border-teal-400/40 text-teal-200"
+                          : "bg-teal-50 hover:bg-teal-100 border-teal-400 text-teal-800 font-bold shadow-xs"
+                      }`}
                       title={`+ ${DEFS[t].name} en ambos lados`}
                     >
                       <span className="text-[7px] lg:text-[8px] font-bold">+2 lados</span>
@@ -928,7 +1040,9 @@ export default function IgualdadBalanzaView() {
               )}
             </div>
 
-            <span className="text-[7px] lg:text-[8px] text-white/30 text-center leading-tight">
+            <span className={`text-[7px] lg:text-[8px] text-center leading-tight ${
+              isDark ? "text-white/30" : "text-slate-500 font-semibold"
+            }`}>
               Operar
             </span>
           </aside>
@@ -936,15 +1050,23 @@ export default function IgualdadBalanzaView() {
       </div>
 
       {/* ── 4. Barra Inferior de Acción y Feedback (40-48px) ── */}
-      <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+      <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 ${
+        isDark ? "border-white/10 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"
+      }`}>
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {complete ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] sm:text-[11px] lg:text-xs font-bold">
-              <CheckCircle2 size={13} className="text-emerald-300 shrink-0" />
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] sm:text-[11px] lg:text-xs font-bold ${
+              isDark
+                ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                : "bg-emerald-50 border-emerald-400 text-emerald-800 shadow-xs"
+            }`}>
+              <CheckCircle2 size={13} className={isDark ? "text-emerald-300 shrink-0" : "text-emerald-600 shrink-0"} />
               <span className="truncate">¡Propiedad {cfg.prop} demostrada!</span>
             </div>
           ) : (
-            <div className="text-[10px] sm:text-[11px] text-white/70 truncate font-medium">
+            <div className={`text-[10px] sm:text-[11px] truncate font-medium ${
+              isDark ? "text-white/70" : "text-slate-700"
+            }`}>
               {promptText}
             </div>
           )}
@@ -954,7 +1076,11 @@ export default function IgualdadBalanzaView() {
           <button
             onClick={() => level > 1 && changeLevel(level - 1)}
             disabled={level === 1}
-            className="h-7 lg:h-8 px-2 sm:px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] sm:text-[11px] font-bold disabled:opacity-30 active:scale-95 transition-all flex items-center gap-1"
+            className={`h-7 lg:h-8 px-2 sm:px-3 rounded-lg border text-[10px] sm:text-[11px] font-bold disabled:opacity-30 active:scale-95 transition-all flex items-center gap-1 ${
+              isDark
+                ? "bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white"
+                : "bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700 shadow-xs"
+            }`}
           >
             <span>Anterior</span>
           </button>
@@ -965,7 +1091,7 @@ export default function IgualdadBalanzaView() {
             className={`h-7 lg:h-8 px-2.5 sm:px-3.5 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all shadow-md ${
               complete
                 ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-black animate-pulse'
-                : 'bg-white/10 hover:bg-white/20 text-white'
+                : (isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 shadow-xs')
             }`}
           >
             <span>Siguiente</span>
@@ -989,16 +1115,18 @@ export default function IgualdadBalanzaView() {
         open={showHelp}
         onClose={() => setShowHelp(false)}
         title="¿Cómo usar la balanza de igualdad?"
-        bgColor="#080c18"
+        bgColor={isDark ? "#080c18" : "#ffffff"}
         maxWidth="max-w-md"
         buttonColor="bg-teal-500 hover:bg-teal-400"
       >
-        <div key={helpId} className="space-y-2 text-white/80 text-xs leading-relaxed pb-2">
+        <div key={helpId} className={`space-y-2 text-xs leading-relaxed pb-2 ${isDark ? "text-white/80" : "text-slate-700"}`}>
           <p>
-            Explora las <strong className="text-white">propiedades de la igualdad</strong> usando la balanza. Cada objeto tiene un peso distinto:
+            Explora las <strong className={isDark ? "text-white" : "text-slate-900"}>propiedades de la igualdad</strong> usando la balanza. Cada objeto tiene un peso distinto:
           </p>
 
-          <div className="grid grid-cols-2 gap-1.5 p-2 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+          <div className={`grid grid-cols-2 gap-1.5 p-2 rounded-xl border text-[11px] font-semibold ${
+            isDark ? "bg-white/5 border-white/10 text-white/80" : "bg-slate-50 border-slate-200 text-slate-800"
+          }`}>
             <div>🍎 Manzana = 1</div>
             <div>🍊 Naranja = 2</div>
             <div>🍋 Limón = 3</div>
@@ -1008,12 +1136,12 @@ export default function IgualdadBalanzaView() {
           </div>
 
           <ol className="space-y-1.5 list-decimal list-inside pl-1 text-[11px]">
-            <li><strong className="text-teal-300">Reflexiva</strong>: Coloca los mismos objetos en el plato derecho ($a = a$).</li>
-            <li><strong className="text-amber-300">Simétrica</strong>: Usa Swap para intercambiar platos ($A = B \implies B = A$).</li>
-            <li><strong className="text-emerald-300">Transitiva</strong>: Equilibra la primera balanza y luego busca otra combinación igual.</li>
-            <li><strong className="text-violet-300">Adición</strong>: Agrega lo mismo a ambos lados ($A + C = B + C$).</li>
-            <li><strong className="text-sky-300">Multiplicación</strong>: Duplica o triplica ambos lados ($A \times C = B \times C$).</li>
-            <li><strong className="text-rose-300">División</strong>: Divide ambos platos en partes iguales ($A \div C = B \div C$).</li>
+            <li><strong className={isDark ? "text-teal-300" : "text-teal-700 font-bold"}>Reflexiva</strong>: Coloca los mismos objetos en el plato derecho ($a = a$).</li>
+            <li><strong className={isDark ? "text-amber-300" : "text-amber-700 font-bold"}>Simétrica</strong>: Usa Swap para intercambiar platos ($A = B \implies B = A$).</li>
+            <li><strong className={isDark ? "text-emerald-300" : "text-emerald-700 font-bold"}>Transitiva</strong>: Equilibra la primera balanza y luego busca otra combinación igual.</li>
+            <li><strong className={isDark ? "text-violet-300" : "text-violet-700 font-bold"}>Adición</strong>: Agrega lo mismo a ambos lados ($A + C = B + C$).</li>
+            <li><strong className={isDark ? "text-sky-300" : "text-sky-700 font-bold"}>Multiplicación</strong>: Duplica o triplica ambos lados ($A \times C = B \times C$).</li>
+            <li><strong className={isDark ? "text-rose-300" : "text-rose-700 font-bold"}>División</strong>: Divide ambos platos en partes iguales ($A \div C = B \div C$).</li>
           </ol>
         </div>
       </ModalHelp>

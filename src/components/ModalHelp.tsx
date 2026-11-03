@@ -29,7 +29,7 @@ export default function ModalHelp({
             onClick={onClose}
         >
             <div
-                className={`border border-white/20 rounded-2xl ${maxWidth} w-[90%] shadow-2xl flex flex-col`}
+                className={`modal-help-content border border-white/20 rounded-2xl ${maxWidth} w-[90%] shadow-2xl flex flex-col`}
                 style={{ backgroundColor: bgColor, maxHeight: "85vh" }}
                 onClick={(e) => e.stopPropagation()}
             >

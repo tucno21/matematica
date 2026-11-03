@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, HelpCircle, Plus, RotateCcw, Undo2, X } from 'lucide-react'
+import { useThemeStore } from '../store/useThemeStore'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -28,8 +29,10 @@ interface WedgeState {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const RAD = Math.PI / 180
-const COLORS = ['#2dd4bf', '#818cf8', '#fbbf24', '#fb7185']
-const LINE_COLORS = ['#2dd4bf', '#fbbf24']
+const COLORS_DARK = ['#2dd4bf', '#818cf8', '#fbbf24', '#fb7185']
+const COLORS_LIGHT = ['#0d9488', '#4f46e5', '#d97706', '#e11d48']
+const LINE_COLORS_DARK = ['#2dd4bf', '#fbbf24']
+const LINE_COLORS_LIGHT = ['#0d9488', '#d97706']
 const VERTEX_NAMES = ['A', 'B', 'C', 'D']
 const WEDGE_MAX: Record<WedgeKind, number> = { llano: 3, recto: 2 }
 const WEDGE_TOTAL: Record<WedgeKind, number> = { llano: 180, recto: 90 }
@@ -263,6 +266,9 @@ const NO_RAYS: number[] = []
 
 export default function AngulosView() {
     const navigate = useNavigate()
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const colors = isDark ? COLORS_DARK : COLORS_LIGHT
+    const lineColors = isDark ? LINE_COLORS_DARK : LINE_COLORS_LIGHT
 
     const [mode, setMode] = useState<Mode>('llano')
     const [wedges, setWedges] = useState<Record<WedgeKind, WedgeState>>({
@@ -324,14 +330,15 @@ export default function AngulosView() {
         const h = dims.height
         const min = Math.min(w, h)
 
-        const label = (x: number, y: number, text: string, color: string, px = 10) => {
-            ctx.font = `700 ${px}px "JetBrains Mono", ui-monospace, monospace`
+        const label = (x: number, y: number, text: string, color?: string, px = 12) => {
+            ctx.font = `800 ${px}px "JetBrains Mono", ui-monospace, monospace`
             ctx.textAlign = 'center'
             ctx.textBaseline = 'middle'
-            ctx.lineWidth = 3
-            ctx.strokeStyle = 'rgba(8, 12, 24, 0.85)'
+            ctx.lineWidth = 3.5
+            ctx.lineJoin = 'round'
+            ctx.strokeStyle = isDark ? 'rgba(8, 12, 24, 0.95)' : '#ffffff'
             ctx.strokeText(text, x, y)
-            ctx.fillStyle = color
+            ctx.fillStyle = color || (isDark ? '#f1f5f9' : '#0f172a')
             ctx.fillText(text, x, y)
         }
 
@@ -350,11 +357,11 @@ export default function AngulosView() {
         const handleDot = (p: P, color: string, active: boolean) => {
             if (active) {
                 ctx.beginPath()
-                ctx.arc(p.x, p.y, 15, 0, Math.PI * 2)
-                ctx.fillStyle = 'rgba(255,255,255,0.16)'
+                ctx.arc(p.x, p.y, 16, 0, Math.PI * 2)
+                ctx.fillStyle = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.14)'
                 ctx.fill()
             }
-            dot(p, 10, 'rgba(8,12,24,0.55)')
+            dot(p, 10, isDark ? 'rgba(8,12,24,0.6)' : 'rgba(15,23,42,0.18)')
             dot(p, 7.5, color)
             dot(p, 2.6, '#ffffff')
         }
@@ -382,6 +389,9 @@ export default function AngulosView() {
             ctx.globalAlpha = 1
         }
 
+        const fixedLineColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(15,23,42,0.65)'
+        const fixedDotColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.5)'
+
         if (wedgeKind) {
             const layout = wedgeLayout(wedgeKind, w, h)
             const v = layout.v
@@ -393,48 +403,48 @@ export default function AngulosView() {
                 const hi = bounds[i + 1]
                 const val = values[i]
                 const rArc = val < 24 ? min * 0.22 : min * 0.15
-                arcMath(v, lo, hi, rArc, COLORS[i % 4], 0.95, 3.5)
+                arcMath(v, lo, hi, rArc, colors[i % 4], 0.95, 3.5)
                 const lp = pt(v, (lo + hi) / 2, rArc + 22)
-                label(lp.x, lp.y, `${Math.round(val)}°`, '#f1f5f9', 13)
+                label(lp.x, lp.y, `${Math.round(val)}°`, colors[i % 4], 13)
             }
 
             // Lados fijos del ángulo (85% del área de trabajo)
             const [edgeA, edgeB] = layout.edges
-            seg(v, edgeA, 'rgba(255,255,255,0.5)')
-            seg(v, edgeB, 'rgba(255,255,255,0.5)')
-            dot(edgeA, 4, 'rgba(255,255,255,0.4)')
-            dot(edgeB, 4, 'rgba(255,255,255,0.4)')
+            seg(v, edgeA, fixedLineColor, 2.5)
+            seg(v, edgeB, fixedLineColor, 2.5)
+            dot(edgeA, 4.5, fixedDotColor)
+            dot(edgeB, 4.5, fixedDotColor)
 
             // Líneas móviles (nunca desde el vértice: se giran desde su punto)
             rays.forEach((angle, index) => {
                 const tip = pt(v, angle, layout.grab)
-                seg(v, tip, COLORS[index % 4], 3)
-                handleDot(tip, COLORS[index % 4], drag?.kind === 'ray' && drag.index === index)
+                seg(v, tip, colors[index % 4], 3)
+                handleDot(tip, colors[index % 4], drag?.kind === 'ray' && drag.index === index)
             })
 
-            dot(v, 5.5, '#ffffff', 'rgba(8,12,24,0.9)')
+            dot(v, 6, isDark ? '#ffffff' : '#0f172a', isDark ? 'rgba(8,12,24,0.9)' : '#ffffff')
         }
 
         if (mode === 'secantes') {
             const c = secCenter(w, h)
             const R = Math.hypot(w, h) / 2 + 10
             secLines.forEach((angle, index) => {
-                seg(pt(c, angle + 180, R), pt(c, angle, R), LINE_COLORS[index], 2.5, 0.85)
+                seg(pt(c, angle + 180, R), pt(c, angle, R), lineColors[index], 2.5, 0.85)
             })
 
             secSectors(secLines).forEach((s, i) => {
-                const color = i % 2 === 0 ? COLORS[0] : COLORS[3]
+                const color = i % 2 === 0 ? colors[0] : colors[3]
                 const rArc = s.val < 26 ? min * 0.21 : min * 0.15
                 arcMath(c, s.lo, s.hi, rArc, color, 0.9, 3.5)
                 const lp = pt(c, (s.lo + s.hi) / 2, rArc + 22)
-                label(lp.x, lp.y, `${i % 2 === 0 ? 'α' : 'β'} ${Math.round(s.val)}°`, '#f1f5f9', 13)
+                label(lp.x, lp.y, `${i % 2 === 0 ? 'α' : 'β'} ${Math.round(s.val)}°`, color, 13)
             })
 
-            dot(c, 5, '#ffffff', 'rgba(8,12,24,0.9)')
+            dot(c, 5.5, isDark ? '#ffffff' : '#0f172a', isDark ? 'rgba(8,12,24,0.9)' : '#ffffff')
             secLines.forEach((angle, index) => {
                 for (const sign of [1, -1] as const) {
                     const p = pt(c, angle, sign * min * 0.3)
-                    handleDot(p, LINE_COLORS[index], drag?.kind === 'line' && drag.index === index)
+                    handleDot(p, lineColors[index], drag?.kind === 'line' && drag.index === index)
                 }
             })
         }
@@ -445,11 +455,11 @@ export default function AngulosView() {
             const c = { x: w / 2, y: (yT + yB) / 2 }
             const t = trans
 
-            seg({ x: 6, y: yT }, { x: w - 6, y: yT }, 'rgba(255,255,255,0.45)')
-            seg({ x: 6, y: yB }, { x: w - 6, y: yB }, 'rgba(255,255,255,0.45)')
+            seg({ x: 6, y: yT }, { x: w - 6, y: yT }, fixedLineColor, 2.5)
+            seg({ x: 6, y: yB }, { x: w - 6, y: yB }, fixedLineColor, 2.5)
 
             const R = Math.hypot(w, h) / 2 + 10
-            seg(pt(c, t + 180, R), pt(c, t, R), COLORS[3], 2.5, 0.9)
+            seg(pt(c, t + 180, R), pt(c, t, R), colors[3], 2.5, 0.9)
 
             const sinT = Math.sin(t * RAD)
             const cosT = Math.cos(t * RAD)
@@ -495,20 +505,21 @@ export default function AngulosView() {
 
             all.forEach((s, idx) => {
                 const inPair = pairs.some(([a, b]) => a === idx || b === idx)
-                const color = rel === 3 && inPair ? COLORS[1] : s.si % 2 === 0 ? COLORS[0] : COLORS[2]
-                const alpha = rel === 0 ? 0.5 : inPair ? 0.95 : 0.12
-                arcMath(s.p, s.lo, s.hi, 24, color, alpha, rel > 0 && inPair ? 4.5 : 3.5)
+                const color = rel === 3 && inPair ? colors[1] : s.si % 2 === 0 ? colors[0] : colors[2]
+                const alpha = rel === 0 ? 0.6 : inPair ? 0.95 : 0.15
+                arcMath(s.p, s.lo, s.hi, 24, color, alpha, rel > 0 && inPair ? 4.5 : 3)
                 const lp = pt(s.p, s.bis, 42)
-                label(lp.x, lp.y, `${Math.round(s.val)}°`, rel === 0 || inPair ? '#f1f5f9' : 'rgba(241,245,249,0.35)', 12)
+                const textColor = rel === 0 || inPair ? (isDark ? '#f1f5f9' : '#0f172a') : (isDark ? 'rgba(241,245,249,0.35)' : 'rgba(15,23,42,0.35)')
+                label(lp.x, lp.y, `${Math.round(s.val)}°`, textColor, 12)
             })
 
             if (rel === 3) {
-                label(c.x, (yT + yB) / 2, `internos: ${Math.round(t)}° + ${Math.round(180 - t)}° = 180°`, '#f1f5f9', 10)
+                label(c.x, (yT + yB) / 2, `internos: ${Math.round(t)}° + ${Math.round(180 - t)}° = 180°`, colors[1], 11)
             }
 
             const handleRadius = min * 0.42
             for (const sign of [1, -1] as const) {
-                handleDot(pt(c, t, sign * handleRadius), COLORS[3], drag?.kind === 'transversal')
+                handleDot(pt(c, t, sign * handleRadius), colors[3], drag?.kind === 'transversal')
             }
         }
 
@@ -523,7 +534,7 @@ export default function AngulosView() {
             ctx.closePath()
             ctx.lineWidth = 2.5
             ctx.lineJoin = 'round'
-            ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+            ctx.strokeStyle = fixedLineColor
             ctx.stroke()
 
             // Arcos y medidas por vértice
@@ -551,16 +562,16 @@ export default function AngulosView() {
                 ctx.arc(v.x, v.y, 30, Math.atan2(uy, ux), Math.atan2(wy, wx), anticlockwise)
                 ctx.lineWidth = 3.5
                 ctx.lineCap = 'round'
-                ctx.strokeStyle = COLORS[i]
+                ctx.strokeStyle = colors[i]
                 ctx.globalAlpha = 0.95
                 ctx.stroke()
                 ctx.globalAlpha = 1
-                label(v.x + bx * 52, v.y + by * 52, `${Math.round(angles[i])}°`, '#f1f5f9', 13)
+                label(v.x + bx * 52, v.y + by * 52, `${VERTEX_NAMES[i]} ${Math.round(angles[i])}°`, colors[i], 13)
             })
 
-            pts.forEach((p, i) => handleDot(p, COLORS[i], drag?.kind === 'vertex' && drag.index === i))
+            pts.forEach((p, i) => handleDot(p, colors[i], drag?.kind === 'vertex' && drag.index === i))
         }
-    }, [mode, wedgeKind, polyKind, wedges, polys, secLines, trans, rel, rays, dims, drag])
+    }, [mode, wedgeKind, polyKind, wedges, polys, secLines, trans, rel, rays, dims, drag, isDark, colors, lineColors])
 
     // ── Historial del ángulo llano / recto (todo dentro de un solo estado) ───
     const undoRay = () => {
@@ -764,32 +775,54 @@ export default function AngulosView() {
             ? polygonAngles(polys[polyKind].map(([fx, fy]) => ({ x: fx * dims.width, y: fy * dims.height })))
             : []
 
-    const chipClass =
-        'flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold leading-none text-white/70'
-    const buttonClass =
-        'flex h-6 shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] font-bold text-white/60 transition-colors hover:bg-white/10 hover:text-white active:scale-95 disabled:opacity-30 lg:h-8'
+    const chipClass = `flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold leading-none transition-colors ${
+        isDark
+            ? 'border-white/10 bg-white/5 text-white/80'
+            : 'border-slate-300 bg-slate-100 text-slate-800'
+    }`
+    const buttonClass = `flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-30 lg:h-8 cursor-pointer ${
+        isDark
+            ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+            : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 hover:text-slate-900'
+    }`
 
     return (
-        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white">
+        <div className={`flex h-dvh flex-col overflow-hidden select-none transition-colors duration-150 ${
+            isDark ? 'bg-[#080c18] text-white' : 'bg-slate-100 text-slate-900'
+        }`}>
             {/* Cabecera */}
-            <header className="flex shrink-0 items-center gap-1.5 border-b border-white/5 px-2 py-1 lg:py-1.5">
+            <header className={`flex shrink-0 items-center gap-1.5 border-b px-2 py-1 lg:py-1.5 transition-colors ${
+                isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+            }`}>
                 <button
                     type="button"
                     onClick={() => navigate(-1)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/60 transition-colors hover:bg-white/10 hover:text-white active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 cursor-pointer ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
                     aria-label="Volver"
                 >
                     <ArrowLeft size={16} />
                 </button>
-                <h1 className="shrink-0 text-[13px] font-black leading-none tracking-tight sm:text-sm">Ángulos</h1>
-                <span className="hidden shrink-0 text-[9px] font-bold uppercase tracking-[0.14em] text-white/30 sm:inline">
+                <h1 className={`shrink-0 text-[13px] font-black leading-none tracking-tight sm:text-sm ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                }`}>Ángulos</h1>
+                <span className={`hidden shrink-0 text-[9px] font-bold uppercase tracking-[0.14em] sm:inline ${
+                    isDark ? 'text-white/40' : 'text-slate-500'
+                }`}>
                     {MODES.find((m) => m.id === mode)?.label}
                 </span>
                 <div className="min-w-0 flex-1" />
                 <button
                     type="button"
                     onClick={() => setShowHelp(true)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/50 transition-colors hover:bg-white/10 hover:text-white active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 cursor-pointer ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
                     aria-label="Ayuda"
                 >
                     <HelpCircle size={16} />
@@ -797,17 +830,23 @@ export default function AngulosView() {
             </header>
 
             {/* Modos */}
-            <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/5 px-2 py-1">
+            <nav className={`flex shrink-0 items-center gap-1 overflow-x-auto border-b px-2 py-1 transition-colors ${
+                isDark ? 'border-white/5 bg-[#0d1424]' : 'border-slate-300 bg-slate-50'
+            }`}>
                 {MODES.map((m) => (
                     <button
                         key={m.id}
                         type="button"
                         onClick={() => setMode(m.id)}
                         aria-pressed={mode === m.id}
-                        className={`h-6 shrink-0 rounded-md border px-2 text-[9px] font-bold leading-none transition-colors sm:text-[10px] ${
+                        className={`h-6 shrink-0 rounded-md border px-2 text-[9px] font-bold leading-none transition-colors sm:text-[10px] cursor-pointer ${
                             mode === m.id
-                                ? 'border-teal-400/40 bg-teal-400/10 text-teal-300'
-                                : 'border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/[0.07] hover:text-white/75'
+                                ? isDark
+                                    ? 'border-teal-400/40 bg-teal-400/15 text-teal-300 shadow-sm'
+                                    : 'border-teal-600 bg-teal-100 text-teal-900 font-black shadow-xs'
+                                : isDark
+                                ? 'border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.08] hover:text-white/80'
+                                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-semibold'
                         }`}
                     >
                         {m.label}
@@ -819,7 +858,11 @@ export default function AngulosView() {
             <div className="relative min-h-0 flex-1 p-1 sm:p-1.5">
                 <div
                     ref={boardRef}
-                    className="relative h-full w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02]"
+                    className={`relative h-full w-full overflow-hidden rounded-xl border shadow-sm transition-colors ${
+                        isDark
+                            ? 'border-white/10 bg-[#091020] bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:20px_20px]'
+                            : 'border-slate-300 bg-white bg-[radial-gradient(#0f172a0d_1px,transparent_1px)] [background-size:20px_20px]'
+                    }`}
                 >
                     <canvas
                         ref={canvasRef}
@@ -832,14 +875,22 @@ export default function AngulosView() {
                     />
 
                     <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
-                        <p className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-center text-[9px] leading-tight text-white/40 sm:text-[10px]">
+                        <p className={`rounded-full border px-3 py-1 text-center text-[9px] leading-tight sm:text-[10px] font-bold shadow-xs ${
+                            isDark
+                                ? 'border-white/10 bg-black/50 text-white/60'
+                                : 'border-slate-300 bg-white/95 text-slate-700 shadow-sm'
+                        }`}>
                             {HINTS[mode]}
                         </p>
                     </div>
 
                     {notice && (
                         <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-                            <p className="rounded-full border border-white/10 bg-[#0b1120]/95 px-3 py-1.5 text-[11px] font-semibold text-white/70 shadow-lg">
+                            <p className={`rounded-full border px-3 py-1.5 text-[11px] font-bold shadow-lg ${
+                                isDark
+                                    ? 'border-white/10 bg-[#0b1120]/95 text-white/80'
+                                    : 'border-slate-300 bg-white text-slate-900'
+                            }`}>
                                 {notice}
                             </p>
                         </div>
@@ -848,19 +899,25 @@ export default function AngulosView() {
             </div>
 
             {/* Pie: medidas en vivo + acciones */}
-            <footer className="shrink-0 border-t border-white/5 px-2 py-1 lg:py-1.5">
+            <footer className={`shrink-0 border-t px-2 py-1 lg:py-1.5 transition-colors ${
+                isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+            }`}>
                 <div className="mx-auto flex max-w-6xl items-center gap-1.5">
                     <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
                         {wedgeKind &&
                             wedgeInfo &&
                             wedgeInfo.values.map((val, i) => (
                                 <span key={i} className={chipClass}>
-                                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS[i % 4] }} />
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[i % 4] }} />
                                     {Math.round(val)}°
                                 </span>
                             ))}
                         {wedgeKind && (
-                            <span className="shrink-0 rounded-full border border-teal-400/30 bg-teal-400/10 px-2 py-1 text-[10px] font-black leading-none text-teal-300">
+                            <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black leading-none ${
+                                isDark
+                                    ? 'border-teal-400/40 bg-teal-400/15 text-teal-300'
+                                    : 'border-teal-600 bg-teal-100 text-teal-900 shadow-xs'
+                            }`}>
                                 Σ = {WEDGE_TOTAL[wedgeKind]}°
                             </span>
                         )}
@@ -868,11 +925,11 @@ export default function AngulosView() {
                         {mode === 'secantes' && secInfo && (
                             <>
                                 <span className={chipClass}>
-                                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS[0] }} />
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[0] }} />
                                     α = {Math.round(secInfo[0].val)}°
                                 </span>
                                 <span className={chipClass}>
-                                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS[3] }} />
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[3] }} />
                                     β = {Math.round(secInfo[1].val)}°
                                 </span>
                                 <span className={chipClass}>α + β = 180°</span>
@@ -891,10 +948,14 @@ export default function AngulosView() {
                                             type="button"
                                             onClick={() => setRel(rel === r.id ? 0 : r.id)}
                                             aria-pressed={rel === r.id}
-                                            className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[9px] font-bold transition-colors active:scale-95 sm:text-[10px] ${
+                                            className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[9px] font-bold transition-colors active:scale-95 sm:text-[10px] cursor-pointer ${
                                                 rel === r.id
-                                                    ? 'border-teal-400/40 bg-teal-400/10 text-teal-300'
-                                                    : 'border-white/10 bg-white/[0.03] text-white/45 hover:text-white/75'
+                                                    ? isDark
+                                                        ? 'border-teal-400/40 bg-teal-400/15 text-teal-300 font-black'
+                                                        : 'border-teal-600 bg-teal-100 text-teal-900 font-black shadow-xs'
+                                                    : isDark
+                                                    ? 'border-white/10 bg-white/[0.03] text-white/50 hover:text-white/80'
+                                                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
                                             }`}
                                         >
                                             <b className="text-[11px] font-black">{r.short}</b>
@@ -908,12 +969,16 @@ export default function AngulosView() {
                         {polyKind &&
                             polyAngles.map((val, i) => (
                                 <span key={i} className={chipClass}>
-                                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[i] }} />
                                     {VERTEX_NAMES[i]} = {Math.round(val)}°
                                 </span>
                             ))}
                         {polyKind && (
-                            <span className="shrink-0 rounded-full border border-teal-400/30 bg-teal-400/10 px-2 py-1 text-[10px] font-black leading-none text-teal-300">
+                            <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black leading-none ${
+                                isDark
+                                    ? 'border-teal-400/40 bg-teal-400/15 text-teal-300'
+                                    : 'border-teal-600 bg-teal-100 text-teal-900 shadow-xs'
+                            }`}>
                                 Σ = {polyKind === 'triangulo' ? 180 : 360}°
                             </span>
                         )}
@@ -925,7 +990,11 @@ export default function AngulosView() {
                                 type="button"
                                 onClick={addRay}
                                 disabled={rays.length >= WEDGE_MAX[wedgeKind]}
-                                className={`${buttonClass} border-teal-400/30 bg-teal-400/10 text-teal-300 hover:bg-teal-400/20`}
+                                className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-30 lg:h-8 cursor-pointer ${
+                                    isDark
+                                        ? 'border-teal-400/30 bg-teal-400/10 text-teal-300 hover:bg-teal-400/20'
+                                        : 'border-teal-600/40 bg-teal-50 text-teal-900 hover:bg-teal-100 font-bold'
+                                }`}
                                 aria-label="Agregar línea"
                             >
                                 <Plus size={14} />
@@ -950,7 +1019,11 @@ export default function AngulosView() {
                                 key={preset}
                                 type="button"
                                 onClick={() => applyPreset(preset)}
-                                className="flex h-6 shrink-0 items-center rounded-lg border border-teal-400/25 bg-teal-400/[0.07] px-2 text-[9px] font-bold leading-none text-teal-200/90 transition-colors hover:bg-teal-400/15 active:scale-95 sm:text-[10px] lg:h-8"
+                                className={`flex h-6 shrink-0 items-center rounded-lg border px-2 text-[9px] font-bold leading-none transition-colors active:scale-95 sm:text-[10px] lg:h-8 cursor-pointer ${
+                                    isDark
+                                        ? 'border-teal-400/25 bg-teal-400/[0.07] text-teal-200/90 hover:bg-teal-400/15'
+                                        : 'border-teal-600/40 bg-teal-50 text-teal-900 hover:bg-teal-100 font-bold'
+                                }`}
                                 aria-label={`Convertir en ${PRESET_LABELS[preset]}`}
                             >
                                 {PRESET_LABELS[preset]}
@@ -966,33 +1039,59 @@ export default function AngulosView() {
 
             {/* Modal de ayuda */}
             {showHelp && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
-                    <div className="max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-white/10 bg-[#0f1629] p-4 shadow-2xl">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm animate-fade-in"
+                    onClick={() => setShowHelp(false)}
+                >
+                    <div
+                        className={`max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border p-4 shadow-2xl transition-colors ${
+                            isDark
+                                ? 'border-white/10 bg-[#0f1629] text-white'
+                                : 'border-slate-300 bg-white text-slate-900'
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="mb-3 flex items-center justify-between">
                             <h2 className="text-base font-black">Cómo usar los ángulos</h2>
                             <button
                                 type="button"
                                 onClick={() => setShowHelp(false)}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-colors cursor-pointer ${
+                                    isDark
+                                        ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                                        : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                                }`}
                                 aria-label="Cerrar ayuda"
                             >
                                 <X size={16} />
                             </button>
                         </div>
-                        <ul className="space-y-2 text-[11px] leading-snug text-white/55">
+                        <ul className={`space-y-2 text-[11px] leading-snug ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
                             {HELP_ITEMS.map((item) => (
-                                <li key={item.title} className="rounded-xl border border-white/5 bg-white/[0.03] p-2">
-                                    <b className="text-white/85">{item.title}:</b> {item.text}
+                                <li key={item.title} className={`rounded-xl border p-2 ${
+                                    isDark
+                                        ? 'border-white/5 bg-white/[0.03]'
+                                        : 'border-slate-200 bg-slate-50'
+                                }`}>
+                                    <b className={isDark ? 'text-white/90' : 'text-slate-900'}>{item.title}:</b> {item.text}
                                 </li>
                             ))}
                         </ul>
-                        <p className="mt-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 text-[9px] leading-relaxed text-white/30">
+                        <p className={`mt-3 rounded-xl border p-2 text-[9px] leading-relaxed ${
+                            isDark
+                                ? 'border-white/5 bg-white/[0.03] text-white/40'
+                                : 'border-slate-200 bg-slate-50 text-slate-500'
+                        }`}>
                             Las medidas se calculan solas al mover. Al salir de la vista todo se reinicia.
                         </p>
                         <button
                             type="button"
                             onClick={() => setShowHelp(false)}
-                            className="mt-3 w-full rounded-xl bg-teal-400 py-2.5 text-xs font-black text-[#06272a] hover:bg-teal-300 active:scale-95"
+                            className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black transition-all active:scale-95 cursor-pointer ${
+                                isDark
+                                    ? 'bg-teal-400 text-[#06272a] hover:bg-teal-300'
+                                    : 'bg-teal-600 text-white hover:bg-teal-500 shadow-sm'
+                            }`}
                         >
                             Entendido
                         </button>

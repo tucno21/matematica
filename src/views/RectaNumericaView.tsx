@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN = -30;
@@ -49,34 +50,79 @@ interface DiceFaceProps {
     value: number;
     rolling: boolean;
     onClick: () => void;
-    disabled: boolean;
+    canRoll: boolean;
+    isActiveResult: boolean;
     color: string;
 }
 
-function DiceFace({ value, rolling, onClick, disabled, color }: DiceFaceProps) {
+function DiceFace({ value, rolling, onClick, canRoll, isActiveResult, color }: DiceFaceProps) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const dots = DICE_DOTS[value] ?? DICE_DOTS[1];
+
+    const bg = isDark
+        ? isActiveResult
+            ? "rgba(255,255,255,0.15)"
+            : canRoll
+            ? "rgba(255,255,255,0.08)"
+            : "rgba(255,255,255,0.03)"
+        : isActiveResult
+        ? "#ffffff"
+        : canRoll
+        ? "#ffffff"
+        : "#f8fafc";
+
+    const borderColor = isActiveResult
+        ? color
+        : canRoll
+        ? color
+        : isDark
+        ? "rgba(255,255,255,0.15)"
+        : "#cbd5e1";
+
+    const shadow = isActiveResult
+        ? isDark
+            ? `0 0 22px ${color}66`
+            : `0 6px 20px ${color}45, 0 2px 6px rgba(0,0,0,0.08)`
+        : canRoll
+        ? isDark
+            ? `0 4px 14px ${color}33`
+            : `0 3px 12px ${color}30, 0 1px 2px rgba(0,0,0,0.06)`
+        : "none";
+
+    const dotColor = isActiveResult
+        ? color
+        : canRoll
+        ? isDark
+            ? "#ffffff"
+            : color
+        : isDark
+        ? "rgba(255,255,255,0.25)"
+        : "#94a3b8";
+
     return (
         <button
             type="button"
-            onClick={onClick}
-            disabled={disabled}
-            className="relative select-none transition-all"
+            onClick={canRoll ? onClick : undefined}
+            disabled={!canRoll}
+            className={`relative select-none transition-all ${canRoll ? "hover:scale-105 active:scale-95 animate-pulse" : ""}`}
             style={{
                 width: 62,
                 height: 62,
                 borderRadius: 14,
-                background: disabled && !rolling ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.1)",
-                border: `2px solid ${disabled && !rolling ? "rgba(255,255,255,0.1)" : color + "99"}`,
-                cursor: disabled ? "default" : "pointer",
-                boxShadow: disabled && !rolling ? "none" : `0 4px 20px ${color}33`,
+                background: bg,
+                border: `2.5px solid ${borderColor}`,
+                cursor: canRoll ? "pointer" : "default",
+                boxShadow: shadow,
                 padding: 10,
                 display: "grid",
                 gridTemplate: "repeat(3,1fr) / repeat(3,1fr)",
                 gap: 2,
-                transition: "transform .12s ease, background .3s, border-color .3s",
-                animation: rolling ? "diceRoll .1s ease-in-out infinite alternate" : "none",
+                transform: isActiveResult ? "scale(1.06)" : "scale(1)",
+                transition: "transform .2s ease, background .3s, border-color .3s, box-shadow .3s",
+                animation: rolling ? "diceRoll .1s ease-in-out infinite alternate" : undefined,
                 outline: "none",
             }}
+            title={canRoll ? "Toca para lanzar el dado" : `Resultado: ${value}`}
         >
             {Array.from({ length: 9 }, (_, idx) => {
                 const col = idx % 3;
@@ -87,9 +133,11 @@ function DiceFace({ value, rolling, onClick, disabled, color }: DiceFaceProps) {
                         key={idx}
                         style={{
                             borderRadius: "50%",
-                            background: hasDot ? (disabled && !rolling ? "rgba(255,255,255,0.3)" : "#fff") : "transparent",
+                            background: hasDot ? dotColor : "transparent",
+                            boxShadow: hasDot && isActiveResult ? `0 0 6px ${color}88` : "none",
                             width: "100%",
                             height: "100%",
+                            transition: "background .2s, box-shadow .2s",
                         }}
                     />
                 );
@@ -110,28 +158,29 @@ interface PlayerPanelProps {
 }
 
 function PlayerPanel({ name, color, player, isActive, direction, ballPos, totalTurns }: PlayerPanelProps) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     return (
         <div
             className="flex-1 flex flex-col items-center justify-center gap-1 px-3 py-3"
             style={{
-                background: isActive ? `${color}0e` : "transparent",
+                background: isActive ? `${color}18` : "transparent",
                 transition: "background .4s",
                 minWidth: 0,
             }}
         >
             <div className="flex items-center gap-1.5">
                 <div style={{
-                    width: 7,
-                    height: 7,
+                    width: 8,
+                    height: 8,
                     borderRadius: "50%",
-                    background: isActive ? color : "rgba(255,255,255,.15)",
-                    boxShadow: isActive ? `0 0 8px ${color}` : "none",
+                    background: isActive ? color : (isDark ? "rgba(255,255,255,.2)" : "#94a3b8"),
+                    boxShadow: isActive ? `0 0 10px ${color}` : "none",
                     transition: "all .3s",
                     flexShrink: 0,
                 }} />
                 <p
                     className="text-xs font-black uppercase tracking-wider truncate"
-                    style={{ color: isActive ? color : "rgba(255,255,255,.35)", transition: "color .3s" }}
+                    style={{ color: isActive ? color : (isDark ? "rgba(255,255,255,.5)" : "#64748b"), transition: "color .3s" }}
                 >
                     {direction}&nbsp;{name}
                 </p>
@@ -142,8 +191,8 @@ function PlayerPanel({ name, color, player, isActive, direction, ballPos, totalT
                 className="font-black"
                 style={{
                     fontFamily: "'JetBrains Mono',monospace",
-                    fontSize: 24,
-                    color: isActive ? "#fff" : "rgba(255,255,255,.45)",
+                    fontSize: 26,
+                    color: isActive ? (isDark ? "#ffffff" : "#0f172a") : (isDark ? "rgba(255,255,255,.45)" : "#64748b"),
                     lineHeight: 1,
                     transition: "color .3s",
                 }}
@@ -152,9 +201,9 @@ function PlayerPanel({ name, color, player, isActive, direction, ballPos, totalT
             </p>
 
             <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-[10px] font-bold" style={{ color: "rgba(52,211,153,.85)" }}>✓ {player.correct}</span>
-                <span className="text-[10px] font-bold" style={{ color: "rgba(248,113,113,.85)" }}>✗ {player.errors}</span>
-                <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,.25)" }}>
+                <span className="text-[10px] font-extrabold" style={{ color: isDark ? "#34d399" : "#047857" }}>✓ {player.correct}</span>
+                <span className="text-[10px] font-extrabold" style={{ color: isDark ? "#f87171" : "#b91c1c" }}>✗ {player.errors}</span>
+                <span className="text-[10px] font-bold" style={{ color: isDark ? "rgba(255,255,255,.4)" : "#64748b" }}>
                     {totalTurns - player.turnsLeft}/{totalTurns}
                 </span>
             </div>
@@ -165,6 +214,7 @@ function PlayerPanel({ name, color, player, isActive, direction, ballPos, totalT
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function RectaNumerica() {
     const navigate = useNavigate();
+    const isDark = useThemeStore((s) => s.theme === "dark");
 
     const [gamePhase, setGamePhase] = useState<GamePhase>("idle");
     const [currentTurn, setCurrentTurn] = useState<PlayerKey>("advance");
@@ -196,8 +246,8 @@ export default function RectaNumerica() {
 
     // ── Derived ──
     // Avanzar → positivo → AZUL  |  Retroceder → negativo → ROJO
-    const advColor = "#60a5fa";
-    const retColor = "#f87171";
+    const advColor = isDark ? "#60a5fa" : "#2563eb";
+    const retColor = isDark ? "#f87171" : "#dc2626";
     const curColor = currentTurn === "advance" ? advColor : retColor;
 
     // Expected position is always relative to the SHARED ball position
@@ -283,12 +333,12 @@ export default function RectaNumerica() {
         setBallPos(expectedPos);
         setMarkerPos(expectedPos);
 
-        // Update only this player's ✓/✗ stats (position field no longer drives game logic)
+        // Update only this player's ✓/✗ stats
         setPlayers(prev => ({
             ...prev,
             [currentTurn]: {
                 ...prev[currentTurn],
-                position: expectedPos, // kept for display in results
+                position: expectedPos,
                 correct: prev[currentTurn].correct + (isCorrect ? 1 : 0),
                 errors: prev[currentTurn].errors + (isCorrect ? 0 : 1),
                 turnsLeft: prev[currentTurn].turnsLeft - 1,
@@ -368,18 +418,19 @@ export default function RectaNumerica() {
         <div
             className="min-h-dvh flex flex-col"
             style={{
-                background: "linear-gradient(160deg,#07090f 0%,#0c1220 55%,#07090f 100%)",
+                background: "var(--theme-bg-main, #f1f5f9)",
+                color: isDark ? "#ffffff" : "#0f172a",
                 fontFamily: "'Nunito',sans-serif",
                 overflow: "hidden",
             }}
         >
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;900&display=swap');
         *, *::before, *::after { box-sizing:border-box; }
 
         @keyframes diceRoll {
           from { transform: rotate(-8deg) scale(0.95); }
-          to   { transform: rotate(8deg)  scale(1.05); }
+          to   { transform: rotate(8deg)  scale(1.08); }
         }
         @keyframes fadeUp {
           from { opacity:0; transform:translateY(10px); }
@@ -399,7 +450,7 @@ export default function RectaNumerica() {
         }
         @keyframes pulseRing {
           0%,100% { opacity:.5; transform:translate(-50%,-50%) scale(1);    }
-          50%     { opacity:.9; transform:translate(-50%,-50%) scale(1.15); }
+          50%     { opacity:.9; transform:translate(-50%,-50%) scale(1.18); }
         }
         .anim-fadeup  { animation: fadeUp .4s ease-out both; }
         .anim-popin   { animation: popIn  .3s ease-out both; }
@@ -409,15 +460,18 @@ export default function RectaNumerica() {
       `}</style>
 
             {/* ── Header ── */}
-            <div className="px-4 pt-4 pb-1 shrink-0">
+            <header className="px-3 sm:px-4 pt-3 pb-2 shrink-0 border-b" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "#cbd5e1", background: isDark ? "#0a0f1d" : "#ffffff" }}>
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 shrink-0"
-                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shrink-0 border shadow-xs"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.06)" : "#ffffff",
+                            borderColor: isDark ? "rgba(255,255,255,0.12)" : "#94a3b8",
+                            color: isDark ? "#ffffff" : "#0f172a",
+                            cursor: "pointer",
+                        }}
                     >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M15 19l-7-7 7-7" />
@@ -426,53 +480,61 @@ export default function RectaNumerica() {
                     </button>
 
                     <div className="flex-1 text-center">
-                        <p className="text-[10px] font-bold tracking-widest uppercase mb-0.5" style={{ color: "rgba(255,255,255,.28)" }}>Recta Numérica</p>
-                        <h1 className="text-base sm:text-lg font-black text-white leading-tight">
+                        <p className="text-[10px] font-bold tracking-widest uppercase mb-0.5" style={{ color: isDark ? "rgba(255,255,255,.45)" : "#64748b" }}>Recta Numérica</p>
+                        <h1 className="text-sm sm:text-base lg:text-lg font-black leading-tight" style={{ color: isDark ? "#fff" : "#0f172a" }}>
                             El Juego de{" "}
-                            <span style={{ color: advColor }}>Avanzar</span>{" "}&{" "}
-                            <span style={{ color: retColor }}>Retroceder</span>
+                            <span style={{ color: advColor }}>Avanzar (+)</span>{" "}&{" "}
+                            <span style={{ color: retColor }}>Retroceder (−)</span>
                         </h1>
                     </div>
 
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-95"
-                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                        className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all active:scale-95 border shadow-xs"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.06)" : "#ffffff",
+                            borderColor: isDark ? "rgba(255,255,255,0.12)" : "#94a3b8",
+                            color: isDark ? "#ffffff" : "#0f172a",
+                            cursor: "pointer",
+                        }}
                     >
                         ?
                     </button>
                 </div>
-            </div>
+            </header>
 
             {/* ══════════ IDLE ══════════ */}
             {gamePhase === "idle" && (
                 <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
-                    <p className="text-sm" style={{ color: "rgba(255,255,255,.38)" }}>
-                        2 jugadores · {turnsPerRound} turnos cada uno · El dado decide cuánto mueves
+                    <p className="text-sm font-semibold" style={{ color: isDark ? "rgba(255,255,255,.6)" : "#475569" }}>
+                        2 jugadores · {turnsPerRound} turnos cada uno · Los dados deciden cuánto te desplazas
                     </p>
 
                     {/* Configuration Panel */}
                     <div
                         className="w-full max-w-sm rounded-2xl p-5 anim-fadeup flex flex-col gap-4"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", animationDelay: ".07s" }}
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
+                            border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #94a3b8",
+                            boxShadow: isDark ? "none" : "0 4px 14px rgba(15,23,42,0.08)",
+                            animationDelay: ".07s",
+                        }}
                     >
                         {/* Turns per round selection */}
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.28)" }}>Turnos por ronda</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: isDark ? "rgba(255,255,255,.5)" : "#475569" }}>Turnos por ronda</p>
                             <div className="flex gap-2">
                                 {[3, 4, 5].map(num => (
                                     <button
                                         key={num}
                                         type="button"
                                         onClick={() => setTurnsPerRound(num)}
-                                        className="flex-1 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                                        className="flex-1 py-2 rounded-xl text-xs font-black transition-all active:scale-95"
                                         style={{
-                                            background: turnsPerRound === num ? `${advColor}33` : "rgba(255,255,255,0.04)",
-                                            border: turnsPerRound === num ? `1px solid ${advColor}66` : "1px solid rgba(255,255,255,0.1)",
-                                            color: turnsPerRound === num ? "#fff" : "rgba(255,255,255,0.5)",
-                                            cursor: "pointer"
+                                            background: turnsPerRound === num ? `${advColor}25` : (isDark ? "rgba(255,255,255,0.04)" : "#f8fafc"),
+                                            border: turnsPerRound === num ? `2px solid ${advColor}` : (isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #cbd5e1"),
+                                            color: turnsPerRound === num ? advColor : (isDark ? "#ffffff" : "#334155"),
+                                            cursor: "pointer",
                                         }}
                                     >
                                         {num}
@@ -483,22 +545,22 @@ export default function RectaNumerica() {
 
                         {/* Number of dice selection */}
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.28)" }}>Número de dados</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: isDark ? "rgba(255,255,255,.5)" : "#475569" }}>Número de dados</p>
                             <div className="flex gap-2">
                                 {[1, 2].map(num => (
                                     <button
                                         key={num}
                                         type="button"
                                         onClick={() => setNumberOfDice(num)}
-                                        className="flex-1 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                                        className="flex-1 py-2 rounded-xl text-xs font-black transition-all active:scale-95"
                                         style={{
-                                            background: numberOfDice === num ? `${advColor}33` : "rgba(255,255,255,0.04)",
-                                            border: numberOfDice === num ? `1px solid ${advColor}66` : "1px solid rgba(255,255,255,0.1)",
-                                            color: numberOfDice === num ? "#fff" : "rgba(255,255,255,0.5)",
-                                            cursor: "pointer"
+                                            background: numberOfDice === num ? `${advColor}25` : (isDark ? "rgba(255,255,255,0.04)" : "#f8fafc"),
+                                            border: numberOfDice === num ? `2px solid ${advColor}` : (isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #cbd5e1"),
+                                            color: numberOfDice === num ? advColor : (isDark ? "#ffffff" : "#334155"),
+                                            cursor: "pointer",
                                         }}
                                     >
-                                        {num}
+                                        {num} {num === 1 ? "Dado" : "Dados"}
                                     </button>
                                 ))}
                             </div>
@@ -508,19 +570,30 @@ export default function RectaNumerica() {
                     <button
                         type="button"
                         onClick={() => setShowRules(true)}
-                        className="w-full max-w-sm py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,.5)", cursor: "pointer" }}
+                        className="w-full max-w-sm py-3 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center justify-center gap-2 border shadow-xs"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
+                            borderColor: isDark ? "rgba(255,255,255,0.15)" : "#94a3b8",
+                            color: isDark ? "#ffffff" : "#0f172a",
+                            cursor: "pointer",
+                        }}
                     >
-                        <span>📋</span> Lee reglas
+                        <span>📋</span> Ver Reglas del Juego
                     </button>
 
                     <button
                         type="button"
                         onClick={startGame}
-                        className="w-full max-w-sm py-4 rounded-2xl font-black text-base transition-all active:scale-95"
-                        style={{ background: `linear-gradient(135deg,${advColor},#3b82f6)`, border: "none", color: "#fff", cursor: "pointer", boxShadow: `0 8px 28px ${advColor}55` }}
+                        className="w-full max-w-sm py-3.5 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
+                        style={{
+                            background: `linear-gradient(135deg, ${advColor}, #1d4ed8)`,
+                            border: "none",
+                            color: "#ffffff",
+                            cursor: "pointer",
+                            boxShadow: `0 8px 24px ${advColor}55`,
+                        }}
                     >
-                        ¡Comenzar! 🎲
+                        ¡Comenzar Partida! 🎲
                     </button>
                 </div>
             )}
@@ -530,8 +603,12 @@ export default function RectaNumerica() {
                 <>
                     {/* ── Top panel: two players + dice ── */}
                     <div
-                        className="shrink-0 flex items-stretch"
-                        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", minHeight: 130 }}
+                        className="shrink-0 flex items-stretch border-b shadow-xs"
+                        style={{
+                            borderColor: isDark ? "rgba(255,255,255,0.08)" : "#cbd5e1",
+                            background: isDark ? "#0a0f1d" : "#ffffff",
+                            minHeight: 125,
+                        }}
                     >
                         {/* Player Retroceder — LEFT */}
                         <PlayerPanel
@@ -546,46 +623,57 @@ export default function RectaNumerica() {
 
                         {/* Center: dice */}
                         <div
-                            className="flex flex-col items-center justify-center gap-2 shrink-0 px-3"
-                            style={{ borderLeft: "1px solid rgba(255,255,255,0.07)", borderRight: "1px solid rgba(255,255,255,0.07)", minWidth: 90 }}
+                            className="flex flex-col items-center justify-center gap-1.5 shrink-0 px-3 border-x"
+                            style={{
+                                borderColor: isDark ? "rgba(255,255,255,0.08)" : "#cbd5e1",
+                                minWidth: 96,
+                            }}
                         >
                             {gamePhase === "playing" ? (
                                 <>
                                     <div className="flex items-center gap-2">
                                         <DiceFace
-                                            value={diceRolling ? diceFace : diceFace}
+                                            value={diceFace}
                                             rolling={diceRolling}
                                             onClick={rollDice}
-                                            disabled={turnPhase !== "roll" || diceRolling}
+                                            canRoll={turnPhase === "roll" && !diceRolling}
+                                            isActiveResult={turnPhase === "drag" || diceRolling}
                                             color={curColor}
                                         />
                                         {numberOfDice === 2 && (
                                             <DiceFace
-                                                value={diceRolling ? dice2Face : dice2Face}
+                                                value={dice2Face}
                                                 rolling={diceRolling}
                                                 onClick={rollDice}
-                                                disabled={turnPhase !== "roll" || diceRolling}
+                                                canRoll={turnPhase === "roll" && !diceRolling}
+                                                isActiveResult={turnPhase === "drag" || diceRolling}
                                                 color={curColor}
                                             />
                                         )}
                                     </div>
                                     <p
-                                        className="text-[9px] font-black uppercase tracking-widest"
-                                        style={{ color: "rgba(255,255,255,.28)" }}
+                                        className="text-[10px] font-black uppercase tracking-wider text-center"
+                                        style={{
+                                            color: turnPhase === "roll" ? curColor : (isDark ? "rgba(255,255,255,0.7)" : "#334155")
+                                        }}
                                     >
-                                        {turnPhase === "roll" ? "LANZAR" : turnPhase === "drag" ? "ARRASTRA" : "···"}
+                                        {turnPhase === "roll" ? "🎲 ¡LANZA!" : turnPhase === "drag" ? `Mueve ${diceValue}` : "···"}
                                     </p>
                                     <div
                                         className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
-                                        style={{ background: `${curColor}22`, border: `1px solid ${curColor}40`, color: curColor }}
+                                        style={{
+                                            background: `${curColor}22`,
+                                            border: `1px solid ${curColor}55`,
+                                            color: curColor,
+                                        }}
                                     >
-                                        T{Math.floor(totalTurns / 2) + 1}/{turnsPerRound}
+                                        Turno {Math.floor(totalTurns / 2) + 1}/{turnsPerRound}
                                     </div>
                                 </>
                             ) : (
                                 <div className="text-center">
                                     <div className="text-2xl">🏆</div>
-                                    <p className="text-[10px] font-black text-white mt-1">FIN</p>
+                                    <p className="text-[10px] font-black mt-1" style={{ color: isDark ? "#ffffff" : "#0f172a" }}>FIN</p>
                                 </div>
                             )}
                         </div>
@@ -604,29 +692,38 @@ export default function RectaNumerica() {
 
                     {/* ── Feedback / instruction bar ── */}
                     <div
-                        className="shrink-0 flex items-center justify-center px-4"
-                        style={{ height: 42, borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                        className="shrink-0 flex items-center justify-center px-4 border-b"
+                        style={{
+                            height: 42,
+                            borderColor: isDark ? "rgba(255,255,255,0.06)" : "#cbd5e1",
+                            background: isDark ? "rgba(0,0,0,0.15)" : "#f8fafc",
+                        }}
                     >
                         {feedback ? (
                             <div
                                 key={feedback.msg}
-                                className={`anim-popin flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black ${!feedback.correct ? "anim-shake" : ""}`}
+                                className={`anim-popin flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black shadow-xs ${!feedback.correct ? "anim-shake" : ""}`}
                                 style={{
-                                    background: feedback.correct ? "rgba(52,211,153,0.14)" : "rgba(248,113,113,0.14)",
-                                    border: `1px solid ${feedback.correct ? "rgba(52,211,153,0.4)" : "rgba(248,113,113,0.4)"}`,
-                                    color: feedback.correct ? "#6ee7b7" : "#fca5a5",
+                                    background: feedback.correct
+                                        ? (isDark ? "rgba(52,211,153,0.15)" : "rgba(16,185,129,0.15)")
+                                        : (isDark ? "rgba(248,113,113,0.15)" : "rgba(239,68,68,0.15)"),
+                                    border: `1.5px solid ${feedback.correct ? (isDark ? "#34d399" : "#059669") : (isDark ? "#f87171" : "#dc2626")}`,
+                                    color: feedback.correct
+                                        ? (isDark ? "#6ee7b7" : "#047857")
+                                        : (isDark ? "#fca5a5" : "#b91c1c"),
                                 }}
                             >
                                 <span>{feedback.correct ? "✅" : "❌"}</span>
                                 {feedback.msg}
                             </div>
                         ) : gamePhase === "playing" ? (
-                            <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,.26)" }}>
+                            <p className="text-xs font-bold" style={{ color: isDark ? "rgba(255,255,255,0.85)" : "#1e293b" }}>
                                 {turnPhase === "roll"
-                                    ? `${currentTurn === "advance" ? "🔵 Avanzar" : "🔴 Retroceder"} — lanza el dado`
+                                    ? `${currentTurn === "advance" ? "🔵 Avanzar" : "🔴 Retroceder"} — presiona el dado para lanzar`
                                     : <>
-                                        {numberOfDice === 2 ? `Mueve ${diceValue} lugar${diceValue > 1 ? "es" : ""} (${diceFace} + ${dice2Face}) hacia la ${currentTurn === "advance" ? "derecha ▶" : "izquierda ◀"}`
-                                            : `Mueve ${diceValue} lugar${diceValue > 1 ? "es" : ""} hacia la ${currentTurn === "advance" ? "derecha ▶" : "izquierda ◀"}`}
+                                        {numberOfDice === 2
+                                            ? `Mueve ${diceValue} lugares (${diceFace} + ${dice2Face}) hacia la ${currentTurn === "advance" ? "derecha ▶ (+)" : "izquierda ◀ (−)"}`
+                                            : `Mueve ${diceValue} lugar${diceValue > 1 ? "es" : ""} hacia la ${currentTurn === "advance" ? "derecha ▶ (+)" : "izquierda ◀ (−)"}`}
                                     </>
                                 }
                             </p>
@@ -634,36 +731,46 @@ export default function RectaNumerica() {
                     </div>
 
                     {/* ════════ NUMBER LINE — full width ════════ */}
-                    <div className="flex-1 flex flex-col justify-center" style={{ overflow: "hidden" }}>
+                    <div
+                        className="flex-1 flex flex-col justify-center"
+                        style={{
+                            background: isDark ? "transparent" : "#f8fafc",
+                            overflow: "hidden",
+                        }}
+                    >
                         <div className="relative w-full" style={{ height: 148, paddingLeft: 16, paddingRight: 16 }}>
 
                             {/* Negative zone fill — ROJO (retroceder) */}
                             <div className="absolute" style={{
                                 top: "50%", transform: "translateY(-50%)",
-                                left: 16, width: `${linePct(0)}%`, height: 5,
-                                background: "linear-gradient(to right,rgba(248,113,113,0.1),rgba(248,113,113,0.3))",
+                                left: 16, width: `${linePct(0)}%`, height: 6,
+                                background: isDark
+                                    ? "linear-gradient(to right, rgba(248,113,113,0.1), rgba(248,113,113,0.35))"
+                                    : "linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.25))",
                                 borderRadius: "4px 0 0 4px",
                             }} />
                             {/* Positive zone fill — AZUL (avanzar) */}
                             <div className="absolute" style={{
                                 top: "50%", transform: "translateY(-50%)",
-                                left: `calc(${linePct(0)}% + 16px)`, right: 16, height: 5,
-                                background: "linear-gradient(to right,rgba(96,165,250,0.3),rgba(96,165,250,0.1))",
+                                left: `calc(${linePct(0)}% + 16px)`, right: 16, height: 6,
+                                background: isDark
+                                    ? "linear-gradient(to right, rgba(96,165,250,0.35), rgba(96,165,250,0.1))"
+                                    : "linear-gradient(to right, rgba(37,99,235,0.25), rgba(37,99,235,0.1))",
                                 borderRadius: "0 4px 4px 0",
                             }} />
 
                             {/* Main axis */}
                             <div className="absolute rounded-full" style={{
-                                top: "50%", left: 16, right: 16, height: 2,
-                                background: "rgba(255,255,255,0.13)", transform: "translateY(-50%)",
+                                top: "50%", left: 16, right: 16, height: 3,
+                                background: isDark ? "rgba(255,255,255,0.25)" : "#64748b", transform: "translateY(-50%)",
                             }} />
 
                             {/* Arrows */}
                             <div className="absolute" style={{ top: "50%", left: 4, transform: "translateY(-50%)" }}>
-                                <svg width="11" height="11" viewBox="0 0 12 12" fill="rgba(248,113,113,0.5)"><polygon points="0,6 12,0 12,12" /></svg>
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill={isDark ? "rgba(248,113,113,0.7)" : "#dc2626"}><polygon points="0,6 12,0 12,12" /></svg>
                             </div>
                             <div className="absolute" style={{ top: "50%", right: 4, transform: "translateY(-50%)" }}>
-                                <svg width="11" height="11" viewBox="0 0 12 12" fill="rgba(96,165,250,0.5)"><polygon points="12,6 0,0 0,12" /></svg>
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill={isDark ? "rgba(96,165,250,0.7)" : "#2563eb"}><polygon points="12,6 0,0 0,12" /></svg>
                             </div>
 
                             {/* Ticks */}
@@ -677,19 +784,24 @@ export default function RectaNumerica() {
                                         style={{ left: `calc(${linePct(t)}% + 16px)`, top: "50%", transform: "translate(-50%,-50%)" }}
                                     >
                                         <div style={{
-                                            width: isZero ? 2.5 : 1.5,
+                                            width: isZero ? 3 : isBig ? 2 : 1.5,
                                             height: isZero ? 28 : isBig ? 18 : 10,
-                                            background: isZero ? "rgba(255,255,255,0.7)" : isBig ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.09)",
+                                            background: isDark
+                                                ? (isZero ? "#ffffff" : isBig ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)")
+                                                : (isZero ? "#0f172a" : isBig ? "#334155" : "#94a3b8"),
                                             borderRadius: 2,
                                         }} />
                                         {(isBig || isZero) && (
                                             <span
-                                                className="absolute select-none font-bold"
+                                                className="absolute select-none"
                                                 style={{
                                                     top: "calc(50% + 20px)",
                                                     fontFamily: "'JetBrains Mono',monospace",
                                                     fontSize: isZero ? 14 : 11,
-                                                    color: isZero ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.5)",
+                                                    fontWeight: isZero ? 900 : 700,
+                                                    color: isDark
+                                                        ? (isZero ? "#ffffff" : "rgba(255,255,255,.75)")
+                                                        : (isZero ? "#0f172a" : "#334155"),
                                                     whiteSpace: "nowrap",
                                                 }}
                                             >
@@ -714,55 +826,57 @@ export default function RectaNumerica() {
                                 {turnPhase === "drag" && !dragLocked && (
                                     <div style={{
                                         position: "absolute",
-                                        width: 38,
-                                        height: 38,
+                                        width: 42,
+                                        height: 42,
                                         borderRadius: "50%",
                                         top: "50%", left: "50%",
                                         transform: "translate(-50%,-50%)",
-                                        border: `2px solid ${curColor}`,
-                                        opacity: 0.4,
-                                        animation: "pulseRing 1.4s ease-in-out infinite",
+                                        border: `2.5px solid ${curColor}`,
+                                        opacity: 0.5,
+                                        animation: "pulseRing 1.3s ease-in-out infinite",
                                     }} />
                                 )}
                                 {/* Outer ring */}
                                 <div style={{
                                     position: "absolute",
-                                    width: 30,
-                                    height: 30,
+                                    width: 32,
+                                    height: 32,
                                     borderRadius: "50%",
                                     top: "50%", left: "50%",
                                     transform: "translate(-50%,-50%)",
-                                    background: `${curColor}20`,
-                                    border: `2px solid ${curColor}55`,
-                                    boxShadow: `0 0 18px ${curColor}44`,
+                                    background: `${curColor}25`,
+                                    border: `2px solid ${curColor}88`,
+                                    boxShadow: `0 0 18px ${curColor}55`,
                                     transition: "background .4s, border-color .4s, box-shadow .4s",
                                 }} />
                                 {/* Inner dot */}
                                 <div style={{
                                     position: "absolute",
-                                    width: 16,
-                                    height: 16,
+                                    width: 18,
+                                    height: 18,
                                     borderRadius: "50%",
                                     top: "50%", left: "50%",
                                     transform: "translate(-50%,-50%)",
                                     background: curColor,
-                                    boxShadow: `0 0 12px ${curColor}`,
-                                    border: "2.5px solid rgba(255,255,255,.85)",
+                                    boxShadow: `0 0 14px ${curColor}`,
+                                    border: isDark ? "2.5px solid rgba(255,255,255,.9)" : "2.5px solid #ffffff",
                                     transition: "background .4s, box-shadow .4s",
                                 }} />
-                                {/* Value label above — LARGE so student can clearly read the number */}
+                                {/* Value label above — crisp badge */}
                                 <span
-                                    className="absolute font-black select-none"
+                                    className="absolute font-black select-none px-2 py-0.5 rounded-lg border shadow-sm"
                                     style={{
                                         bottom: "calc(100% + 14px)",
                                         left: "50%",
                                         transform: "translateX(-50%)",
                                         fontFamily: "'JetBrains Mono',monospace",
-                                        fontSize: 22,
+                                        fontSize: 20,
                                         lineHeight: 1,
                                         color: curColor,
                                         whiteSpace: "nowrap",
-                                        textShadow: `0 0 12px ${curColor}, 0 0 24px ${curColor}88`,
+                                        background: isDark ? "#0a1020" : "#ffffff",
+                                        borderColor: isDark ? `${curColor}66` : `${curColor}88`,
+                                        boxShadow: isDark ? `0 0 12px ${curColor}44` : "0 2px 6px rgba(0,0,0,0.08)",
                                     }}
                                 >
                                     {markerPos > 0 ? `+${markerPos}` : markerPos}
@@ -785,11 +899,14 @@ export default function RectaNumerica() {
                     {/* ── Final results ── */}
                     {gamePhase === "finished" && (
                         <div
-                            className="shrink-0 px-4 pb-6 pt-4 flex flex-col gap-3"
-                            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+                            className="shrink-0 px-4 pb-6 pt-4 flex flex-col gap-3 border-t"
+                            style={{
+                                borderColor: isDark ? "rgba(255,255,255,0.08)" : "#cbd5e1",
+                                background: isDark ? "#0a0f1d" : "#ffffff",
+                            }}
                         >
-                            <p className="text-center text-[10px] font-black uppercase tracking-widest" style={{ color: "rgba(255,255,255,.3)" }}>
-                                Resultados finales
+                            <p className="text-center text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? "rgba(255,255,255,.45)" : "#64748b" }}>
+                                Resultados Finales
                             </p>
                             <div className="flex gap-3">
                                 {(["retreat", "advance"] as PlayerKey[]).map(pk => {
@@ -799,19 +916,27 @@ export default function RectaNumerica() {
                                     return (
                                         <div
                                             key={pk}
-                                            className="flex-1 rounded-2xl p-4 text-center"
-                                            style={{ background: `${col}10`, border: `1px solid ${col}30` }}
+                                            className="flex-1 rounded-2xl p-4 text-center border shadow-xs"
+                                            style={{
+                                                background: isDark ? `${col}15` : `${col}08`,
+                                                borderColor: `${col}40`,
+                                            }}
                                         >
                                             <p className="text-xs font-black mb-1" style={{ color: col }}>
                                                 {pk === "advance" ? "🔵 Avanzar" : "🔴 Retroceder"}
                                             </p>
                                             <p
-                                                className="font-black text-white"
-                                                style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, lineHeight: 1 }}
+                                                className="font-black"
+                                                style={{
+                                                    fontFamily: "'JetBrains Mono',monospace",
+                                                    fontSize: 28,
+                                                    lineHeight: 1,
+                                                    color: isDark ? "#ffffff" : "#0f172a",
+                                                }}
                                             >
                                                 {p.correct}/{turnsPerRound}
                                             </p>
-                                            <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,.35)" }}>
+                                            <p className="text-[10px] font-semibold mt-1" style={{ color: isDark ? "rgba(255,255,255,.6)" : "#475569" }}>
                                                 {accuracy}% precisión · {p.errors} error{p.errors !== 1 ? "es" : ""}
                                             </p>
                                         </div>
@@ -819,15 +944,22 @@ export default function RectaNumerica() {
                                 })}
                             </div>
                             <div
-                                className="rounded-2xl p-3 text-center"
-                                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                                className="rounded-2xl p-3 text-center border shadow-xs"
+                                style={{
+                                    background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
+                                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "#cbd5e1",
+                                }}
                             >
-                                <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,.3)" }}>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: isDark ? "rgba(255,255,255,.45)" : "#64748b" }}>
                                     Posición final de la bolita
                                 </p>
                                 <p
-                                    className="font-black text-white"
-                                    style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 24 }}
+                                    className="font-black"
+                                    style={{
+                                        fontFamily: "'JetBrains Mono',monospace",
+                                        fontSize: 26,
+                                        color: isDark ? "#ffffff" : "#0f172a",
+                                    }}
                                 >
                                     {ballPos > 0 ? `+${ballPos}` : ballPos}
                                 </p>
@@ -835,8 +967,13 @@ export default function RectaNumerica() {
                             <button
                                 type="button"
                                 onClick={startGame}
-                                className="w-full py-3 rounded-2xl text-sm font-black transition-all active:scale-95"
-                                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.11)", color: "#fff", cursor: "pointer" }}
+                                className="w-full py-3.5 rounded-2xl text-sm font-black transition-all active:scale-95 shadow-md"
+                                style={{
+                                    background: `linear-gradient(135deg, ${advColor}, #1d4ed8)`,
+                                    border: "none",
+                                    color: "#ffffff",
+                                    cursor: "pointer",
+                                }}
                             >
                                 🔄 Jugar de nuevo
                             </button>

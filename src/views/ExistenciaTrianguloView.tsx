@@ -19,6 +19,7 @@ import {
   Wand2,
 } from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
+import { useThemeStore } from '../store/useThemeStore'
 
 // Casos predefinidos de estudio pedagógico
 interface PresetCase {
@@ -99,10 +100,16 @@ interface SegmentData {
   p2: { x: number; y: number } // Extremo 2
 }
 
-const SEGMENT_COLORS = {
+const SEGMENT_COLORS_DARK = {
   a: { main: '#38bdf8', accent: '#0284c7', glow: 'rgba(56, 189, 248, 0.4)' }, // Cian
   b: { main: '#fbbf24', accent: '#d97706', glow: 'rgba(251, 191, 36, 0.4)' }, // Ámbar
   c: { main: '#f472b6', accent: '#db2777', glow: 'rgba(244, 114, 182, 0.4)' }, // Rosa
+}
+
+const SEGMENT_COLORS_LIGHT = {
+  a: { main: '#0284c7', accent: '#0369a1', glow: 'rgba(2, 132, 199, 0.3)' }, // Azul cian oscuro
+  b: { main: '#d97706', accent: '#b45309', glow: 'rgba(217, 119, 6, 0.3)' }, // Ámbar intenso
+  c: { main: '#db2777', accent: '#be185d', glow: 'rgba(219, 39, 119, 0.3)' }, // Rosa magenta profundo
 }
 
 function getDistance(p1: { x: number; y: number }, p2: { x: number; y: number }) {
@@ -113,6 +120,8 @@ function getDistance(p1: { x: number; y: number }, p2: { x: number; y: number })
 
 export default function ExistenciaTrianguloView() {
   const nav = useNavigate()
+  const isDark = useThemeStore((s) => s.theme === 'dark')
+  const segColors = isDark ? SEGMENT_COLORS_DARK : SEGMENT_COLORS_LIGHT
   const helpId = useId()
   const [showHelp, setShowHelp] = useState(false)
 
@@ -176,8 +185,8 @@ export default function ExistenciaTrianguloView() {
       id: 'a',
       label: `a = ${aU}`,
       units: aU,
-      color: SEGMENT_COLORS.a.main,
-      accentColor: SEGMENT_COLORS.a.accent,
+      color: segColors.a.main,
+      accentColor: segColors.a.accent,
       p1: { x: Math.round(startX), y: Math.round(cy - lenA / 2) },
       p2: { x: Math.round(startX), y: Math.round(cy + lenA / 2) },
     }
@@ -186,8 +195,8 @@ export default function ExistenciaTrianguloView() {
       id: 'b',
       label: `b = ${bU}`,
       units: bU,
-      color: SEGMENT_COLORS.b.main,
-      accentColor: SEGMENT_COLORS.b.accent,
+      color: segColors.b.main,
+      accentColor: segColors.b.accent,
       p1: { x: Math.round(cx), y: Math.round(cy - lenB / 2) },
       p2: { x: Math.round(cx), y: Math.round(cy + lenB / 2) },
     }
@@ -196,14 +205,14 @@ export default function ExistenciaTrianguloView() {
       id: 'c',
       label: `c = ${cU}`,
       units: cU,
-      color: SEGMENT_COLORS.c.main,
-      accentColor: SEGMENT_COLORS.c.accent,
+      color: segColors.c.main,
+      accentColor: segColors.c.accent,
       p1: { x: Math.round(startX + spacing * 2), y: Math.round(cy - lenC / 2) },
       p2: { x: Math.round(startX + spacing * 2), y: Math.round(cy + lenC / 2) },
     }
 
     return [segA, segB, segC]
-  }, [pxPerUnit])
+  }, [pxPerUnit, segColors])
 
   // Montaje inicial y resize
   const isFirstMount = useRef(true)
@@ -743,42 +752,64 @@ export default function ExistenciaTrianguloView() {
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none"
+      className={`flex h-dvh flex-col overflow-hidden select-none transition-colors duration-150 ${
+        isDark ? 'bg-[#080c18] text-white' : 'bg-slate-100 text-slate-900'
+      }`}
       style={{ fontFamily: "'Nunito', sans-serif" }}
     >
       {/* ── 1. Cabecera (34-44px) ── */}
-      <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+      <header className={`flex h-9 lg:h-11 shrink-0 items-center justify-between border-b px-2 lg:px-4 transition-colors ${
+        isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+      }`}>
         <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => nav(-1)}
-            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+            }`}
             aria-label="Volver"
             title="Volver"
           >
             <ArrowLeft size={15} />
           </button>
           <div className="flex items-center gap-1.5 min-w-0">
-            <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/90 truncate">
+            <h1 className={`text-[12px] sm:text-[13px] lg:text-[15px] font-bold truncate ${
+              isDark ? 'text-white/90' : 'text-slate-900'
+            }`}>
               Existencia de un Triángulo
             </h1>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">
+            <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono border ${
+              isDark
+                ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
+                : 'bg-cyan-50 text-cyan-800 border-cyan-300 font-bold'
+            }`}>
               Desigualdad Triangular
             </span>
           </div>
         </div>
 
-        {/* Longitudes actuales sin spoilers pedagógicos */}
-        <div className="flex items-center gap-1.5 text-[10px] lg:text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-400/25 text-cyan-300">
-          <span>a = {sideA}</span>
-          <span className="text-white/30">•</span>
-          <span>b = {sideB}</span>
-          <span className="text-white/30">•</span>
-          <span>c = {sideC}</span>
+        {/* Longitudes actuales */}
+        <div className={`flex items-center gap-2 text-[10px] lg:text-xs font-mono font-bold px-3 py-1 rounded-full border shadow-xs transition-colors ${
+          isDark
+            ? 'bg-[#0d1627] border-white/10 text-white/90'
+            : 'bg-white border-slate-200 text-slate-800'
+        }`}>
+          <span style={{ color: segColors.a.main }}>a = {sideA}</span>
+          <span className={isDark ? 'text-white/20' : 'text-slate-300'}>•</span>
+          <span style={{ color: segColors.b.main }}>b = {sideB}</span>
+          <span className={isDark ? 'text-white/20' : 'text-slate-300'}>•</span>
+          <span style={{ color: segColors.c.main }}>c = {sideC}</span>
         </div>
 
         <button
           onClick={() => setShowHelp(true)}
-          className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+          className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all cursor-pointer ${
+            isDark
+              ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+              : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+          }`}
           aria-label="Ayuda"
           title="Ayuda"
         >
@@ -795,7 +826,9 @@ export default function ExistenciaTrianguloView() {
         {isPortrait ? (
           /* Barra Superior Horizontal de Casos (Portrait) */
           <nav
-            className="w-full shrink-0 bg-[#0a0f1d] border border-white/10 rounded-xl p-1 flex items-center justify-between gap-1 shadow-md select-none"
+            className={`w-full shrink-0 border rounded-xl p-1 flex items-center justify-between gap-1 shadow-sm select-none transition-colors ${
+              isDark ? 'bg-[#0a0f1d] border-white/10' : 'bg-white border-slate-300'
+            }`}
             aria-label="Casos de estudio"
           >
             <div className="flex-1 min-w-0 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
@@ -806,10 +839,14 @@ export default function ExistenciaTrianguloView() {
                     key={c.id}
                     onClick={() => handleSelectCase(c)}
                     title={c.desc}
-                    className={`flex-1 h-7 sm:h-8 min-w-[52px] rounded-lg transition-all flex items-center justify-center gap-1 px-1 active:scale-95 ${
+                    className={`flex-1 h-7 sm:h-8 min-w-[52px] rounded-lg transition-all flex items-center justify-center gap-1 px-1 active:scale-95 cursor-pointer ${
                       active
-                        ? 'bg-cyan-500 text-black shadow font-black ring-1 ring-cyan-300'
-                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        ? isDark
+                          ? 'bg-cyan-500 text-black shadow font-black ring-1 ring-cyan-300'
+                          : 'bg-cyan-600 text-white shadow font-black'
+                        : isDark
+                        ? 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     <span className="text-[9px] sm:text-[10px] font-bold truncate">
@@ -822,7 +859,11 @@ export default function ExistenciaTrianguloView() {
 
             <button
               onClick={() => setShowCustomModal(true)}
-              className="h-7 sm:h-8 px-2 shrink-0 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 flex items-center gap-1 text-[9px] font-bold active:scale-95 transition-all"
+              className={`h-7 sm:h-8 px-2 shrink-0 rounded-lg border flex items-center gap-1 text-[9px] font-bold active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-400/30 text-cyan-300'
+                  : 'bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-800'
+              }`}
               title="Personalizar medidas"
             >
               <Sliders size={12} />
@@ -832,11 +873,15 @@ export default function ExistenciaTrianguloView() {
         ) : (
           /* Panel Lateral Izquierdo de Casos (Landscape / Laptop) */
           <aside
-            className="w-[60px] sm:w-[70px] lg:w-[142px] shrink-0 h-full bg-[#0a0f1d] border border-white/10 rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-xl select-none"
+            className={`w-[60px] sm:w-[70px] lg:w-[142px] shrink-0 h-full border rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-md select-none transition-colors ${
+              isDark ? 'bg-[#0a0f1d] border-white/10' : 'bg-white border-slate-300'
+            }`}
             aria-label="Casos de estudio"
           >
             <div className="w-full flex flex-col items-center gap-1 sm:gap-1.5">
-              <span className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b border-white/5">
+              <span className={`text-[9px] lg:text-[10px] font-bold uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b ${
+                isDark ? 'text-white/40 border-white/5' : 'text-slate-500 border-slate-200'
+              }`}>
                 Casos
               </span>
 
@@ -847,10 +892,14 @@ export default function ExistenciaTrianguloView() {
                     key={c.id}
                     onClick={() => handleSelectCase(c)}
                     title={c.desc}
-                    className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 ${
+                    className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 cursor-pointer ${
                       active
-                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
-                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        ? isDark
+                          ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
+                          : 'bg-cyan-600 text-white shadow font-black'
+                        : isDark
+                        ? 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     <span className="text-[8px] sm:text-[9px] lg:text-xs font-bold truncate max-w-full">
@@ -863,7 +912,11 @@ export default function ExistenciaTrianguloView() {
 
             <button
               onClick={() => setShowCustomModal(true)}
-              className="w-full py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 text-[9px] font-bold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all"
+              className={`w-full py-1.5 rounded-xl border text-[9px] font-bold flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-400/30 text-cyan-300'
+                  : 'bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-800'
+              }`}
               title="Personalizar medidas con sliders"
             >
               <Sliders size={13} />
@@ -876,7 +929,11 @@ export default function ExistenciaTrianguloView() {
         <div
           ref={canvasRef}
           onPointerDown={handleCanvasPointerDown}
-          className="flex-1 min-w-0 min-h-0 h-full relative bg-gradient-to-b from-[#0a1122] via-[#070d1a] to-[#080c18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing"
+          className={`flex-1 min-w-0 min-h-0 h-full relative border rounded-2xl overflow-hidden shadow-sm cursor-grab active:cursor-grabbing transition-colors ${
+            isDark
+              ? 'bg-gradient-to-b from-[#0a1122] via-[#070d1a] to-[#080c18] border-white/10'
+              : 'bg-slate-50 border-slate-300'
+          }`}
           style={{ touchAction: 'none' }}
         >
           {/* Mundo Geométrico (Mueve los segmentos, figuras y la cuadrícula en sincronía exacta con Pan y Zoom) */}
@@ -900,9 +957,9 @@ export default function ExistenciaTrianguloView() {
                   <path
                     d={`M ${pxPerUnit} 0 L 0 0 0 ${pxPerUnit}`}
                     fill="none"
-                    stroke="#38bdf8"
+                    stroke={isDark ? '#38bdf8' : '#0284c7'}
                     strokeWidth="0.8"
-                    opacity="0.38"
+                    opacity={isDark ? '0.38' : '0.22'}
                   />
                 </pattern>
               </defs>
@@ -914,8 +971,8 @@ export default function ExistenciaTrianguloView() {
               {triangleStatus.isClosed && triangleStatus.vertices.length === 3 && (
                 <polygon
                   points={`${triangleStatus.vertices[0].x},${triangleStatus.vertices[0].y} ${triangleStatus.vertices[1].x},${triangleStatus.vertices[1].y} ${triangleStatus.vertices[2].x},${triangleStatus.vertices[2].y}`}
-                  fill="rgba(52, 211, 153, 0.22)"
-                  stroke="#34d399"
+                  fill={isDark ? "rgba(52, 211, 153, 0.22)" : "rgba(16, 185, 129, 0.25)"}
+                  stroke={isDark ? "#34d399" : "#059669"}
                   strokeWidth="2.5"
                   className="animate-pulse"
                 />
@@ -925,15 +982,16 @@ export default function ExistenciaTrianguloView() {
               {showReachCircles &&
                 segments.map(s => {
                   const r = s.units * pxPerUnit
+                  const currentColor = segColors[s.id].main
                   return (
-                    <g key={`reach-${s.id}`} opacity="0.35">
+                    <g key={`reach-${s.id}`} opacity={isDark ? "0.35" : "0.45"}>
                       <circle
                         cx={s.p1.x}
                         cy={s.p1.y}
                         r={r}
                         fill="none"
-                        stroke={s.color}
-                        strokeWidth="1"
+                        stroke={currentColor}
+                        strokeWidth="1.2"
                         strokeDasharray="4,4"
                       />
                       <circle
@@ -941,8 +999,8 @@ export default function ExistenciaTrianguloView() {
                         cy={s.p2.y}
                         r={r}
                         fill="none"
-                        stroke={s.color}
-                        strokeWidth="1"
+                        stroke={currentColor}
+                        strokeWidth="1.2"
                         strokeDasharray="4,4"
                       />
                     </g>
@@ -956,6 +1014,7 @@ export default function ExistenciaTrianguloView() {
                 const angleRad = Math.atan2(seg.p2.y - seg.p1.y, seg.p2.x - seg.p1.x)
                 const normalAngle = angleRad - Math.PI / 2
                 const labelDist = 16
+                const currentColor = segColors[seg.id].main
 
                 return (
                   <g key={seg.id}>
@@ -979,7 +1038,7 @@ export default function ExistenciaTrianguloView() {
                       y1={seg.p1.y + 2}
                       x2={seg.p2.x}
                       y2={seg.p2.y + 2}
-                      stroke="rgba(0, 0, 0, 0.6)"
+                      stroke={isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(15, 23, 42, 0.15)"}
                       strokeWidth="6"
                       strokeLinecap="round"
                     />
@@ -990,7 +1049,7 @@ export default function ExistenciaTrianguloView() {
                       y1={seg.p1.y}
                       x2={seg.p2.x}
                       y2={seg.p2.y}
-                      stroke={seg.color}
+                      stroke={currentColor}
                       strokeWidth="4.5"
                       strokeLinecap="round"
                       className="pointer-events-none drop-shadow"
@@ -1006,26 +1065,48 @@ export default function ExistenciaTrianguloView() {
                           key={idx}
                           cx={tx}
                           cy={ty}
-                          r={idx === 0 || idx === seg.units ? '1.5' : '1'}
+                          r={idx === 0 || idx === seg.units ? '1.5' : '1.2'}
                           fill="#ffffff"
-                          opacity={idx === 0 || idx === seg.units ? '0' : '0.65'}
+                          opacity={idx === 0 || idx === seg.units ? '0' : '0.85'}
                         />
                       )
                     })}
 
                     {/* Etiqueta flotante con la longitud y nombre del segmento */}
-                    <text
-                      x={midX + labelDist * Math.cos(normalAngle)}
-                      y={midY + labelDist * Math.sin(normalAngle) + 4}
-                      fill={seg.color}
-                      fontSize="12"
-                      fontWeight="black"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                      className="pointer-events-none drop-shadow-md select-none"
-                    >
-                      {seg.label}
-                    </text>
+                    {(() => {
+                      const textStr = seg.label
+                      const lx = midX + (labelDist + 4) * Math.cos(normalAngle)
+                      const ly = midY + (labelDist + 4) * Math.sin(normalAngle)
+                      const pillW = Math.max(52, textStr.length * 8.5 + 16)
+                      const pillH = 22
+
+                      return (
+                        <g className="pointer-events-none select-none">
+                          <rect
+                            x={lx - pillW / 2}
+                            y={ly - pillH / 2}
+                            width={pillW}
+                            height={pillH}
+                            rx="6"
+                            fill={isDark ? '#0b1324' : '#ffffff'}
+                            stroke={isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.18)'}
+                            strokeWidth="1"
+                            filter={isDark ? undefined : 'drop-shadow(0 1px 3px rgba(0,0,0,0.08))'}
+                          />
+                          <text
+                            x={lx}
+                            y={ly + 4}
+                            fill={currentColor}
+                            fontSize="11"
+                            fontWeight="800"
+                            fontFamily="'JetBrains Mono', ui-monospace, monospace"
+                            textAnchor="middle"
+                          >
+                            {textStr}
+                          </text>
+                        </g>
+                      )
+                    })()}
 
                     {/* Extremo 1 (p1): Manipulador táctil de rotación */}
                     <g
@@ -1039,13 +1120,13 @@ export default function ExistenciaTrianguloView() {
                       <circle
                         cx={seg.p1.x}
                         cy={seg.p1.y}
-                        r="8"
-                        fill="#080c18"
-                        stroke={seg.color}
+                        r="8.5"
+                        fill={isDark ? "#080c18" : "#ffffff"}
+                        stroke={currentColor}
                         strokeWidth="2.5"
                       />
-                      {/* Punto central blanco */}
-                      <circle cx={seg.p1.x} cy={seg.p1.y} r="3" fill="#ffffff" />
+                      {/* Punto central */}
+                      <circle cx={seg.p1.x} cy={seg.p1.y} r="3" fill={isDark ? "#ffffff" : currentColor} />
                     </g>
 
                     {/* Extremo 2 (p2): Manipulador táctil de rotación */}
@@ -1060,13 +1141,13 @@ export default function ExistenciaTrianguloView() {
                       <circle
                         cx={seg.p2.x}
                         cy={seg.p2.y}
-                        r="8"
-                        fill="#080c18"
-                        stroke={seg.color}
+                        r="8.5"
+                        fill={isDark ? "#080c18" : "#ffffff"}
+                        stroke={currentColor}
                         strokeWidth="2.5"
                       />
-                      {/* Punto central blanco */}
-                      <circle cx={seg.p2.x} cy={seg.p2.y} r="3" fill="#ffffff" />
+                      {/* Punto central */}
+                      <circle cx={seg.p2.x} cy={seg.p2.y} r="3" fill={isDark ? "#ffffff" : currentColor} />
                     </g>
                   </g>
                 )
@@ -1075,30 +1156,42 @@ export default function ExistenciaTrianguloView() {
           </div>
 
           {/* Micro-guía flotante en esquina superior izquierda */}
-          <div className="absolute top-2 left-2 bg-[#09101f]/90 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1 text-[10px] text-white/70 flex items-center gap-2 pointer-events-none shadow-md z-20">
-            <span className="flex items-center gap-1 text-cyan-300 font-bold">
+          <div className={`absolute top-2 left-2 rounded-xl px-2.5 py-1 text-[10px] flex items-center gap-2 pointer-events-none shadow-md z-20 transition-colors ${
+            isDark
+              ? 'bg-[#09101f]/90 backdrop-blur-md border border-white/10 text-white/70'
+              : 'bg-white border-2 border-slate-300 text-slate-800'
+          }`}>
+            <span className={`flex items-center gap-1 font-black ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
               <Move size={12} /> Cuerpo: traslada
             </span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-amber-300 font-bold">
+            <span className={isDark ? 'text-white/30' : 'text-slate-400 font-bold'}>•</span>
+            <span className={`flex items-center gap-1 font-black ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
               <RotateCw size={12} /> Extremos: gira
             </span>
-            <span className="hidden md:inline">•</span>
-            <span className="hidden md:flex items-center gap-1 text-emerald-300 font-bold">
+            <span className={`hidden md:inline ${isDark ? 'text-white/30' : 'text-slate-400 font-bold'}`}>•</span>
+            <span className={`hidden md:flex items-center gap-1 font-black ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
               <Sparkles size={12} /> Imán al unir
             </span>
           </div>
 
           {/* Distintivo de Éxito al cerrar el triángulo */}
           {triangleStatus.isClosed && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/40 rounded-full px-4 py-1.5 text-xs text-emerald-200 font-bold flex items-center gap-2 shadow-2xl z-20 animate-bounce">
-              <CheckCircle2 size={16} className="text-emerald-400" />
+            <div className={`absolute top-3 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold flex items-center gap-2 shadow-2xl z-20 animate-bounce ${
+              isDark
+                ? 'bg-emerald-500/20 backdrop-blur-md border border-emerald-400/40 text-emerald-200'
+                : 'bg-emerald-600 border-2 border-emerald-700 text-white shadow-emerald-700/30'
+            }`}>
+              <CheckCircle2 size={16} className={isDark ? "text-emerald-400" : "text-white"} />
               <span>🎉 ¡Triángulo cerrado exitosamente! Cumple el teorema de existencia.</span>
             </div>
           )}
 
           {/* Controles flotantes de Zoom y Recentrado en esquina superior derecha */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 z-20 bg-[#09101f]/90 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-xl">
+          <div className={`absolute top-2 right-2 flex items-center gap-1 z-20 rounded-xl p-1 shadow-md transition-colors ${
+            isDark
+              ? 'bg-[#09101f]/90 backdrop-blur-md border border-white/10 text-white'
+              : 'bg-white border-2 border-slate-300 text-slate-800'
+          }`}>
             <button
               onClick={() => {
                 if (canvasRef.current) {
@@ -1106,7 +1199,11 @@ export default function ExistenciaTrianguloView() {
                   applyZoomToPoint(zoom - 0.2, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 }
               }}
-              className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white flex items-center justify-center active:scale-90 transition-transform"
+              className={`h-7 w-7 rounded-lg flex items-center justify-center active:scale-90 transition-transform cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-white/80 hover:text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+              }`}
               title="Alejar (Zoom -)"
             >
               <ZoomOut size={14} />
@@ -1117,7 +1214,11 @@ export default function ExistenciaTrianguloView() {
                 setZoom(1)
                 setPan({ x: 0, y: 0 })
               }}
-              className="h-7 px-2 rounded-lg bg-white/5 hover:bg-white/15 text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-0.5 active:scale-95 transition-all"
+              className={`h-7 px-2 rounded-lg font-mono text-[11px] font-bold flex items-center gap-0.5 active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-cyan-300'
+                  : 'bg-slate-100 hover:bg-slate-200 text-cyan-800 border border-slate-200 font-black'
+              }`}
               title="Restablecer zoom a 100% y centrar"
             >
               <span>{Math.round(zoom * 100)}%</span>
@@ -1130,7 +1231,11 @@ export default function ExistenciaTrianguloView() {
                   applyZoomToPoint(zoom + 0.2, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 }
               }}
-              className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white flex items-center justify-center active:scale-90 transition-transform"
+              className={`h-7 w-7 rounded-lg flex items-center justify-center active:scale-90 transition-transform cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-white/80 hover:text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+              }`}
               title="Acercar (Zoom +)"
             >
               <ZoomIn size={14} />
@@ -1138,10 +1243,14 @@ export default function ExistenciaTrianguloView() {
 
             <button
               onClick={() => setShowReachCircles(s => !s)}
-              className={`h-7 px-2 rounded-lg border text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all ${
+              className={`h-7 px-2 rounded-lg border text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
                 showReachCircles
-                  ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200'
-                  : 'bg-white/5 hover:bg-white/15 border-white/10 text-white/70 hover:text-white'
+                  ? isDark
+                    ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200'
+                    : 'bg-cyan-100 border-cyan-400 text-cyan-900 font-black'
+                  : isDark
+                  ? 'bg-white/5 hover:bg-white/15 border-white/10 text-white/70 hover:text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 hover:text-slate-900'
               }`}
               title="Mostrar u ocultar círculos de alcance"
             >
@@ -1155,7 +1264,11 @@ export default function ExistenciaTrianguloView() {
                   setPan({ x: 0, y: 0 })
                   setZoom(1)
                 }}
-                className="h-7 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+                className={`h-7 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                  isDark
+                    ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30'
+                    : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300'
+                }`}
                 title="Centrar figura y restablecer zoom"
               >
                 <Maximize2 size={12} />
@@ -1168,16 +1281,24 @@ export default function ExistenciaTrianguloView() {
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 z-20">
             <button
               onClick={handleAutoAssembleBase}
-              className="h-7 lg:h-8 px-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 text-[10px] lg:text-xs font-bold flex items-center gap-1.5 shadow-lg active:scale-95 transition-all"
+              className={`h-7 lg:h-8 px-2.5 rounded-xl border text-[10px] lg:text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-400/40 text-cyan-200'
+                  : 'bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-800'
+              }`}
               title="Colocar el lado mayor como base y unir los dos menores en los extremos"
             >
-              <Wand2 size={13} className="text-cyan-300" />
+              <Wand2 size={13} className={isDark ? "text-cyan-300" : "text-cyan-700"} />
               <span>Montar base</span>
             </button>
 
             <button
               onClick={handleResetPositions}
-              className="h-7 lg:h-8 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] lg:text-xs font-bold flex items-center gap-1.5 shadow-lg active:scale-95 transition-all"
+              className={`h-7 lg:h-8 px-2.5 rounded-xl border text-[10px] lg:text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white'
+                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-800'
+              }`}
               title="Restablecer posición vertical de los segmentos"
             >
               <RotateCw size={13} />
@@ -1188,11 +1309,15 @@ export default function ExistenciaTrianguloView() {
       </div>
 
       {/* ── 3. Barra Inferior de Acción y Explicación Pedagógica (40-48px) ── */}
-      <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+      <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 transition-colors ${
+        isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+      }`}>
         {/* Mensaje pedagógico de exploración (sin spoilers) */}
         <div className="flex-1 min-w-0 flex items-center gap-2 text-[10px] sm:text-[11px] truncate">
           {triangleStatus.isClosed ? (
-            <div className="flex items-center gap-1.5 text-emerald-300 font-bold truncate">
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-emerald-300' : 'text-emerald-700'
+            }`}>
               <CheckCircle2 size={14} className="shrink-0" />
               <span className="truncate">
                 ¡Triángulo cerrado! {sideA} + {sideB} &gt; {sideC}, {sideA} + {sideC} &gt; {sideB} y{' '}
@@ -1200,8 +1325,10 @@ export default function ExistenciaTrianguloView() {
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-white/80 truncate">
-              <Info size={14} className="text-cyan-300 shrink-0" />
+            <div className={`flex items-center gap-1.5 truncate ${
+              isDark ? 'text-white/80' : 'text-slate-700'
+            }`}>
+              <Info size={14} className={`shrink-0 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`} />
               <span className="truncate">
                 Mueve los segmentos y gira sus extremos para intentar unirlos y comprobar si es posible formar un triángulo.
               </span>
@@ -1213,7 +1340,7 @@ export default function ExistenciaTrianguloView() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowCustomModal(true)}
-            className="h-7 lg:h-8 px-2.5 sm:px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[10px] sm:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            className="h-7 lg:h-8 px-2.5 sm:px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-[10px] sm:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
           >
             <Sliders size={13} />
             <span>Medidas ({sideA}, {sideB}, {sideC})</span>
@@ -1225,7 +1352,11 @@ export default function ExistenciaTrianguloView() {
               const nextPreset = PRESET_CASES[(currentIdx + 1) % PRESET_CASES.length]
               handleSelectCase(nextPreset)
             }}
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-[10px] sm:text-[11px] flex items-center gap-1 active:scale-95 transition-all"
+            className={`h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg border font-bold text-[10px] sm:text-[11px] flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'bg-white/10 hover:bg-white/20 text-white border-transparent'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+            }`}
             title="Siguiente caso de estudio"
           >
             <ChevronRight size={14} />
@@ -1241,23 +1372,33 @@ export default function ExistenciaTrianguloView() {
           onClick={() => setShowCustomModal(false)}
         >
           <div
-            className="w-full max-w-[340px] bg-[#0c1529] border border-cyan-400/40 rounded-2xl p-4 shadow-2xl flex flex-col gap-3.5"
+            className={`w-full max-w-[340px] rounded-2xl p-4 shadow-2xl flex flex-col gap-3.5 border transition-colors ${
+              isDark ? 'bg-[#0c1529] border-cyan-400/40 text-white' : 'bg-white border-2 border-slate-300 text-slate-900'
+            }`}
             onClick={e => e.stopPropagation()}
           >
             {/* Cabecera */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className={`flex items-center justify-between border-b pb-2 ${
+              isDark ? 'border-white/10' : 'border-slate-200'
+            }`}>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+                  isDark ? 'bg-cyan-500/20 border-cyan-400/30 text-cyan-300' : 'bg-cyan-100 border-cyan-300 text-cyan-800'
+                }`}>
                   <Sliders size={16} />
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-white">Personalizar Lados</h3>
-                  <p className="text-[10px] text-white/50">Elige la longitud de cada segmento</p>
+                  <h3 className={`text-xs sm:text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Personalizar Lados</h3>
+                  <p className={`text-[10px] ${isDark ? 'text-white/50' : 'text-slate-500'}`}>Elige la longitud de cada segmento</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCustomModal(false)}
-                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors"
+                className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/15 text-white/60 hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+                }`}
                 aria-label="Cerrar modal"
               >
                 <XCircle size={16} />
@@ -1269,8 +1410,8 @@ export default function ExistenciaTrianguloView() {
               {/* Lado A */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-cyan-300">Lado a (Cian):</span>
-                  <span className="font-mono text-cyan-300">{sideA} u</span>
+                  <span className={isDark ? 'text-cyan-300' : 'text-cyan-700'}>Lado a (Cian):</span>
+                  <span className={`font-mono ${isDark ? 'text-cyan-300' : 'text-cyan-800 font-black'}`}>{sideA} u</span>
                 </div>
                 <input
                   type="range"
@@ -1283,15 +1424,17 @@ export default function ExistenciaTrianguloView() {
                     setSelectedCaseId('libre')
                     setSegments(initSegments(val, sideB, sideC, canvasDim.w, canvasDim.h))
                   }}
-                  className="w-full accent-cyan-400 h-1.5 bg-black/50 rounded-lg cursor-pointer"
+                  className={`w-full accent-cyan-500 h-1.5 rounded-lg cursor-pointer ${
+                    isDark ? 'bg-black/50' : 'bg-slate-200'
+                  }`}
                 />
               </div>
 
               {/* Lado B */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-amber-300">Lado b (Ámbar):</span>
-                  <span className="font-mono text-amber-300">{sideB} u</span>
+                  <span className={isDark ? 'text-amber-300' : 'text-amber-700'}>Lado b (Ámbar):</span>
+                  <span className={`font-mono ${isDark ? 'text-amber-300' : 'text-amber-800 font-black'}`}>{sideB} u</span>
                 </div>
                 <input
                   type="range"
@@ -1304,15 +1447,17 @@ export default function ExistenciaTrianguloView() {
                     setSelectedCaseId('libre')
                     setSegments(initSegments(sideA, val, sideC, canvasDim.w, canvasDim.h))
                   }}
-                  className="w-full accent-amber-400 h-1.5 bg-black/50 rounded-lg cursor-pointer"
+                  className={`w-full accent-amber-500 h-1.5 rounded-lg cursor-pointer ${
+                    isDark ? 'bg-black/50' : 'bg-slate-200'
+                  }`}
                 />
               </div>
 
               {/* Lado C */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-pink-300">Lado c (Rosa):</span>
-                  <span className="font-mono text-pink-300">{sideC} u</span>
+                  <span className={isDark ? 'text-pink-300' : 'text-pink-700'}>Lado c (Rosa):</span>
+                  <span className={`font-mono ${isDark ? 'text-pink-300' : 'text-pink-800 font-black'}`}>{sideC} u</span>
                 </div>
                 <input
                   type="range"
@@ -1325,7 +1470,9 @@ export default function ExistenciaTrianguloView() {
                     setSelectedCaseId('libre')
                     setSegments(initSegments(sideA, sideB, val, canvasDim.w, canvasDim.h))
                   }}
-                  className="w-full accent-pink-400 h-1.5 bg-black/50 rounded-lg cursor-pointer"
+                  className={`w-full accent-pink-500 h-1.5 rounded-lg cursor-pointer ${
+                    isDark ? 'bg-black/50' : 'bg-slate-200'
+                  }`}
                 />
               </div>
             </div>
@@ -1334,16 +1481,22 @@ export default function ExistenciaTrianguloView() {
             <div
               className={`p-2.5 rounded-xl border text-[11px] leading-tight ${
                 inequalityCheck.status === 'valid'
-                  ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-200'
+                  ? isDark
+                    ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-200'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
                   : inequalityCheck.status === 'degenerate'
-                  ? 'bg-amber-500/15 border-amber-400/30 text-amber-200'
-                  : 'bg-rose-500/15 border-rose-400/30 text-rose-200'
+                  ? isDark
+                    ? 'bg-amber-500/15 border-amber-400/30 text-amber-200'
+                    : 'bg-amber-50 border-amber-300 text-amber-900 font-bold'
+                  : isDark
+                  ? 'bg-rose-500/15 border-rose-400/30 text-rose-200'
+                  : 'bg-rose-50 border-rose-300 text-rose-900 font-bold'
               }`}
             >
               <div className="font-bold flex items-center gap-1 mb-1">
-                {inequalityCheck.status === 'valid' && <CheckCircle2 size={14} className="text-emerald-400" />}
-                {inequalityCheck.status === 'degenerate' && <AlertCircle size={14} className="text-amber-400" />}
-                {inequalityCheck.status === 'impossible' && <XCircle size={14} className="text-rose-400" />}
+                {inequalityCheck.status === 'valid' && <CheckCircle2 size={14} className={isDark ? "text-emerald-400" : "text-emerald-600"} />}
+                {inequalityCheck.status === 'degenerate' && <AlertCircle size={14} className={isDark ? "text-amber-400" : "text-amber-600"} />}
+                {inequalityCheck.status === 'impossible' && <XCircle size={14} className={isDark ? "text-rose-400" : "text-rose-600"} />}
                 <span>
                   {inequalityCheck.status === 'valid'
                     ? '¿Se puede formar triángulo?: SÍ'
@@ -1358,7 +1511,7 @@ export default function ExistenciaTrianguloView() {
             {/* Botón cerrar modal */}
             <button
               onClick={() => setShowCustomModal(false)}
-              className="w-full h-9 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow active:scale-95 transition-all"
+              className="w-full h-9 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow active:scale-95 transition-all cursor-pointer"
             >
               Aplicar y Experimentar en el Lienzo
             </button>
@@ -1371,17 +1524,20 @@ export default function ExistenciaTrianguloView() {
         open={showHelp}
         onClose={() => setShowHelp(false)}
         title="¿Cuándo existe un triángulo? (Teorema de la Desigualdad Triangular)"
-        bgColor="#080c18"
+        bgColor={isDark ? "#080c18" : "#ffffff"}
+        titleColor={isDark ? "#ffffff" : "#0f172a"}
         maxWidth="max-w-md"
         buttonColor="bg-cyan-500 text-black hover:bg-cyan-400"
       >
-        <div key={helpId} className="space-y-2.5 text-white/80 text-xs leading-relaxed pb-2">
+        <div key={helpId} className={`space-y-2.5 text-xs leading-relaxed pb-2 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
           <p>
             Para que tres segmentos puedan unirse por sus extremos y formar un triángulo cerrado,
             deben cumplir la <strong>Propiedad de la Desigualdad Triangular</strong>:
           </p>
 
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-center font-mono text-cyan-200 font-bold text-sm">
+          <div className={`p-2.5 rounded-xl border text-center font-mono font-bold text-sm ${
+            isDark ? 'bg-cyan-500/10 border-cyan-400/30 text-cyan-200' : 'bg-cyan-50 border-cyan-300 text-cyan-900'
+          }`}>
             a + b &gt; c &emsp;•&emsp; a + c &gt; b &emsp;•&emsp; b + c &gt; a
           </div>
 
@@ -1389,24 +1545,28 @@ export default function ExistenciaTrianguloView() {
             En palabras sencillas: <em>"La suma de las longitudes de los dos lados menores debe ser estrictamente mayor que el lado más largo"</em>.
           </p>
 
-          <div className="space-y-1.5 p-2 rounded-xl bg-white/5 border border-white/10">
+          <div className={`space-y-1.5 p-2 rounded-xl border ${
+            isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
+          }`}>
             <div className="flex items-start gap-1.5">
-              <span className="text-emerald-400 font-bold">1. Caso Posible:</span>
+              <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>1. Caso Posible:</span>
               <span>Si la suma de los dos lados menores supera al mayor, los extremos se cruzan y forman un triángulo.</span>
             </div>
             <div className="flex items-start gap-1.5">
-              <span className="text-rose-400 font-bold">2. Caso Imposible:</span>
+              <span className={`font-bold ${isDark ? 'text-rose-400' : 'text-rose-700'}`}>2. Caso Imposible:</span>
               <span>Si los dos menores suman menos que el mayor, aunque los gires nunca se tocarán (queda una brecha abierta).</span>
             </div>
             <div className="flex items-start gap-1.5">
-              <span className="text-amber-400 font-bold">3. Caso Límite:</span>
+              <span className={`font-bold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>3. Caso Límite:</span>
               <span>Si la suma es exactamente igual, los lados menores caen planos encima del lado mayor formando una línea recta sin altura.</span>
             </div>
           </div>
 
-          <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+          <div className={`p-2 rounded-xl border text-[11px] ${
+            isDark ? 'bg-white/5 border-white/10 text-white/70' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
             💡 <strong>Cómo usar el simulador:</strong>
-            <ul className="list-disc list-inside mt-1 space-y-0.5 text-white/70">
+            <ul className={`list-disc list-inside mt-1 space-y-0.5 ${isDark ? 'text-white/70' : 'text-slate-600'}`}>
               <li>Arrastra el <strong>cuerpo</strong> de un segmento para trasladarlo.</li>
               <li>Arrastra los <strong>puntos extremos</strong> para girar el segmento (su longitud se mantiene fija).</li>
               <li>Acerca un extremo a otro para que el <strong>imán</strong> los una automáticamente.</li>

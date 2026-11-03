@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronRight, RefreshCw, Sun, Moon } from 'lucide-react'
 import { accents, competencies, competencyIcons, recreativa, topics } from '../data/curriculum'
 import type { Competency } from '../types'
+import { useThemeStore } from '../store/useThemeStore'
 
 export default function HomeView() {
     const navigate = useNavigate()
+    const { theme, toggleTheme } = useThemeStore()
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [isUpdating, setIsUpdating] = useState(false)
 
@@ -60,13 +62,30 @@ export default function HomeView() {
                             Elige una competencia
                         </p>
                     </div>
-                    <button
-                        onClick={handleUpdateClick}
-                        className="shrink-0 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
-                        title="Actualizar aplicación"
-                    >
-                        <RefreshCw size={17} className="text-white/50" />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5"
+                            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                        >
+                            {theme === 'dark' ? (
+                                <Sun size={17} className="text-amber-400 animate-in spin-in-180 duration-200" />
+                            ) : (
+                                <Moon size={17} className="text-indigo-600 animate-in spin-in-180 duration-200" />
+                            )}
+                            <span className="hidden sm:inline text-xs font-bold text-white/70">
+                                {theme === 'dark' ? 'Oscuro' : 'Claro'}
+                            </span>
+                        </button>
+                        <button
+                            onClick={handleUpdateClick}
+                            className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
+                            title="Actualizar aplicación"
+                        >
+                            <RefreshCw size={17} className="text-white/50" />
+                        </button>
+                    </div>
                 </header>
 
                 {/* Competencias */}

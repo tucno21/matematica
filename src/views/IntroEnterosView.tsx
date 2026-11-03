@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN_TEMP = -20;
@@ -28,11 +29,27 @@ interface TypeLabel {
 type FactKey = "positive" | "zero" | "negative";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getTempColor = (temp: number): TempColor => {
+const getTempColor = (temp: number, isDark = true): TempColor => {
     // Convención matemática escolar: Positivos en AZUL, Negativos en ROJO, Cero neutro en GRIS
-    if (temp > 0) return { primary: "#60a5fa", secondary: "#2563eb", glow: "rgba(96,165,250,0.35)" };
-    if (temp < 0) return { primary: "#f87171", secondary: "#dc2626", glow: "rgba(248,113,113,0.35)" };
-    return { primary: "#cbd5e1", secondary: "#94a3b8", glow: "rgba(203,213,225,0.3)" };
+    if (temp > 0) {
+        return {
+            primary: isDark ? "#60a5fa" : "#2563eb",
+            secondary: isDark ? "#2563eb" : "#1d4ed8",
+            glow: isDark ? "rgba(96,165,250,0.38)" : "rgba(37,99,235,0.35)",
+        };
+    }
+    if (temp < 0) {
+        return {
+            primary: isDark ? "#f87171" : "#dc2626",
+            secondary: isDark ? "#dc2626" : "#b91c1c",
+            glow: isDark ? "rgba(248,113,113,0.38)" : "rgba(220,38,38,0.35)",
+        };
+    }
+    return {
+        primary: isDark ? "#cbd5e1" : "#475569",
+        secondary: isDark ? "#94a3b8" : "#64748b",
+        glow: isDark ? "rgba(203,213,225,0.3)" : "rgba(100,116,139,0.25)",
+    };
 };
 
 const getFactKey = (temp: number): FactKey => {
@@ -61,14 +78,16 @@ const FACTS: Record<FactKey, string[]> = {
 };
 
 const LEGEND_ITEMS = [
-    { color: "#60a5fa", label: "Positivo (+)", sub: "> 0" },
-    { color: "#cbd5e1", label: "Cero (0)", sub: "origen" },
-    { color: "#f87171", label: "Negativo (−)", sub: "< 0" },
+    { color: "#3b82f6", label: "Positivo (+)", sub: "> 0" },
+    { color: "#94a3b8", label: "Cero (0)", sub: "origen" },
+    { color: "#ef4444", label: "Negativo (−)", sub: "< 0" },
 ] as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function IntroEnterosView(): React.ReactElement {
     const navigate = useNavigate();
+    const { theme } = useThemeStore();
+    const isDark = theme === "dark";
 
     const [temperature, setTemperature] = useState<number>(15);
     const [dragging, setDragging] = useState<boolean>(false);
@@ -76,7 +95,7 @@ export default function IntroEnterosView(): React.ReactElement {
 
     const stemRef = useRef<HTMLDivElement>(null);
 
-    const colors: TempColor = getTempColor(temperature);
+    const colors: TempColor = getTempColor(temperature, isDark);
     const range: number = MAX_TEMP - MIN_TEMP;
     const factKey: FactKey = getFactKey(temperature);
     const fillPct: number = Math.max(0, Math.min(100, ((temperature - MIN_TEMP) / range) * 100));
@@ -214,7 +233,16 @@ export default function IntroEnterosView(): React.ReactElement {
                 <div
                     className="flex items-center w-full max-w-[560px] lg:max-w-[700px] bg-white/[0.04] border border-white/10 rounded-2xl lg:rounded-3xl p-2 sm:p-4 lg:p-6 gap-2 sm:gap-6 lg:gap-8 backdrop-blur-xl shadow-2xl transition-all duration-500"
                     style={{
-                        boxShadow: `0 0 40px ${colors.glow}`,
+                        boxShadow: isDark
+                            ? `0 0 40px ${colors.glow}`
+                            : `0 0 35px ${colors.glow}, 0 10px 25px -4px rgba(15, 23, 42, 0.08)`,
+                        borderColor: isDark
+                            ? undefined
+                            : temperature > 0
+                            ? "rgba(37, 99, 235, 0.45)"
+                            : temperature < 0
+                            ? "rgba(220, 38, 38, 0.45)"
+                            : "rgba(148, 163, 184, 0.55)",
                     }}
                 >
                     {/* ════ COLUMNA TERMÓMETRO ════ */}
@@ -224,7 +252,11 @@ export default function IntroEnterosView(): React.ReactElement {
                             type="button"
                             onClick={() => setTemperature((t) => Math.min(MAX_TEMP, t + 1))}
                             disabled={temperature >= MAX_TEMP}
-                            className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center border border-white/15 shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mb-1"
+                            className={`h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full font-black text-xs sm:text-sm flex items-center justify-center border shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mb-1 ${
+                                isDark
+                                    ? "bg-white/10 hover:bg-white/20 active:scale-95 text-white border-white/15"
+                                    : "bg-white hover:bg-slate-100 active:scale-95 text-slate-800 border-slate-300 shadow-sm"
+                            }`}
                             title="Aumentar temperatura (+1°C)"
                         >
                             ▲
@@ -243,10 +275,10 @@ export default function IntroEnterosView(): React.ReactElement {
                                         <span
                                             className={`font-mono text-[9px] sm:text-[10px] tabular-nums whitespace-nowrap ${
                                                 isZero
-                                                    ? "text-white font-bold"
+                                                    ? (isDark ? "text-white font-black" : "text-slate-900 font-black")
                                                     : isMajor
-                                                    ? "text-white/60 font-semibold"
-                                                    : "text-white/25"
+                                                    ? (isDark ? "text-white/70 font-bold" : "text-slate-700 font-bold")
+                                                    : (isDark ? "text-white/30" : "text-slate-500 font-medium")
                                             }`}
                                         >
                                             {t > 0 ? `+${t}` : t}°
@@ -254,10 +286,10 @@ export default function IntroEnterosView(): React.ReactElement {
                                         <div
                                             className={`rounded-full ${
                                                 isZero
-                                                    ? "w-3 h-[2px] bg-white"
+                                                    ? (isDark ? "w-3 h-[2px] bg-white" : "w-3.5 h-[2.5px] bg-slate-800")
                                                     : isMajor
-                                                    ? "w-2 h-[1.5px] bg-white/50"
-                                                    : "w-1 h-[1px] bg-white/20"
+                                                    ? (isDark ? "w-2 h-[1.5px] bg-white/60" : "w-2.5 h-[2px] bg-slate-600")
+                                                    : (isDark ? "w-1 h-[1px] bg-white/25" : "w-1.5 h-[1.5px] bg-slate-400")
                                             }`}
                                         />
                                     </div>
@@ -273,7 +305,9 @@ export default function IntroEnterosView(): React.ReactElement {
                                     onPointerMove={handlePointerMove}
                                     onPointerUp={handlePointerUp}
                                     onPointerCancel={handlePointerUp}
-                                    className="relative w-5 sm:w-6 lg:w-7 h-[170px] sm:h-[200px] lg:h-[270px] rounded-t-full bg-white/10 border-x border-t border-white/20 overflow-visible cursor-ns-resize touch-none select-none"
+                                    className={`relative w-5 sm:w-6 lg:w-7 h-[170px] sm:h-[200px] lg:h-[270px] rounded-t-full border-x border-t overflow-visible cursor-ns-resize touch-none select-none ${
+                                        isDark ? "bg-white/10 border-white/20" : "bg-slate-200/70 border-slate-400/80 shadow-inner"
+                                    }`}
                                     style={{ touchAction: "none" }}
                                     title="Arrastra verticalmente para cambiar la temperatura"
                                 >
@@ -304,7 +338,9 @@ export default function IntroEnterosView(): React.ReactElement {
 
                                 {/* Bulbo inferior redondo */}
                                 <div
-                                    className="relative w-9 h-9 sm:w-11 sm:h-11 lg:w-13 lg:h-13 -mt-2 rounded-full border border-white/20 flex items-center justify-center shadow-lg transition-all duration-500 z-10"
+                                    className={`relative w-9 h-9 sm:w-11 sm:h-11 lg:w-13 lg:h-13 -mt-2 rounded-full border flex items-center justify-center shadow-lg transition-all duration-500 z-10 ${
+                                        isDark ? "border-white/20" : "border-slate-400/80"
+                                    }`}
                                     style={{
                                         background: `radial-gradient(circle at 35% 35%, ${colors.primary}, ${colors.secondary})`,
                                         boxShadow: `0 0 16px ${colors.glow}`,
@@ -321,7 +357,11 @@ export default function IntroEnterosView(): React.ReactElement {
                             type="button"
                             onClick={() => setTemperature((t) => Math.max(MIN_TEMP, t - 1))}
                             disabled={temperature <= MIN_TEMP}
-                            className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center border border-white/15 shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mt-1"
+                            className={`h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full font-black text-xs sm:text-sm flex items-center justify-center border shadow transition-all disabled:opacity-25 disabled:cursor-not-allowed mt-1 ${
+                                isDark
+                                    ? "bg-white/10 hover:bg-white/20 active:scale-95 text-white border-white/15"
+                                    : "bg-white hover:bg-slate-100 active:scale-95 text-slate-800 border-slate-300 shadow-sm"
+                            }`}
                             title="Disminuir temperatura (−1°C)"
                         >
                             ▼
@@ -344,23 +384,29 @@ export default function IntroEnterosView(): React.ReactElement {
                                 <span
                                     className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-black tracking-wide border transition-all duration-500"
                                     style={{
-                                        background: `${colors.primary}20`,
-                                        borderColor: `${colors.primary}50`,
+                                        background: isDark ? `${colors.primary}20` : `${colors.primary}18`,
+                                        borderColor: isDark ? `${colors.primary}50` : `${colors.primary}60`,
                                         color: colors.primary,
                                     }}
                                 >
                                     <span className="font-mono text-sm leading-none">{typeLabel.sign}</span>
                                     <span>{typeLabel.text}</span>
                                 </span>
-                                <span className="text-[11px] sm:text-xs text-white/50 font-medium truncate">
+                                <span className={`text-[11px] sm:text-xs font-medium truncate ${
+                                    isDark ? "text-white/50" : "text-slate-600"
+                                }`}>
                                     {typeLabel.sub}
                                 </span>
                             </div>
                         </div>
 
                         {/* Mini Recta Numérica Interactiva */}
-                        <div className="rounded-xl bg-white/[0.05] border border-white/10 p-2 sm:p-2.5 mb-2 sm:mb-2.5">
-                            <div className="flex items-center justify-between text-[9px] uppercase tracking-wider font-bold text-white/40 mb-1">
+                        <div className={`rounded-xl border p-2 sm:p-2.5 mb-2 sm:mb-2.5 ${
+                            isDark ? "bg-white/[0.05] border-white/10" : "bg-slate-50 border-slate-300"
+                        }`}>
+                            <div className={`flex items-center justify-between text-[9px] uppercase tracking-wider font-bold mb-1 ${
+                                isDark ? "text-white/40" : "text-slate-500"
+                            }`}>
                                 <span>Recta numérica</span>
                                 <span className="font-mono font-semibold" style={{ color: colors.primary }}>
                                     {temperature > 0 ? `+${temperature}` : temperature}
@@ -369,11 +415,15 @@ export default function IntroEnterosView(): React.ReactElement {
 
                             <div className="relative h-6 sm:h-7 flex items-center">
                                 {/* Eje horizontal */}
-                                <div className="absolute left-0 right-0 h-[2px] bg-white/20 rounded-full" />
+                                <div className={`absolute left-0 right-0 h-[2px] rounded-full ${
+                                    isDark ? "bg-white/20" : "bg-slate-300"
+                                }`} />
 
                                 {/* Marca cero destacada */}
                                 <div
-                                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-3.5 bg-white/60 rounded-full"
+                                    className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-3.5 rounded-full ${
+                                        isDark ? "bg-white/60" : "bg-slate-700"
+                                    }`}
                                     style={{ left: `${((0 - MIN_TEMP) / range) * 100}%` }}
                                 />
 
@@ -382,7 +432,9 @@ export default function IntroEnterosView(): React.ReactElement {
                                     <span
                                         key={v}
                                         className={`absolute top-4 -translate-x-1/2 text-[8px] sm:text-[9px] font-mono select-none ${
-                                            v === 0 ? "text-white font-bold" : "text-white/40"
+                                            v === 0
+                                                ? (isDark ? "text-white font-bold" : "text-slate-900 font-black")
+                                                : (isDark ? "text-white/40" : "text-slate-500 font-semibold")
                                         }`}
                                         style={{ left: `${((v - MIN_TEMP) / range) * 100}%` }}
                                     >
@@ -406,13 +458,15 @@ export default function IntroEnterosView(): React.ReactElement {
                         <div
                             className="flex items-center rounded-xl p-2 sm:p-2.5 min-h-[46px] sm:min-h-[52px] border transition-all duration-500"
                             style={{
-                                background: `${colors.primary}12`,
-                                borderColor: `${colors.primary}30`,
+                                background: isDark ? `${colors.primary}12` : `${colors.primary}15`,
+                                borderColor: isDark ? `${colors.primary}30` : `${colors.primary}50`,
                             }}
                         >
                             <p
                                 key={`${factIdx}-${factKey}`}
-                                className="fact-anim m-0 text-xs sm:text-[13px] text-white/90 font-medium leading-snug"
+                                className={`fact-anim m-0 text-xs sm:text-[13px] font-medium leading-snug ${
+                                    isDark ? "text-white/90" : "text-slate-800"
+                                }`}
                             >
                                 💡 {currentFacts[factIdx]}
                             </p>
@@ -428,14 +482,14 @@ export default function IntroEnterosView(): React.ReactElement {
                     {LEGEND_ITEMS.map(({ color, label, sub }) => (
                         <div key={label} className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="font-bold text-white/80">{label}</span>
-                            <span className="hidden sm:inline text-white/40">{sub}</span>
+                            <span className={`font-bold ${isDark ? "text-white/80" : "text-slate-800"}`}>{label}</span>
+                            <span className={`hidden sm:inline ${isDark ? "text-white/40" : "text-slate-500"}`}>{sub}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* Micro-indicación */}
-                <span className="hidden md:inline text-white/30 truncate">
+                <span className={`hidden md:inline truncate ${isDark ? "text-white/30" : "text-slate-500"}`}>
                     Arrastra el termómetro · Usa ▲▼ · O toca el tubo
                 </span>
             </footer>

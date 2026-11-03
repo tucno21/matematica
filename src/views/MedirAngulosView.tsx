@@ -20,6 +20,7 @@ import {
   Award,
 } from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
+import { useThemeStore } from '../store/useThemeStore'
 
 // Tipos de retos de ángulos
 type ChallengeMode = 'simple' | 'secantes' | 'llano' | 'triangulo' | 'cuadrilatero' | 'libre'
@@ -135,8 +136,10 @@ function getVectorAngleDeg(p1: { x: number; y: number }, p2: { x: number; y: num
 
 // Paleta de colores distintivos para arcos múltiples
 const ANGLE_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#f472b6', '#a78bfa']
+const ANGLE_COLORS_LIGHT = ['#0284c7', '#d97706', '#059669', '#db2777', '#7c3aed']
 
 export default function MedirAngulosView() {
+  const isDark = useThemeStore(s => s.theme === 'dark')
   const nav = useNavigate()
   const helpId = useId()
   const [showHelp, setShowHelp] = useState(false)
@@ -989,25 +992,39 @@ export default function MedirAngulosView() {
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none"
+      className={`flex h-dvh flex-col overflow-hidden select-none transition-colors duration-150 ${
+        isDark ? 'bg-[#080c18] text-white' : 'bg-slate-100 text-slate-900'
+      }`}
       style={{ fontFamily: "'Nunito', sans-serif" }}
     >
       {/* ── 1. Cabecera (34-44px) ── */}
-      <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+      <header className={`flex h-9 lg:h-11 shrink-0 items-center justify-between border-b px-2 lg:px-4 transition-colors ${
+        isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+      }`}>
         <div className="flex items-center gap-1.5 min-w-0">
           <button
             onClick={() => nav(-1)}
-            className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+            className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+            }`}
             aria-label="Volver"
             title="Volver"
           >
             <ArrowLeft size={15} />
           </button>
           <div className="flex items-center gap-1.5 min-w-0">
-            <h1 className="text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/90 truncate">
+            <h1 className={`text-[12px] sm:text-[13px] lg:text-[15px] font-bold truncate ${
+              isDark ? 'text-white/90' : 'text-slate-900'
+            }`}>
               Medición con Transportador
             </h1>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">
+            <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-mono border ${
+              isDark
+                ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
+                : 'bg-cyan-50 text-cyan-800 border-cyan-300 font-bold'
+            }`}>
               Goniómetro
             </span>
           </div>
@@ -1015,11 +1032,19 @@ export default function MedirAngulosView() {
 
         {/* Título del reto y teorema */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] lg:text-xs text-cyan-300 font-bold bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-400/20 truncate">
+          <span className={`text-[10px] lg:text-xs font-bold px-2.5 py-0.5 rounded-full border truncate ${
+            isDark
+              ? 'bg-cyan-500/10 text-cyan-300 border-cyan-400/20'
+              : 'bg-cyan-100 text-cyan-900 border-cyan-300 font-black'
+          }`}>
             {challenge.title}
           </span>
           {challenge.expectedSum && (
-            <span className="hidden md:inline-flex items-center gap-1 text-[9px] lg:text-[10px] text-amber-300 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-400/20">
+            <span className={`hidden md:inline-flex items-center gap-1 text-[9px] lg:text-[10px] font-mono px-2 py-0.5 rounded border ${
+              isDark
+                ? 'bg-amber-500/10 text-amber-300 border-amber-400/20'
+                : 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
+            }`}>
               Σ = {challenge.expectedSum}°
             </span>
           )}
@@ -1027,7 +1052,11 @@ export default function MedirAngulosView() {
 
         <button
           onClick={() => setShowHelp(true)}
-          className="flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white active:scale-95 transition-all"
+          className={`flex h-7 w-7 lg:h-8 lg:w-8 shrink-0 items-center justify-center rounded-lg border active:scale-95 transition-all cursor-pointer ${
+            isDark
+              ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+              : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+          }`}
           aria-label="Ayuda"
           title="Ayuda"
         >
@@ -1040,7 +1069,9 @@ export default function MedirAngulosView() {
         {isPortrait ? (
           /* Barra Superior Horizontal de Modos (Para pantalla vertical / portrait) */
           <nav
-            className="w-full shrink-0 bg-[#0a0f1d] border border-white/10 rounded-xl p-1 flex items-center justify-between gap-1 shadow-md select-none"
+            className={`w-full shrink-0 border rounded-xl p-1 flex items-center justify-between gap-1 shadow-md select-none transition-colors ${
+              isDark ? 'bg-[#0a0f1d] border-white/10' : 'bg-white border-slate-300'
+            }`}
             aria-label="Selección de modos"
           >
             <div className="flex-1 min-w-0 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
@@ -1051,10 +1082,12 @@ export default function MedirAngulosView() {
                     key={m.id}
                     onClick={() => handleSelectMode(m.id)}
                     title={m.desc}
-                    className={`flex-1 h-7 sm:h-8 min-w-[46px] rounded-lg transition-all flex items-center justify-center gap-1 px-1 active:scale-95 ${
+                    className={`flex-1 h-7 sm:h-8 min-w-[46px] rounded-lg transition-all flex items-center justify-center gap-1 px-1 active:scale-95 cursor-pointer ${
                       active
-                        ? 'bg-cyan-500 text-black shadow font-black ring-1 ring-cyan-300'
-                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        ? 'bg-cyan-500 text-slate-950 shadow font-black ring-1 ring-cyan-300'
+                        : isDark
+                        ? 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     <div className="shrink-0">
@@ -1073,7 +1106,11 @@ export default function MedirAngulosView() {
                 setPan({ x: 0, y: 0 })
                 setZoom(1)
               }}
-              className="h-7 sm:h-8 w-7 sm:w-8 shrink-0 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 flex items-center justify-center border border-white/5 active:scale-95 transition-all"
+              className={`h-7 sm:h-8 w-7 sm:w-8 shrink-0 rounded-lg flex items-center justify-center border active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 border-white/5'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-cyan-700 border-slate-300'
+              }`}
               title="Centrar figura y restablecer zoom a 100%"
             >
               <Maximize2 size={13} />
@@ -1082,11 +1119,15 @@ export default function MedirAngulosView() {
         ) : (
           /* Panel Lateral Izquierdo de Modos (Para pantalla horizontal / landscape) */
           <aside
-            className="w-[50px] sm:w-[58px] lg:w-[136px] shrink-0 h-full bg-[#0a0f1d] border border-white/10 rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-xl select-none"
+            className={`w-[50px] sm:w-[58px] lg:w-[136px] shrink-0 h-full border rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-between shadow-xl select-none transition-colors ${
+              isDark ? 'bg-[#0a0f1d] border-white/10' : 'bg-white border-slate-300 shadow-sm'
+            }`}
             aria-label="Selección de modos"
           >
             <div className="w-full flex flex-col items-center gap-1 sm:gap-1.5">
-              <span className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b border-white/5">
+              <span className={`text-[9px] lg:text-[10px] font-bold uppercase tracking-wider py-0.5 hidden lg:block text-center w-full border-b ${
+                isDark ? 'text-white/40 border-white/5' : 'text-slate-500 border-slate-200'
+              }`}>
                 Modos
               </span>
 
@@ -1097,10 +1138,12 @@ export default function MedirAngulosView() {
                     key={m.id}
                     onClick={() => handleSelectMode(m.id)}
                     title={m.desc}
-                    className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 ${
+                    className={`w-full rounded-xl transition-all flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0.5 lg:gap-2 p-1 sm:p-1.5 lg:px-2.5 lg:py-2 active:scale-95 cursor-pointer ${
                       active
-                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
-                        : 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/25 font-black ring-1 ring-cyan-300'
+                        : isDark
+                        ? 'bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/5'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     <div className="shrink-0">
@@ -1121,7 +1164,11 @@ export default function MedirAngulosView() {
                 setPan({ x: 0, y: 0 })
                 setZoom(1)
               }}
-              className="w-full py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 text-[9px] font-mono flex flex-col items-center justify-center gap-0.5 border border-white/5 active:scale-95 transition-all"
+              className={`w-full py-1.5 rounded-xl text-[9px] font-mono flex flex-col items-center justify-center gap-0.5 border active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-cyan-300 border-white/5'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-cyan-700 border-slate-300'
+              }`}
               title="Centrar figura y restablecer zoom a 100%"
             >
               <Maximize2 size={13} />
@@ -1134,11 +1181,15 @@ export default function MedirAngulosView() {
         <div
           ref={canvasRef}
           onPointerDown={handleCanvasPointerDown}
-          className="flex-1 min-w-0 h-full relative bg-gradient-to-b from-[#0a1122] via-[#070d1a] to-[#080c18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing"
+          className={`flex-1 min-w-0 h-full relative border rounded-2xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing transition-colors ${
+            isDark
+              ? 'bg-gradient-to-b from-[#0a1122] via-[#070d1a] to-[#080c18] border-white/10'
+              : 'bg-gradient-to-b from-slate-50 via-sky-50/30 to-slate-100 border-slate-300'
+          }`}
           style={{ touchAction: 'none' }}
         >
           {/* Cuadrícula milimétrica tenue de fondo sincronizada con el pan */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+          <svg className={`absolute inset-0 w-full h-full pointer-events-none ${isDark ? 'opacity-20' : 'opacity-25'}`}>
             <defs>
               <pattern
                 id="grid"
@@ -1147,7 +1198,12 @@ export default function MedirAngulosView() {
                 patternUnits="userSpaceOnUse"
                 patternTransform={`translate(${pan.x % (isLargeScreen ? 30 : 20)}, ${pan.y % (isLargeScreen ? 30 : 20)})`}
               >
-                <path d={isLargeScreen ? 'M 30 0 L 0 0 0 30' : 'M 20 0 L 0 0 0 20'} fill="none" stroke="#38bdf8" strokeWidth="0.5" />
+                <path
+                  d={isLargeScreen ? 'M 30 0 L 0 0 0 30' : 'M 20 0 L 0 0 0 20'}
+                  fill="none"
+                  stroke={isDark ? '#38bdf8' : '#0284c7'}
+                  strokeWidth="0.5"
+                />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
@@ -1162,9 +1218,9 @@ export default function MedirAngulosView() {
               touchAction: 'none',
             }}
           >
-            {/* SVG con las figuras geométricas (trazos finos y nítidos de 1.1px) */}
+            {/* SVG con las figuras geométricas (trazos nítidos de 1.2px) */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-              {/* Líneas de las figuras (grosor fino 1.1px) */}
+              {/* Líneas de las figuras */}
               {challenge.shapeLines?.map((l, idx) => (
                 <line
                   key={idx}
@@ -1172,10 +1228,10 @@ export default function MedirAngulosView() {
                   y1={l.y1}
                   x2={l.x2}
                   y2={l.y2}
-                  stroke="#f1f5f9"
-                  strokeWidth="1.1"
+                  stroke={isDark ? '#f1f5f9' : '#0f172a'}
+                  strokeWidth={isDark ? '1.2' : '1.5'}
                   strokeLinecap="round"
-                  opacity="0.9"
+                  opacity={isDark ? '0.9' : '0.95'}
                 />
               ))}
 
@@ -1186,10 +1242,11 @@ export default function MedirAngulosView() {
                 const rad1 = (ang.ray1Angle * Math.PI) / 180
                 const rad2 = (ang.ray2Angle * Math.PI) / 180
                 const midRad = (((ang.ray1Angle + ang.targetSpan / 2) * Math.PI) / 180)
+                const angleColor = isDark ? ang.color : (ANGLE_COLORS_LIGHT[idx % ANGLE_COLORS_LIGHT.length] || ang.color)
 
                 return (
                   <g key={ang.id}>
-                    {/* Rayos del ángulo activo destacados con grosor fino de 1.2px */}
+                    {/* Rayos del ángulo activo destacados */}
                     {isActive && (
                       <>
                         <line
@@ -1197,72 +1254,135 @@ export default function MedirAngulosView() {
                           y1={ang.vertex.y}
                           x2={ang.vertex.x + rayLen * Math.cos(rad1)}
                           y2={ang.vertex.y + rayLen * Math.sin(rad1)}
-                          stroke="#38bdf8"
-                          strokeWidth="1.2"
+                          stroke={isDark ? '#38bdf8' : '#0284c7'}
+                          strokeWidth={isDark ? '1.3' : '1.6'}
                           strokeLinecap="round"
                         />
                         <circle
                           cx={ang.vertex.x + rayLen * Math.cos(rad1)}
                           cy={ang.vertex.y + rayLen * Math.sin(rad1)}
-                          r="2.2"
-                          fill="#38bdf8"
+                          r={isDark ? '2.2' : '2.6'}
+                          fill={isDark ? '#38bdf8' : '#0284c7'}
                         />
                         <line
                           x1={ang.vertex.x}
                           y1={ang.vertex.y}
                           x2={ang.vertex.x + rayLen * Math.cos(rad2)}
                           y2={ang.vertex.y + rayLen * Math.sin(rad2)}
-                          stroke="#fbbf24"
-                          strokeWidth="1.2"
+                          stroke={isDark ? '#fbbf24' : '#d97706'}
+                          strokeWidth={isDark ? '1.3' : '1.6'}
                           strokeLinecap="round"
                         />
                         <circle
                           cx={ang.vertex.x + rayLen * Math.cos(rad2)}
                           cy={ang.vertex.y + rayLen * Math.sin(rad2)}
-                          r="2.2"
-                          fill="#fbbf24"
+                          r={isDark ? '2.2' : '2.6'}
+                          fill={isDark ? '#fbbf24' : '#d97706'}
                         />
                       </>
                     )}
 
-                    {/* Arco del ángulo */}
+                    {/* Arco del ángulo (Trazo curvo limpio sin sombra ni cortes de cuerda) */}
                     <path
                       d={getAngleArcPath(ang)}
-                      fill={isActive ? 'rgba(56, 189, 248, 0.16)' : 'rgba(255, 255, 255, 0.05)'}
-                      stroke={isActive ? '#38bdf8' : ang.color}
-                      strokeWidth={isActive ? '1.5' : '1.1'}
+                      fill="none"
+                      stroke={isActive ? (isDark ? '#38bdf8' : '#0284c7') : angleColor}
+                      strokeWidth={isActive ? '2.2' : '1.4'}
                       strokeDasharray={isActive ? 'none' : '3,2'}
                     />
 
-                    {/* Etiqueta del ángulo en el arco */}
-                    <text
-                      x={ang.vertex.x + 48 * Math.cos(midRad)}
-                      y={ang.vertex.y + 48 * Math.sin(midRad) + 4}
-                      fill={isActive ? '#38bdf8' : ang.color}
-                      fontSize={isActive ? '13' : '11'}
-                      fontWeight="black"
-                      fontFamily="sans-serif"
-                      textAnchor="middle"
-                      className="cursor-pointer pointer-events-auto"
-                      onClick={() => handleOpenAnswerModal(idx)}
-                    >
-                      {isMeasured ? `${userAnswers[ang.id]}°` : ang.label}
-                    </text>
+                    {/* Etiqueta del ángulo en el arco con pastilla de contraste (Pill badge) */}
+                    {(() => {
+                      const labelText = isMeasured ? `${userAnswers[ang.id]}°` : ang.label
+                      const tx = ang.vertex.x + 48 * Math.cos(midRad)
+                      const ty = ang.vertex.y + 48 * Math.sin(midRad)
+                      const pillW = Math.max(30, labelText.length * 8.5 + 14)
+                      const pillH = 20
+
+                      return (
+                        <g
+                          className="cursor-pointer pointer-events-auto"
+                          onClick={() => handleOpenAnswerModal(idx)}
+                        >
+                          <rect
+                            x={tx - pillW / 2}
+                            y={ty - pillH / 2}
+                            width={pillW}
+                            height={pillH}
+                            rx="6"
+                            fill={
+                              isDark
+                                ? isActive
+                                  ? '#0d1f3b'
+                                  : '#0a0f1d'
+                                : isActive
+                                ? '#e0f2fe'
+                                : '#ffffff'
+                            }
+                            stroke={
+                              isActive
+                                ? isDark
+                                  ? '#38bdf8'
+                                  : '#0284c7'
+                                : isDark
+                                ? 'rgba(255,255,255,0.25)'
+                                : 'rgba(15,23,42,0.3)'
+                            }
+                            strokeWidth={isActive ? '1.8' : '1.2'}
+                          />
+                          <text
+                            x={tx}
+                            y={ty + 4}
+                            fill={
+                              isActive
+                                ? isDark
+                                  ? '#38bdf8'
+                                  : '#0369a1'
+                                : isDark
+                                ? '#ffffff'
+                                : '#0f172a'
+                            }
+                            fontSize={isActive ? '12' : '11'}
+                            fontWeight="black"
+                            fontFamily="sans-serif"
+                            textAnchor="middle"
+                          >
+                            {labelText}
+                          </text>
+                        </g>
+                      )
+                    })()}
 
                     {/* Medida real visible si se pulsa "Ver real" */}
-                    {showSolution && (
-                      <text
-                        x={ang.vertex.x + 64 * Math.cos(midRad)}
-                        y={ang.vertex.y + 64 * Math.sin(midRad) + 4}
-                        fill="#34d399"
-                        fontSize="13"
-                        fontWeight="black"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        {ang.targetSpan}°
-                      </text>
-                    )}
+                    {showSolution && (() => {
+                      const solX = ang.vertex.x + 68 * Math.cos(midRad)
+                      const solY = ang.vertex.y + 68 * Math.sin(midRad)
+                      return (
+                        <g>
+                          <rect
+                            x={solX - 22}
+                            y={solY - 9}
+                            width="44"
+                            height="18"
+                            rx="5"
+                            fill={isDark ? '#064e3b' : '#ecfdf5'}
+                            stroke={isDark ? '#34d399' : '#059669'}
+                            strokeWidth="1.4"
+                          />
+                          <text
+                            x={solX}
+                            y={solY + 4}
+                            fill={isDark ? '#34d399' : '#047857'}
+                            fontSize="11"
+                            fontWeight="black"
+                            fontFamily="monospace"
+                            textAnchor="middle"
+                          >
+                            {ang.targetSpan}°
+                          </text>
+                        </g>
+                      )
+                    })()}
                   </g>
                 )
               })}
@@ -1282,7 +1402,7 @@ export default function MedirAngulosView() {
                           cy={v.y}
                           r="22"
                           fill="none"
-                          stroke="#34d399"
+                          stroke={isDark ? '#34d399' : '#059669'}
                           strokeWidth="2"
                           strokeDasharray="4,3"
                           opacity="0.8"
@@ -1291,7 +1411,7 @@ export default function MedirAngulosView() {
                           cx={v.x}
                           cy={v.y}
                           r="12"
-                          fill="rgba(52, 211, 153, 0.25)"
+                          fill={isDark ? 'rgba(52, 211, 153, 0.25)' : 'rgba(5, 150, 105, 0.22)'}
                         />
                       </>
                     )}
@@ -1299,21 +1419,37 @@ export default function MedirAngulosView() {
                     <circle
                       cx={v.x}
                       cy={v.y}
-                      r="4"
-                      fill="#080c18"
-                      stroke={isSnapped ? '#34d399' : '#38bdf8'}
-                      strokeWidth="1.4"
+                      r="4.5"
+                      fill={isDark ? '#080c18' : '#ffffff'}
+                      stroke={isSnapped ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0284c7')}
+                      strokeWidth="1.6"
                     />
-                    <circle cx={v.x} cy={v.y} r="1.3" fill="#ffffff" />
-                    <text
-                      x={v.x - 12}
-                      y={v.y - 8}
-                      fill={isSnapped ? '#34d399' : '#38bdf8'}
-                      fontSize="11"
-                      fontWeight="black"
-                    >
-                      {v.label}
-                    </text>
+                    <circle cx={v.x} cy={v.y} r="1.4" fill={isDark ? '#ffffff' : '#0f172a'} />
+
+                    {/* Micro-etiqueta del vértice con fondo */}
+                    <g>
+                      <rect
+                        x={v.x - 18}
+                        y={v.y - 19}
+                        width="16"
+                        height="15"
+                        rx="4"
+                        fill={isDark ? '#0b1324' : '#ffffff'}
+                        stroke={isSnapped ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0284c7')}
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x={v.x - 10}
+                        y={v.y - 8}
+                        fill={isSnapped ? (isDark ? '#34d399' : '#059669') : (isDark ? '#38bdf8' : '#0284c7')}
+                        fontSize="10"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        fontFamily="sans-serif"
+                      >
+                        {v.label}
+                      </text>
+                    </g>
                   </g>
                 )
               })}
@@ -1332,7 +1468,9 @@ export default function MedirAngulosView() {
                 transform: `translate(-50%, -50%) rotate(${protAngle}deg)`,
                 transformOrigin: '50% 50%',
                 touchAction: 'none',
-                filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.65))',
+                filter: isDark
+                  ? 'drop-shadow(0 15px 25px rgba(0,0,0,0.65))'
+                  : 'drop-shadow(0 12px 24px rgba(15,23,42,0.22))',
               }}
             >
               {/* SVG del Transportador Graduado Escolar */}
@@ -1343,20 +1481,28 @@ export default function MedirAngulosView() {
                 className="drop-shadow-2xl overflow-visible pointer-events-none"
               >
                 <defs>
-                  <radialGradient id="protractorGlass" cx="0%" cy="0%" r="100%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
-                    <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.14" />
-                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.22" />
-                  </radialGradient>
+                  {isDark ? (
+                    <radialGradient id="protractorGlass" cx="0%" cy="0%" r="100%">
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
+                      <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.14" />
+                      <stop offset="100%" stopColor="#0284c7" stopOpacity="0.22" />
+                    </radialGradient>
+                  ) : (
+                    <radialGradient id="protractorGlass" cx="0%" cy="0%" r="100%">
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
+                      <stop offset="60%" stopColor="#bae6fd" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="#7dd3fc" stopOpacity="0.20" />
+                    </radialGradient>
+                  )}
                 </defs>
 
                 {/* Semicírculo de acrílico transparente (cuerpo interactivo arrastrable) */}
                 <path
                   d="M -150 0 A 150 150 0 0 1 150 0 L 150 16 L -150 16 Z"
                   fill="url(#protractorGlass)"
-                  stroke="rgba(255, 255, 255, 0.45)"
+                  stroke={isDark ? "rgba(255, 255, 255, 0.45)" : "rgba(15, 23, 42, 0.4)"}
                   strokeWidth="1.4"
-                  className="backdrop-blur-sm pointer-events-auto cursor-move"
+                  className="pointer-events-auto cursor-move"
                   data-protractor-body
                   onPointerDown={handleProtractorPointerDown}
                 />
@@ -1364,25 +1510,42 @@ export default function MedirAngulosView() {
                 {/* Zona central recortada para visión clara */}
                 <path
                   d="M -65 0 A 65 65 0 0 1 65 0 L 65 14 L -65 14 Z"
-                  fill="rgba(8, 12, 24, 0.25)"
-                  stroke="rgba(255, 255, 255, 0.2)"
+                  fill={isDark ? "rgba(8, 12, 24, 0.25)" : "rgba(241, 245, 249, 0.12)"}
+                  stroke={isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(15, 23, 42, 0.25)"}
                   strokeWidth="1"
                   className="pointer-events-auto cursor-move"
                   data-protractor-body
                   onPointerDown={handleProtractorPointerDown}
                 />
 
-                {/* Línea divisoria concéntrica tenue entre escala exterior blanca y escala interior celeste */}
+                {/* Línea divisoria concéntrica tenue entre escala exterior y escala interior */}
                 <path
                   d="M -145 0 A 119 119 0 0 1 145 0"
                   fill="none"
-                  stroke="rgba(255, 255, 255, 0.15)"
+                  stroke={isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(15, 23, 42, 0.2)"}
                   strokeWidth="0.8"
                 />
 
                 {/* Línea de base 0° - 180° */}
-                <line x1="-148" y1="0" x2="148" y2="0" stroke="#f8fafc" strokeWidth="1.3" opacity="0.85" />
-                <line x1="0" y1="-148" x2="0" y2="10" stroke="#38bdf8" strokeWidth="1" opacity="0.6" strokeDasharray="2,2" />
+                <line
+                  x1="-148"
+                  y1="0"
+                  x2="148"
+                  y2="0"
+                  stroke={isDark ? "#f8fafc" : "#0f172a"}
+                  strokeWidth={isDark ? "1.3" : "1.5"}
+                  opacity={isDark ? "0.85" : "0.95"}
+                />
+                <line
+                  x1="0"
+                  y1="-148"
+                  x2="0"
+                  y2="10"
+                  stroke={isDark ? "#38bdf8" : "#0284c7"}
+                  strokeWidth={isDark ? "1" : "1.2"}
+                  opacity={isDark ? "0.6" : "0.75"}
+                  strokeDasharray="2,2"
+                />
 
                 {/* Centro de mira reticular con área táctil */}
                 <circle
@@ -1394,8 +1557,15 @@ export default function MedirAngulosView() {
                   data-protractor-body
                   onPointerDown={handleProtractorPointerDown}
                 />
-                <circle cx="0" cy="0" r="4.2" fill="none" stroke="#38bdf8" strokeWidth="1.5" />
-                <circle cx="0" cy="0" r="1.3" fill="#f8fafc" />
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="4.2"
+                  fill="none"
+                  stroke={isDark ? "#38bdf8" : "#0284c7"}
+                  strokeWidth={isDark ? "1.5" : "1.8"}
+                />
+                <circle cx="0" cy="0" r="1.3" fill={isDark ? "#f8fafc" : "#0f172a"} />
 
                 {/* Marcas de graduación cada 1°, 5° y 10° */}
                 {Array.from({ length: 181 }).map((_, deg) => {
@@ -1416,7 +1586,6 @@ export default function MedirAngulosView() {
                   const y2 = rInner * sin
 
                   const textROuter = 126
-                  // Escala interior celeste cercana a la escala blanca exterior
                   const textRInner = 110
 
                   return (
@@ -1426,32 +1595,36 @@ export default function MedirAngulosView() {
                         y1={y1}
                         x2={x2}
                         y2={y2}
-                        stroke={is10 ? '#ffffff' : is5 ? '#7dd3fc' : 'rgba(255,255,255,0.45)'}
-                        strokeWidth={is10 ? 1.2 : 0.7}
+                        stroke={
+                          isDark
+                            ? is10 ? '#ffffff' : is5 ? '#7dd3fc' : 'rgba(255,255,255,0.45)'
+                            : is10 ? '#0f172a' : is5 ? '#0284c7' : 'rgba(15,23,42,0.55)'
+                        }
+                        strokeWidth={is10 ? 1.4 : is5 ? 0.9 : 0.6}
                       />
 
                       {is10 && (
                         <>
-                          {/* Escala exterior blanca (0° a 180°) */}
+                          {/* Escala exterior (0° a 180°) */}
                           <text
                             x={textROuter * cos}
                             y={textROuter * sin + 3}
                             fontSize="8"
-                            fill="#ffffff"
-                            fontWeight="bold"
+                            fill={isDark ? "#ffffff" : "#0f172a"}
+                            fontWeight="black"
                             textAnchor="middle"
                             fontFamily="monospace"
                           >
                             {deg}
                           </text>
 
-                          {/* Escala interior celeste (180° a 0°), ahora cercana a la blanca */}
+                          {/* Escala interior (180° a 0°) */}
                           <text
                             x={textRInner * cos}
                             y={textRInner * sin + 3}
-                            fontSize="7"
-                            fill="#38bdf8"
-                            fontWeight="bold"
+                            fontSize="7.5"
+                            fill={isDark ? "#38bdf8" : "#0284c7"}
+                            fontWeight="black"
                             textAnchor="middle"
                             fontFamily="monospace"
                           >
@@ -1467,7 +1640,11 @@ export default function MedirAngulosView() {
               {/* Manija táctil de Rotación */}
               <div
                 data-protractor-rotator
-                className="absolute -top-7 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black flex items-center justify-center shadow-xl cursor-grab active:cursor-grabbing ring-2 ring-white/50 active:scale-110 transition-transform pointer-events-auto"
+                className={`absolute -top-7 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center shadow-xl cursor-grab active:cursor-grabbing active:scale-110 transition-transform pointer-events-auto ${
+                  isDark
+                    ? 'bg-cyan-500 hover:bg-cyan-400 text-black ring-2 ring-white/50'
+                    : 'bg-cyan-600 hover:bg-cyan-500 text-white ring-2 ring-cyan-900/30 shadow-lg'
+                }`}
                 onPointerDown={handleRotatePointerDown}
                 title="Arrastra para girar el transportador"
               >
@@ -1477,24 +1654,32 @@ export default function MedirAngulosView() {
           </div>
 
           {/* Micro-guía flotante en esquina superior izquierda */}
-          <div className="absolute top-2 left-2 bg-[#09101f]/85 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1 text-[10px] text-white/70 flex items-center gap-2 pointer-events-none shadow-md z-20">
-            <span className="flex items-center gap-1 text-cyan-300 font-bold">
-              <Crosshair size={12} /> Centro → V
+          <div className={`absolute top-2 left-2 border rounded-xl px-2.5 py-1 text-[10px] flex items-center gap-2 pointer-events-none z-20 transition-colors ${
+            isDark
+              ? 'backdrop-blur-md bg-[#09101f]/90 border-white/10 text-white/80 shadow-md'
+              : 'bg-white border-2 border-slate-300 text-slate-800 shadow-md'
+          }`}>
+            <span className={`flex items-center gap-1 font-bold ${isDark ? 'text-cyan-300' : 'text-sky-700 font-black'}`}>
+              <Crosshair size={12} className={isDark ? 'text-cyan-300' : 'text-sky-700'} /> Centro → V
             </span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-emerald-300 font-bold">
-              <Magnet size={12} /> Imán activo
+            <span className={isDark ? 'text-white/30' : 'text-slate-400 font-bold'}>•</span>
+            <span className={`flex items-center gap-1 font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700 font-black'}`}>
+              <Magnet size={12} className={isDark ? 'text-emerald-300' : 'text-emerald-700'} /> Imán activo
             </span>
-            <span className="hidden md:inline">•</span>
-            <span className="hidden md:flex items-center gap-1 text-white/50">
-              <Move size={12} /> 1 dedo: mover • 2 dedos: zoom al punto
+            <span className={`hidden md:inline ${isDark ? 'text-white/30' : 'text-slate-400 font-bold'}`}>•</span>
+            <span className={`hidden md:flex items-center gap-1 ${isDark ? 'text-white/70 font-semibold' : 'text-slate-800 font-bold'}`}>
+              <Move size={12} className={isDark ? 'text-white/60' : 'text-slate-700'} /> 1 dedo: mover • 2 dedos: zoom al punto
             </span>
           </div>
 
           {/* Selector flotante de ángulo si hay varios en el reto */}
           {challenge.angles.length > 1 && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-[#09101f]/90 backdrop-blur-md border border-white/10 rounded-xl p-1 z-20 shadow-lg">
-              <span className="text-[9px] text-white/40 font-bold px-1">Ángulo:</span>
+            <div className={`absolute bottom-2 left-2 flex items-center gap-1 border rounded-xl p-1 z-20 shadow-md transition-colors ${
+              isDark
+                ? 'backdrop-blur-md bg-[#09101f]/90 border-white/10'
+                : 'bg-white border-2 border-slate-300'
+            }`}>
+              <span className={`text-[9px] font-bold px-1 ${isDark ? 'text-white/40' : 'text-slate-600'}`}>Ángulo:</span>
               {challenge.angles.map((ang, idx) => {
                 const isCurrent = idx === activeAngleIndex
                 const ans = userAnswers[ang.id]
@@ -1507,12 +1692,16 @@ export default function MedirAngulosView() {
                       setProtY(ang.vertex.y)
                       setSnappedVertex({ ...ang.vertex, label: ang.label })
                     }}
-                    className={`h-6 px-2 rounded font-bold text-[10px] flex items-center gap-1 transition-all ${
+                    className={`h-6 px-2 rounded font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer ${
                       isCurrent
-                        ? 'bg-cyan-500 text-black shadow'
+                        ? 'bg-cyan-500 text-slate-950 shadow font-black'
                         : ans
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                        : 'bg-white/5 text-white/70 hover:bg-white/15'
+                        ? isDark
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                          : 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold'
+                        : isDark
+                        ? 'bg-white/5 text-white/70 hover:bg-white/15'
+                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300 font-bold'
                     }`}
                   >
                     <span>{ang.label}</span>
@@ -1524,7 +1713,11 @@ export default function MedirAngulosView() {
           )}
 
           {/* Controles flotantes de Zoom y Recentrado en esquina superior derecha */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 z-20 bg-[#09101f]/90 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-xl">
+          <div className={`absolute top-2 right-2 flex items-center gap-1 z-20 border rounded-xl p-1 shadow-md transition-colors ${
+            isDark
+              ? 'backdrop-blur-md bg-[#09101f]/90 border-white/10 text-white'
+              : 'bg-white border-2 border-slate-300 text-slate-800'
+          }`}>
             <button
               onClick={() => {
                 if (canvasRef.current) {
@@ -1532,7 +1725,11 @@ export default function MedirAngulosView() {
                   applyZoomToPoint(zoom - 0.2, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 }
               }}
-              className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white flex items-center justify-center active:scale-90 transition-transform"
+              className={`h-7 w-7 rounded-lg flex items-center justify-center active:scale-90 transition-transform cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-white/80 hover:text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+              }`}
               title="Alejar (Zoom -)"
             >
               <ZoomOut size={14} />
@@ -1543,7 +1740,11 @@ export default function MedirAngulosView() {
                 setZoom(1)
                 setPan({ x: 0, y: 0 })
               }}
-              className="h-7 px-2 rounded-lg bg-white/5 hover:bg-white/15 text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-0.5 active:scale-95 transition-all"
+              className={`h-7 px-2 rounded-lg font-mono text-[11px] font-bold flex items-center gap-0.5 active:scale-95 transition-all cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-cyan-300'
+                  : 'bg-slate-100 hover:bg-slate-200 text-cyan-800 border border-slate-200'
+              }`}
               title="Restablecer zoom a 100% y centrar"
             >
               <span>{Math.round(zoom * 100)}%</span>
@@ -1556,7 +1757,11 @@ export default function MedirAngulosView() {
                   applyZoomToPoint(zoom + 0.2, rect.left + rect.width / 2, rect.top + rect.height / 2)
                 }
               }}
-              className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white flex items-center justify-center active:scale-90 transition-transform"
+              className={`h-7 w-7 rounded-lg flex items-center justify-center active:scale-90 transition-transform cursor-pointer ${
+                isDark
+                  ? 'bg-white/5 hover:bg-white/15 text-white/80 hover:text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+              }`}
               title="Acercar (Zoom +)"
             >
               <ZoomIn size={14} />
@@ -1568,7 +1773,11 @@ export default function MedirAngulosView() {
                   setPan({ x: 0, y: 0 })
                   setZoom(1)
                 }}
-                className="h-7 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+                className={`h-7 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                  isDark
+                    ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30'
+                    : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-900 border border-cyan-300'
+                }`}
                 title="Centrar figura y restablecer zoom"
               >
                 <Maximize2 size={12} />
@@ -1578,62 +1787,62 @@ export default function MedirAngulosView() {
           </div>
 
           {/* Ajuste fino de rotación para precisión milimétrica */}
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-[#09101f]/90 backdrop-blur-md border border-white/10 rounded-xl p-1 z-20 shadow-lg">
-            <span className="text-[9px] text-white/40 font-bold px-1 hidden sm:inline">Giro fino:</span>
-            <button
-              onClick={() => setProtAngle(prev => (prev - 1 + 360) % 360)}
-              className="h-6 px-1.5 rounded bg-white/5 hover:bg-white/10 text-white text-[10px] font-mono font-bold"
-              title="Girar 1° a la izquierda"
-            >
-              -1°
-            </button>
-            <button
-              onClick={() => setProtAngle(prev => (prev + 1) % 360)}
-              className="h-6 px-1.5 rounded bg-white/5 hover:bg-white/10 text-white text-[10px] font-mono font-bold"
-              title="Girar 1° a la derecha"
-            >
-              +1°
-            </button>
-            <button
-              onClick={() => setProtAngle(prev => (prev - 5 + 360) % 360)}
-              className="h-6 px-1.5 rounded bg-white/5 hover:bg-white/10 text-white text-[10px] font-mono font-bold"
-              title="Girar 5° a la izquierda"
-            >
-              -5°
-            </button>
-            <button
-              onClick={() => setProtAngle(prev => (prev + 5) % 360)}
-              className="h-6 px-1.5 rounded bg-white/5 hover:bg-white/10 text-white text-[10px] font-mono font-bold"
-              title="Girar 5° a la derecha"
-            >
-              +5°
-            </button>
+          <div className={`absolute bottom-2 right-2 flex items-center gap-1 border rounded-xl p-1 z-20 shadow-md transition-colors ${
+            isDark ? 'backdrop-blur-md bg-[#09101f]/90 border-white/10' : 'bg-white border-2 border-slate-300'
+          }`}>
+            <span className={`text-[9px] font-bold px-1 hidden sm:inline ${
+              isDark ? 'text-white/40' : 'text-slate-500'
+            }`}>Giro fino:</span>
+            {[-1, 1, -5, 5].map(step => (
+              <button
+                key={step}
+                onClick={() => setProtAngle(prev => (prev + step + 360) % 360)}
+                className={`h-6 px-1.5 rounded text-[10px] font-mono font-bold cursor-pointer transition-colors ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/10 text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'
+                }`}
+                title={`Girar ${Math.abs(step)}° a la ${step < 0 ? 'izquierda' : 'derecha'}`}
+              >
+                {step > 0 ? `+${step}°` : `${step}°`}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* ── 3. Barra Inferior de Acción y Feedback (40-48px) ── */}
-      <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+      <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 transition-colors ${
+        isDark ? 'border-white/10 bg-[#0a0f1d]' : 'border-slate-300 bg-white'
+      }`}>
         {/* Mensaje de feedback o pista */}
         <div className="flex-1 min-w-0 flex items-center gap-2 text-[10px] sm:text-[11px] truncate">
           {feedback.status === 'success' ? (
-            <div className="flex items-center gap-1.5 text-emerald-300 font-bold truncate">
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-emerald-300' : 'text-emerald-700'
+            }`}>
               <CheckCircle2 size={14} className="shrink-0" />
               <span className="truncate">{feedback.msg}</span>
             </div>
           ) : feedback.status === 'close' ? (
-            <div className="flex items-center gap-1.5 text-cyan-300 font-bold truncate">
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-cyan-300' : 'text-cyan-700'
+            }`}>
               <Sparkles size={14} className="shrink-0" />
               <span className="truncate">{feedback.msg}</span>
             </div>
           ) : feedback.status === 'error' ? (
-            <div className="flex items-center gap-1.5 text-rose-300 font-bold truncate">
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-rose-300' : 'text-rose-700'
+            }`}>
               <AlertCircle size={14} className="shrink-0" />
               <span className="truncate">{feedback.msg}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-white/70 truncate">
-              <span className="font-bold text-cyan-300">Pista:</span>
+            <div className={`flex items-center gap-1.5 truncate ${
+              isDark ? 'text-white/70' : 'text-slate-700'
+            }`}>
+              <span className={`font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>Pista:</span>
               <span className="truncate">{challenge.hint}</span>
             </div>
           )}
@@ -1643,16 +1852,24 @@ export default function MedirAngulosView() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={handleAutoAlign}
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-200 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+            className={`h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg border text-[10px] sm:text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-400/30 text-cyan-200'
+                : 'bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-800'
+            }`}
             title="Ubicar centro del transportador en el vértice activo"
           >
-            <Crosshair size={12} className="text-cyan-300" />
+            <Crosshair size={12} className={isDark ? "text-cyan-300" : "text-cyan-700"} />
             <span className="hidden sm:inline">Alinear en V</span>
           </button>
 
           <button
             onClick={() => setShowSolution(s => !s)}
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] sm:text-[11px] font-bold text-white/70 hover:text-white flex items-center gap-1 active:scale-95 transition-all"
+            className={`h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg border text-[10px] sm:text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-900'
+            }`}
             title="Mostrar u ocultar medidas exactas"
           >
             <Eye size={12} />
@@ -1661,7 +1878,7 @@ export default function MedirAngulosView() {
 
           <button
             onClick={() => handleOpenAnswerModal(activeAngleIndex)}
-            className="h-7 lg:h-8 px-3 sm:px-4 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[11px] sm:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            className="h-7 lg:h-8 px-3 sm:px-4 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-[11px] sm:text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
           >
             <Sliders size={13} />
             <span>
@@ -1673,7 +1890,11 @@ export default function MedirAngulosView() {
 
           <button
             onClick={() => loadNewChallenge(mode)}
-            className="h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-[10px] sm:text-[11px] flex items-center gap-1 active:scale-95 transition-all"
+            className={`h-7 lg:h-8 px-2 sm:px-2.5 rounded-lg border font-bold text-[10px] sm:text-[11px] flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+              isDark
+                ? 'bg-white/10 hover:bg-white/20 text-white border-transparent'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300'
+            }`}
             title="Generar nuevo reto"
           >
             <ChevronRight size={14} />
@@ -1689,25 +1910,39 @@ export default function MedirAngulosView() {
           onClick={() => setShowAnswerModal(false)}
         >
           <div
-            className="w-full max-w-[340px] bg-[#0c1529] border border-cyan-400/40 rounded-2xl p-4 shadow-2xl flex flex-col gap-3"
+            className={`w-full max-w-[340px] rounded-2xl p-4 shadow-2xl flex flex-col gap-3 border transition-colors ${
+              isDark ? 'bg-[#0c1529] border-cyan-400/40 text-white' : 'bg-white border-2 border-slate-300 text-slate-900'
+            }`}
             onClick={e => e.stopPropagation()}
           >
             {/* Cabecera del modal */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className={`flex items-center justify-between border-b pb-2 ${
+              isDark ? 'border-white/10' : 'border-slate-200'
+            }`}>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+                  isDark ? 'bg-cyan-500/20 border-cyan-400/30 text-cyan-300' : 'bg-cyan-100 border-cyan-300 text-cyan-800'
+                }`}>
                   <Sliders size={16} />
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-white">¿Cuánto mide el ángulo?</h3>
-                  <p className="text-[10px] text-cyan-300/80 font-mono">
+                  <h3 className={`text-xs sm:text-sm font-bold ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>¿Cuánto mide el ángulo?</h3>
+                  <p className={`text-[10px] font-mono ${
+                    isDark ? 'text-cyan-300/80' : 'text-cyan-800 font-bold'
+                  }`}>
                     {challenge.title} — {activeAngle.label}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAnswerModal(false)}
-                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors"
+                className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/15 text-white/60 hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+                }`}
                 aria-label="Cerrar modal"
               >
                 <X size={16} />
@@ -1716,7 +1951,9 @@ export default function MedirAngulosView() {
 
             {/* Selector de pestañas para retos con varios ángulos (Triángulo, Secantes, Llano) */}
             {challenge.angles.length > 1 && (
-              <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5">
+              <div className={`flex items-center gap-1.5 p-1 rounded-xl border ${
+                isDark ? 'bg-black/40 border-white/5' : 'bg-slate-100 border-slate-200'
+              }`}>
                 {challenge.angles.map((ang, idx) => {
                   const isCurrent = idx === activeAngleIndex
                   const ans = userAnswers[ang.id]
@@ -1727,12 +1964,16 @@ export default function MedirAngulosView() {
                         setActiveAngleIndex(idx)
                         setInputVal(userAnswers[ang.id] || '')
                       }}
-                      className={`flex-1 py-1 px-1 rounded-lg font-bold text-xs flex flex-col items-center transition-all ${
+                      className={`flex-1 py-1 px-1 rounded-lg font-bold text-xs flex flex-col items-center transition-all cursor-pointer ${
                         isCurrent
-                          ? 'bg-cyan-500 text-black shadow'
+                          ? 'bg-cyan-500 text-slate-950 shadow font-black'
                           : ans
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-white/5 text-white/60 hover:text-white'
+                          ? isDark
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold'
+                          : isDark
+                          ? 'bg-white/5 text-white/60 hover:text-white'
+                          : 'bg-white text-slate-800 hover:bg-slate-100 border border-slate-300 font-bold'
                       }`}
                     >
                       <span>{ang.label}</span>
@@ -1754,32 +1995,44 @@ export default function MedirAngulosView() {
                     if (e.key === 'Enter') handleValidateActive()
                   }}
                   placeholder="0"
-                  className="w-full h-11 px-3 pr-8 rounded-xl bg-black/50 border border-cyan-400/40 text-cyan-300 font-mono font-black text-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 text-center"
+                  className={`w-full h-11 px-3 pr-8 rounded-xl font-mono font-black text-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 text-center ${
+                    isDark
+                      ? 'bg-black/50 border border-cyan-400/40 text-cyan-300'
+                      : 'bg-slate-50 border-2 border-cyan-600 text-cyan-950 shadow-inner'
+                  }`}
                   autoFocus
                 />
-                <span className="absolute right-3 top-2.5 font-mono text-cyan-400/60 text-xl font-bold">
+                <span className={`absolute right-3 top-2.5 font-mono text-xl font-bold ${
+                  isDark ? 'text-cyan-400/60' : 'text-cyan-700 font-black'
+                }`}>
                   °
                 </span>
               </div>
 
               <button
                 onClick={handleValidateActive}
-                className="h-11 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center gap-1"
+                className="h-11 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
               >
                 <span>Validar</span>
               </button>
             </div>
 
             {/* Teclado numérico táctil para tablet */}
-            <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-black/30 border border-white/5 rounded-xl">
+            <div className={`grid grid-cols-4 gap-1.5 p-1.5 border rounded-xl ${
+              isDark ? 'bg-black/30 border-white/5' : 'bg-slate-100 border-slate-200'
+            }`}>
               {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'DEL', 'CLR'].map(k => (
                 <button
                   key={k}
                   onClick={() => handleKeyPad(k)}
-                  className={`h-9 rounded-lg font-mono font-bold text-sm active:scale-90 transition-all ${
+                  className={`h-9 rounded-lg font-mono text-sm active:scale-90 transition-all cursor-pointer ${
                     k === 'DEL' || k === 'CLR'
-                      ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
-                      : 'bg-white/5 hover:bg-white/15 text-white'
+                      ? isDark
+                        ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 font-bold'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 font-black'
+                      : isDark
+                      ? 'bg-white/5 hover:bg-white/15 text-white font-bold'
+                      : 'bg-white text-slate-900 border border-slate-300 hover:bg-slate-50 font-black shadow-xs'
                   }`}
                 >
                   {k}
@@ -1789,9 +2042,15 @@ export default function MedirAngulosView() {
 
             {/* Ecuación del teorema en tiempo real si hay múltiples ángulos */}
             {challenge.expectedSum && (
-              <div className="p-2 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-[11px] font-mono text-white/80">
-                <span className="text-white/40">Teorema:</span>
-                <span className={allCompleted ? 'text-emerald-300 font-bold' : 'text-amber-300'}>
+              <div className={`p-2 rounded-xl border flex items-center justify-between text-[11px] font-mono ${
+                isDark ? 'bg-black/40 border-white/5 text-white/80' : 'bg-slate-50 border-slate-200 text-slate-800'
+              }`}>
+                <span className={isDark ? 'text-white/40' : 'text-slate-500 font-bold'}>Teorema:</span>
+                <span className={
+                  allCompleted
+                    ? isDark ? 'text-emerald-300 font-bold' : 'text-emerald-700 font-black'
+                    : isDark ? 'text-amber-300 font-bold' : 'text-amber-800 font-black'
+                }>
                   {challenge.angles.map(a => userAnswers[a.id] ? `${userAnswers[a.id]}°` : a.label).join(' + ')}
                   {' = '}
                   {challenge.angles.reduce((acc, a) => acc + (parseFloat(userAnswers[a.id] || '0') || 0), 0)}°
@@ -1803,26 +2062,38 @@ export default function MedirAngulosView() {
             {/* Mensaje de feedback pedagógico */}
             {feedback.status !== 'idle' && (
               <div
-                className={`p-2.5 rounded-xl text-[11px] font-semibold flex items-center gap-2 ${
+                className={`p-2.5 rounded-xl text-[11px] font-semibold flex items-center gap-2 border ${
                   feedback.status === 'success'
-                    ? 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-200'
+                    ? isDark
+                      ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
+                      : 'bg-emerald-50 border-2 border-emerald-400 text-emerald-950 font-bold'
                     : feedback.status === 'close'
-                    ? 'bg-cyan-500/20 border border-cyan-400/40 text-cyan-200'
-                    : 'bg-rose-500/20 border border-rose-400/40 text-rose-200'
+                    ? isDark
+                      ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-200'
+                      : 'bg-cyan-50 border-2 border-cyan-400 text-cyan-950 font-bold'
+                    : isDark
+                    ? 'bg-rose-500/20 border-rose-400/40 text-rose-200'
+                    : 'bg-rose-50 border-2 border-rose-400 text-rose-950 font-bold'
                 }`}
               >
-                {feedback.status === 'success' && <CheckCircle2 size={16} className="text-emerald-300 shrink-0" />}
-                {feedback.status === 'close' && <Sparkles size={16} className="text-cyan-300 shrink-0" />}
-                {feedback.status === 'error' && <AlertCircle size={16} className="text-rose-400 shrink-0" />}
+                {feedback.status === 'success' && <CheckCircle2 size={16} className={isDark ? "text-emerald-300 shrink-0" : "text-emerald-700 shrink-0"} />}
+                {feedback.status === 'close' && <Sparkles size={16} className={isDark ? "text-cyan-300 shrink-0" : "text-cyan-700 shrink-0"} />}
+                {feedback.status === 'error' && <AlertCircle size={16} className={isDark ? "text-rose-400 shrink-0" : "text-rose-700 shrink-0"} />}
                 <span className="leading-tight">{feedback.msg}</span>
               </div>
             )}
 
             {/* Acciones al pie del modal */}
-            <div className="flex items-center gap-2 pt-1 border-t border-white/5">
+            <div className={`flex items-center gap-2 pt-1 border-t ${
+              isDark ? 'border-white/5' : 'border-slate-200'
+            }`}>
               <button
                 onClick={() => setShowSolution(s => !s)}
-                className="flex-1 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-white/60 hover:text-white flex items-center justify-center gap-1"
+                className={`flex-1 h-8 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-900'
+                }`}
               >
                 <Eye size={12} />
                 <span>{showSolution ? 'Ocultar real' : 'Ver real'}</span>
@@ -1834,7 +2105,7 @@ export default function MedirAngulosView() {
                     loadNewChallenge(mode)
                     setShowAnswerModal(false)
                   }}
-                  className="flex-1 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs flex items-center justify-center gap-1 shadow active:scale-95 transition-all"
+                  className="flex-1 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1 shadow active:scale-95 transition-all cursor-pointer"
                 >
                   <Award size={14} />
                   <span>Siguiente Reto</span>
@@ -1842,7 +2113,11 @@ export default function MedirAngulosView() {
               ) : (
                 <button
                   onClick={() => setShowAnswerModal(false)}
-                  className="flex-1 h-8 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-400/30 font-bold text-xs flex items-center justify-center gap-1"
+                  className={`flex-1 h-8 rounded-xl border font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                    isDark
+                      ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border-cyan-400/30'
+                      : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-900 border-cyan-300 font-bold'
+                  }`}
                 >
                   <span>Volver al Lienzo</span>
                 </button>
@@ -1857,31 +2132,40 @@ export default function MedirAngulosView() {
         open={showHelp}
         onClose={() => setShowHelp(false)}
         title="¿Cómo medir ángulos con el transportador?"
-        bgColor="#080c18"
+        bgColor={isDark ? "#080c18" : "#ffffff"}
+        titleColor={isDark ? "#ffffff" : "#0f172a"}
         maxWidth="max-w-md"
-        buttonColor="bg-cyan-500 text-black hover:bg-cyan-400"
+        buttonColor="bg-cyan-500 text-slate-950 hover:bg-cyan-400 font-bold"
       >
-        <div key={helpId} className="space-y-2.5 text-white/80 text-xs leading-relaxed pb-2">
+        <div key={helpId} className={`space-y-2.5 text-xs leading-relaxed pb-2 ${
+          isDark ? "text-white/80" : "text-slate-700"
+        }`}>
           <p>
             El <strong>transportador o goniómetro</strong> mide la abertura entre dos rayos en <strong>grados sexagesimales (°)</strong>.
           </p>
 
-          <ol className="space-y-2 list-decimal list-inside p-2 rounded-xl bg-white/5 border border-white/10">
+          <ol className={`space-y-2 list-decimal list-inside p-2.5 rounded-xl border ${
+            isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200 text-slate-700"
+          }`}>
             <li>
-              <strong className="text-emerald-300">Efecto Imán en el Vértice</strong>: Arrastra el centro del transportador cerca del vértice <strong>V</strong>. Sentirás cómo se acopla magnéticamente con un halo verde.
+              <strong className={isDark ? "text-emerald-300" : "text-emerald-700"}>Efecto Imán en el Vértice</strong>: Arrastra el centro del transportador cerca del vértice <strong>V</strong>. Sentirás cómo se acopla magnéticamente con un halo verde.
             </li>
             <li>
-              <strong className="text-amber-300">Girar sobre el 0°</strong>: Arrastra la manija circular superior hasta que la línea de base de <strong>0°</strong> quede sobre el primer rayo o lado.
+              <strong className={isDark ? "text-amber-300" : "text-amber-700"}>Girar sobre el 0°</strong>: Arrastra la manija circular superior hasta que la línea de base de <strong>0°</strong> quede sobre el primer rayo o lado.
             </li>
             <li>
-              <strong className="text-cyan-300">Leer la Medida</strong>: Sigue la escala graduada (interior o exterior) que comenzó en 0° y lee el valor donde cruza el segundo rayo.
+              <strong className={isDark ? "text-cyan-300" : "text-cyan-800"}>Leer la Medida</strong>: Sigue la escala graduada (interior o exterior) que comenzó en 0° y lee el valor donde cruza el segundo rayo.
             </li>
             <li>
-              <strong className="text-violet-300">Medir Polígonos Completos</strong>: En triángulos y cuadriláteros, mide todos los ángulos interiores para verificar que suman <strong>180°</strong> o <strong>360°</strong>.
+              <strong className={isDark ? "text-violet-300" : "text-violet-700"}>Medir Polígonos Completos</strong>: En triángulos y cuadriláteros, mide todos los ángulos interiores para verificar que suman <strong>180°</strong> o <strong>360°</strong>.
             </li>
           </ol>
 
-          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-[11px] text-cyan-200">
+          <div className={`p-2.5 rounded-xl border text-[11px] ${
+            isDark
+              ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-200"
+              : "bg-cyan-50 border-2 border-cyan-300 text-cyan-900 font-medium"
+          }`}>
             💡 <em>Consejo de Zoom:</em> Usa 2 dedos en la pantalla táctil o la rueda del ratón. El zoom se acercará con precisión milimétrica al punto donde apuntes.
           </div>
         </div>

@@ -76,26 +76,26 @@ function generateRandomValues(): {
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const TOKEN = {
     blue: {
-        bg: "bg-blue-500/10",
-        border: "border-blue-500/25",
+        bg: "bg-blue-500/15",
+        border: "border-blue-400/50",
         text: "text-blue-300",
         dot: "bg-blue-500",
-        btn: "bg-blue-500 hover:bg-blue-400",
+        btn: "bg-blue-600 hover:bg-blue-500",
         chipGrad: "from-blue-400 to-blue-600",
         chipShadow: "shadow-blue-500/40",
-        chipBorder: "border-blue-300/30",
+        chipBorder: "border-blue-200/50",
         sign: "+1",
         particle: "#60a5fa",
     },
     red: {
-        bg: "bg-red-500/10",
-        border: "border-red-500/25",
+        bg: "bg-red-500/15",
+        border: "border-red-400/50",
         text: "text-red-300",
         dot: "bg-red-500",
-        btn: "bg-red-500 hover:bg-red-400",
+        btn: "bg-red-600 hover:bg-red-500",
         chipGrad: "from-red-400 to-red-600",
         chipShadow: "shadow-red-500/40",
-        chipBorder: "border-red-300/30",
+        chipBorder: "border-red-200/50",
         sign: "−1",
         particle: "#f87171",
     },
@@ -397,11 +397,11 @@ export default function ProductoEnteroView() {
             `}</style>
 
             {/* 1. Header (34-44px) */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/20 px-2 lg:px-4 bg-[#0a0f1d]">
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/20"
                         title="Volver"
                     >
                         <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -414,7 +414,7 @@ export default function ProductoEnteroView() {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <div className="hidden xs:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-white/60">
+                    <div className="hidden xs:flex items-center gap-1 bg-white/5 border border-white/20 rounded-full px-2 py-0.5 text-[10px] text-white/60">
                         {phaseKeys.map((p, idx) => (
                             <span
                                 key={p}
@@ -430,7 +430,7 @@ export default function ProductoEnteroView() {
 
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/20 font-bold text-xs"
                         title="Ayuda didáctica"
                     >
                         ?
@@ -439,9 +439,9 @@ export default function ProductoEnteroView() {
             </header>
 
             {/* 2. Barra de Casos de Aprendizaje (Exactamente 3 casos pedagógicos) */}
-            <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto scrollbar-none">
+            <div className="relative shrink-0 flex items-center justify-between gap-1.5 border-b border-white/15 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] overflow-x-auto scrollbar-none">
                 <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline mr-1">
+                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider hidden sm:inline mr-1">
                         Casos clave:
                     </span>
                     {PRESET_CASES.map((preset) => {
@@ -452,8 +452,8 @@ export default function ProductoEnteroView() {
                                 onClick={() => applyPreset(preset)}
                                 className={`px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold transition-all shrink-0 border ${
                                     isSelected
-                                        ? "bg-teal-500/25 border-teal-400/50 text-teal-200 shadow-xs"
-                                        : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
+                                        ? "bg-teal-500/25 border-teal-400/60 text-teal-200 shadow-xs"
+                                        : "bg-white/5 border-white/20 text-white/70 hover:text-white hover:bg-white/10"
                                 }`}
                                 title={preset.description}
                             >
@@ -463,7 +463,7 @@ export default function ProductoEnteroView() {
                     })}
                     <button
                         onClick={handleRandomCase}
-                        className="px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold bg-white/5 border border-white/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/40 transition-all shrink-0 active:scale-95"
+                        className="px-2 py-1 rounded-md text-[10px] lg:text-[11px] font-bold bg-white/5 border border-white/20 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/50 transition-all shrink-0 active:scale-95"
                         title="Generar caso aleatorio"
                     >
                         🎲 Aleatorio
@@ -471,7 +471,7 @@ export default function ProductoEnteroView() {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                    <div className="flex items-center gap-1 text-[11px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                    <div className="flex items-center gap-1 text-[11px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/20">
                         <span className={aActual >= 0 ? "text-blue-400" : "text-red-400"}>
                             {formatExpr(aActual)}
                         </span>
@@ -489,11 +489,11 @@ export default function ProductoEnteroView() {
                 {phase === "setup" && (
                     <div className="w-full max-w-[620px] flex flex-col justify-center gap-2 lg:gap-3 flex-1 min-h-0">
                         {/* Concept pill */}
-                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-2.5 py-1 text-center shrink-0">
+                        <div className="bg-teal-500/10 border border-teal-400/40 rounded-xl px-2.5 py-1 text-center shrink-0">
                             <p className="text-[11px] lg:text-xs text-teal-300 font-bold">
                                 💡 Significado: <span className="underline font-black">{Math.abs(aActual)} veces el {formatExpr(bActual)}</span>
                             </p>
-                            <p className="text-[10px] text-white/50 leading-tight">
+                            <p className="text-[10px] text-white/60 leading-tight">
                                 El primer factor <span className="font-mono text-white font-bold">a</span> indica cuántos grupos formar. Si es negativo, los grupos se invierten al opuesto.
                             </p>
                         </div>
@@ -505,11 +505,11 @@ export default function ProductoEnteroView() {
                                 <div className="flex items-center justify-between gap-1 mb-1">
                                     <div className="flex items-center gap-1 min-w-0">
                                         <div className={`w-2 h-2 rounded-full ${aSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/70 truncate">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/80 truncate">
                                             Factor a (Grupos)
                                         </span>
                                     </div>
-                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                    <div className="flex rounded-md border border-white/20 overflow-hidden shrink-0">
                                         <button
                                             onClick={() => { setASign("positive"); setActivePreset(null); }}
                                             className={`px-1.5 py-0.5 text-[10px] font-black ${aSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
@@ -526,13 +526,13 @@ export default function ProductoEnteroView() {
                                 </div>
 
                                 <div className="py-1">
-                                    <span className="text-[10px] text-white/50 block">Número de grupos:</span>
+                                    <span className="text-[10px] text-white/60 block">Número de grupos:</span>
                                     <div className="flex items-center justify-between mt-1">
                                         <div className="flex items-center gap-1.5">
                                             <button
                                                 onClick={() => { setAValue((v) => Math.max(1, v - 1)); setActivePreset(null); }}
                                                 disabled={aValue <= 1}
-                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 border border-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
                                             >
                                                 −
                                             </button>
@@ -542,12 +542,12 @@ export default function ProductoEnteroView() {
                                             <button
                                                 onClick={() => { setAValue((v) => Math.min(5, v + 1)); setActivePreset(null); }}
                                                 disabled={aValue >= 5}
-                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 border border-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
                                             >
                                                 +
                                             </button>
                                         </div>
-                                        <span className="text-[10px] font-bold text-white/40">
+                                        <span className="text-[10px] font-bold text-white/50">
                                             {aValue} grupo{aValue > 1 ? "s" : ""}
                                         </span>
                                     </div>
@@ -559,11 +559,11 @@ export default function ProductoEnteroView() {
                                 <div className="flex items-center justify-between gap-1 mb-1">
                                     <div className="flex items-center gap-1 min-w-0">
                                         <div className={`w-2 h-2 rounded-full ${bSign === "positive" ? TOKEN.blue.dot : TOKEN.red.dot}`} />
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/70 truncate">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/80 truncate">
                                             Factor b (Fichas)
                                         </span>
                                     </div>
-                                    <div className="flex rounded-md border border-white/10 overflow-hidden shrink-0">
+                                    <div className="flex rounded-md border border-white/20 overflow-hidden shrink-0">
                                         <button
                                             onClick={() => { setBSign("positive"); setActivePreset(null); }}
                                             className={`px-1.5 py-0.5 text-[10px] font-black ${bSign === "positive" ? "bg-blue-500/30 text-blue-300 font-bold" : "text-white/40"}`}
@@ -580,13 +580,13 @@ export default function ProductoEnteroView() {
                                 </div>
 
                                 <div className="py-1">
-                                    <span className="text-[10px] text-white/50 block">Fichas en cada grupo:</span>
+                                    <span className="text-[10px] text-white/60 block">Fichas en cada grupo:</span>
                                     <div className="flex items-center justify-between mt-1">
                                         <div className="flex items-center gap-1.5">
                                             <button
                                                 onClick={() => { setBValue((v) => Math.max(1, v - 1)); setActivePreset(null); }}
                                                 disabled={bValue <= 1}
-                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 border border-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
                                             >
                                                 −
                                             </button>
@@ -596,12 +596,12 @@ export default function ProductoEnteroView() {
                                             <button
                                                 onClick={() => { setBValue((v) => Math.min(5, v + 1)); setActivePreset(null); }}
                                                 disabled={bValue >= 5}
-                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
+                                                className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 border border-white/20 disabled:opacity-20 text-xs font-black flex items-center justify-center active:scale-95"
                                             >
                                                 +
                                             </button>
                                         </div>
-                                        <span className="text-[10px] font-bold text-white/40">
+                                        <span className="text-[10px] font-bold text-white/50">
                                             {bValue} {bSign === "positive" ? "(+1)" : "(−1)"}
                                         </span>
                                     </div>
@@ -610,8 +610,8 @@ export default function ProductoEnteroView() {
                         </div>
 
                         {/* Summary Pill */}
-                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs shrink-0">
-                            <span className="text-white/40 text-[10px]">Total de fichas:</span>
+                        <div className="bg-white/5 border border-white/20 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs shrink-0">
+                            <span className="text-white/50 text-[10px]">Total de fichas:</span>
                             <div className="flex items-center gap-2 font-mono font-bold text-xs lg:text-sm">
                                 <span>{aValue} × {bValue} = <span className="text-amber-300">{totalChips} fichas</span></span>
                                 <span className="text-white/30">|</span>
@@ -638,7 +638,7 @@ export default function ProductoEnteroView() {
                 {phase === "build" && (
                     <div className="w-full h-full flex flex-col min-h-0 relative">
                         {/* Group Progress Bar */}
-                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/20 rounded-xl shrink-0 mb-1 text-[11px]">
                             <div className="flex items-center gap-1.5">
                                 <span className="text-white/60 text-[10px] font-bold">Objetivo:</span>
                                 <span className="font-mono text-teal-300 font-bold text-xs">
@@ -651,7 +651,7 @@ export default function ProductoEnteroView() {
                                 </span>
                                 <button
                                     onClick={handleAutoGroup}
-                                    className="h-6 px-2 text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-md transition-all active:scale-95"
+                                    className="h-6 px-2 text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-md transition-all active:scale-95"
                                 >
                                     Auto-agrupar ⚡
                                 </button>
@@ -661,7 +661,7 @@ export default function ProductoEnteroView() {
                         {/* Interactive Drag Arena */}
                         <div
                             ref={areaRef}
-                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/25 bg-[#060a14] overflow-hidden"
                             style={{ touchAction: "none" }}
                             onPointerMove={handlePointerMove}
                             onPointerUp={handlePointerUp}
@@ -674,19 +674,19 @@ export default function ProductoEnteroView() {
                                     return (
                                         <div
                                             key={i}
-                                            className={`flex-1 border-r border-white/10 last:border-r-0 flex flex-col justify-between p-1.5 ${
+                                            className={`flex-1 border-r border-white/25 last:border-r-0 flex flex-col justify-between p-1.5 ${
                                                 isComplete ? "bg-emerald-500/[0.04]" : "bg-transparent"
                                             }`}
                                         >
                                             <div className="flex items-center justify-between text-[10px] font-bold">
-                                                <span className="text-white/40">Grupo {i + 1}</span>
+                                                <span className="text-white/50">Grupo {i + 1}</span>
                                                 <span className={isComplete ? "text-emerald-400" : "text-amber-400"}>
                                                     {count}/{chipsPerGroup}
                                                 </span>
                                             </div>
                                             {/* Bottom tray border */}
-                                            <div className="border-t border-dashed border-white/10 pt-1 text-center">
-                                                <span className="text-[9px] text-white/20">Zona del grupo</span>
+                                            <div className="border-t border-dashed border-white/30 pt-1 text-center">
+                                                <span className="text-[9px] text-white/30">Zona del grupo</span>
                                             </div>
                                         </div>
                                     );
@@ -694,9 +694,9 @@ export default function ProductoEnteroView() {
                             </div>
 
                             {/* Separator line for unassigned chips tray at the bottom */}
-                            <div className="absolute bottom-[28%] left-0 right-0 h-px bg-white/10 pointer-events-none" />
+                            <div className="absolute bottom-[28%] left-0 right-0 h-px bg-white/25 pointer-events-none" />
                             <div className="absolute bottom-1 right-2 pointer-events-none">
-                                <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider">
+                                <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">
                                     Bandeja de fichas
                                 </span>
                             </div>
@@ -738,7 +738,7 @@ export default function ProductoEnteroView() {
                 {/* ── FASE 3: FLIP (Inversión cuando a < 0) ── */}
                 {phase === "flip" && (
                     <div className="w-full h-full flex flex-col min-h-0 relative">
-                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded-xl shrink-0 mb-1">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-400/40 rounded-xl shrink-0 mb-1">
                             <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="text-sm">⚠️</span>
                                 <p className="text-[11px] text-amber-200 truncate">
@@ -748,7 +748,7 @@ export default function ProductoEnteroView() {
                             <button
                                 disabled={isFlippingAll}
                                 onClick={handleFlipAll}
-                                className="h-6 px-2 text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-md transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-xs"
+                                className="h-6 px-2.5 text-[10px] font-black bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-md transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
                             >
                                 {isFlippingAll ? "Invirtiendo…" : "Invertir todas 🔄"}
                             </button>
@@ -757,13 +757,13 @@ export default function ProductoEnteroView() {
                         {/* Interactive Board */}
                         <div
                             ref={areaRef}
-                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/25 bg-[#060a14] overflow-hidden"
                             style={{ touchAction: "none" }}
                         >
                             <div className="absolute inset-0 pointer-events-none flex">
                                 {Array.from({ length: numGroups }).map((_, i) => (
-                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
-                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    <div key={i} className="flex-1 border-r border-white/25 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/50">Grupo {i + 1}</span>
                                     </div>
                                 ))}
                             </div>
@@ -803,18 +803,18 @@ export default function ProductoEnteroView() {
                 {/* ── FASE 4: COUNT (Conteo) ── */}
                 {phase === "count" && (
                     <div className="w-full h-full flex flex-col min-h-0 relative">
-                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-xl shrink-0 mb-1 text-[11px]">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-white/5 border border-white/20 rounded-xl shrink-0 mb-1 text-[11px]">
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1">
                                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                                     <span className="font-bold text-blue-300 font-mono text-xs">{liveBlue}</span>
-                                    <span className="text-white/40 text-[10px]">positivas</span>
+                                    <span className="text-white/60 text-[10px]">positivas</span>
                                 </div>
-                                <div className="w-px h-3 bg-white/10" />
+                                <div className="w-px h-3 bg-white/20" />
                                 <div className="flex items-center gap-1">
                                     <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
                                     <span className="font-bold text-red-300 font-mono text-xs">{liveRed}</span>
-                                    <span className="text-white/40 text-[10px]">negativas</span>
+                                    <span className="text-white/60 text-[10px]">negativas</span>
                                 </div>
                             </div>
 
@@ -826,13 +826,13 @@ export default function ProductoEnteroView() {
                         {/* Board */}
                         <div
                             ref={areaRef}
-                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/10 bg-[#060a14] overflow-hidden"
+                            className="relative flex-1 min-h-0 w-full rounded-xl border border-white/25 bg-[#060a14] overflow-hidden"
                             style={{ touchAction: "none" }}
                         >
                             <div className="absolute inset-0 pointer-events-none flex">
                                 {Array.from({ length: numGroups }).map((_, i) => (
-                                    <div key={i} className="flex-1 border-r border-white/10 last:border-r-0 p-1.5">
-                                        <span className="text-[10px] font-bold text-white/30">Grupo {i + 1}</span>
+                                    <div key={i} className="flex-1 border-r border-white/25 last:border-r-0 p-1.5">
+                                        <span className="text-[10px] font-bold text-white/50">Grupo {i + 1}</span>
                                     </div>
                                 ))}
                             </div>
@@ -884,7 +884,7 @@ export default function ProductoEnteroView() {
                                 </div>
                             ))}
                             {chips.length > 16 && (
-                                <span className="text-white/40 text-xs font-bold font-mono">
+                                <span className="text-white/50 text-xs font-bold font-mono">
                                     +{chips.length - 16}
                                 </span>
                             )}
@@ -892,7 +892,7 @@ export default function ProductoEnteroView() {
 
                         {/* Result number */}
                         <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40 block mb-0.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-0.5">
                                 Resultado del Producto
                             </span>
                             <div
@@ -909,7 +909,7 @@ export default function ProductoEnteroView() {
                         </div>
 
                         {/* Feedback text badge */}
-                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 max-w-sm w-full">
+                        <div className="bg-white/5 border border-white/20 rounded-xl px-3 py-1.5 max-w-sm w-full">
                             <p
                                 className={`font-bold text-xs ${
                                     resultValue > 0 ? "text-blue-300" : resultValue < 0 ? "text-red-300" : "text-slate-300"
@@ -920,8 +920,8 @@ export default function ProductoEnteroView() {
                         </div>
 
                         {/* Law of signs rule card */}
-                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl px-3 py-2 max-w-sm w-full text-[11px] font-mono">
-                            <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1 text-center font-sans">
+                        <div className="bg-teal-500/10 border border-teal-400/40 rounded-xl px-3 py-2 max-w-sm w-full text-[11px] font-mono">
+                            <div className="text-white/50 text-[9px] uppercase tracking-wider mb-1 text-center font-sans">
                                 Ley de Signos en la Multiplicación
                             </div>
                             <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
@@ -962,32 +962,32 @@ export default function ProductoEnteroView() {
             </div>
 
             {/* 4. Barra Inferior de Acción y Feedback (40-48px) */}
-            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/20 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                     {phase === "setup" && (
-                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                        <p className="text-[10px] lg:text-[11px] text-white/60 truncate">
                             Elige uno de los 3 casos clave o ajusta los factores a y b.
                         </p>
                     )}
                     {phase === "build" && (
-                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                        <p className="text-[10px] lg:text-[11px] text-white/60 truncate">
                             {allGroupsFormed
                                 ? "¡Excelente! Cada grupo tiene exactamente la cantidad correspondiente."
                                 : "Arrastra las fichas de la bandeja inferior a cada grupo."}
                         </p>
                     )}
                     {phase === "flip" && (
-                        <p className="text-[10px] lg:text-[11px] text-amber-300/80 truncate">
+                        <p className="text-[10px] lg:text-[11px] text-amber-300 truncate">
                             Al ser a negativo, las fichas se invierten al signo opuesto.
                         </p>
                     )}
                     {phase === "count" && (
-                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                        <p className="text-[10px] lg:text-[11px] text-white/60 truncate">
                             Contando el total de fichas agrupadas.
                         </p>
                     )}
                     {phase === "result" && (
-                        <p className="text-[10px] lg:text-[11px] text-emerald-400/90 truncate font-semibold">
+                        <p className="text-[10px] lg:text-[11px] text-emerald-400 truncate font-semibold">
                             Multiplicación completada exitosamente.
                         </p>
                     )}
@@ -1000,7 +1000,7 @@ export default function ProductoEnteroView() {
                             onClick={handleGenerate}
                             className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
                                 canGenerate
-                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    ? "bg-teal-600 hover:bg-teal-500 text-white font-bold active:scale-95 shadow-sm"
                                     : "bg-white/5 text-white/20 cursor-not-allowed"
                             }`}
                         >
@@ -1014,7 +1014,7 @@ export default function ProductoEnteroView() {
                             onClick={handleContinueFromBuild}
                             className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
                                 allGroupsFormed
-                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm"
+                                    ? "bg-teal-600 hover:bg-teal-500 text-white font-bold active:scale-95 shadow-sm"
                                     : "bg-white/5 text-white/20 cursor-not-allowed"
                             }`}
                         >
@@ -1025,7 +1025,7 @@ export default function ProductoEnteroView() {
                     {phase === "flip" && (
                         <button
                             onClick={() => setPhase("count")}
-                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-500 text-white active:scale-95 transition-all shadow-sm"
                         >
                             Siguiente: Conteo →
                         </button>
@@ -1034,7 +1034,7 @@ export default function ProductoEnteroView() {
                     {phase === "count" && (
                         <button
                             onClick={() => setPhase("result")}
-                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-500 text-white active:scale-95 transition-all shadow-sm"
                         >
                             Ver Resultado ✅
                         </button>
@@ -1043,7 +1043,7 @@ export default function ProductoEnteroView() {
                     {phase === "result" && (
                         <button
                             onClick={handleReset}
-                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 transition-all shadow-sm"
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-500 text-white active:scale-95 transition-all shadow-sm"
                         >
                             Nuevo Reto 🔄
                         </button>

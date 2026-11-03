@@ -376,15 +376,15 @@ const FractionBar = React.memo(function FractionBar({
         const val = fraction.numerator / fraction.denominator;
         switch (displayMode) {
             case 'decimals':
-                return <span className="text-[10px] lg:text-xs font-bold tabular-nums">{val.toFixed(2)}</span>;
+                return <span className="text-[10px] lg:text-xs font-bold tabular-nums text-gray-900" style={{ color: '#111827' }}>{val.toFixed(2)}</span>;
             case 'percentages':
-                return <span className="text-[10px] lg:text-xs font-bold tabular-nums">{(val * 100).toFixed(0)}%</span>;
+                return <span className="text-[10px] lg:text-xs font-bold tabular-nums text-gray-900" style={{ color: '#111827' }}>{(val * 100).toFixed(0)}%</span>;
             default:
                 return (
-                    <div className="flex flex-col items-center leading-none select-none gap-0.5">
-                        <span className="text-[10px] lg:text-xs font-extrabold">{fraction.numerator}</span>
-                        <div className="w-2.5 lg:w-3.5 border-t border-gray-800" />
-                        <span className="text-[10px] lg:text-xs font-extrabold">{fraction.denominator}</span>
+                    <div className="flex flex-col items-center leading-none select-none gap-0.5 text-gray-900" style={{ color: '#111827' }}>
+                        <span className="text-[10px] lg:text-xs font-extrabold text-gray-900" style={{ color: '#111827' }}>{fraction.numerator}</span>
+                        <div className="w-2.5 lg:w-3.5 border-t border-gray-900" style={{ borderColor: '#111827' }} />
+                        <span className="text-[10px] lg:text-xs font-extrabold text-gray-900" style={{ color: '#111827' }}>{fraction.denominator}</span>
                     </div>
                 );
         }
@@ -438,6 +438,7 @@ const FractionBar = React.memo(function FractionBar({
                 className={`
           absolute cursor-grab active:cursor-grabbing
           ${fraction.color}
+          text-gray-900
           flex items-center justify-center
           border ${
               isLongPressing
@@ -448,7 +449,7 @@ const FractionBar = React.memo(function FractionBar({
                       : isWall
                       ? 'border-sky-400 ring-2 ring-sky-400'
                       : 'border-blue-400 ring-2 ring-blue-400'
-                  : 'border-gray-800'
+                  : 'border-gray-900'
           }
           select-none touch-none
           fraction-bar rounded-none
@@ -461,6 +462,8 @@ const FractionBar = React.memo(function FractionBar({
                     minWidth: 22,
                     borderRadius: 0,
                     zIndex: isSnapping || hasSnapTarget ? 40 : 1,
+                    color: '#111827',
+                    ...(!hasSnapTarget && !isLongPressing ? { borderColor: '#111827' } : {}),
                     transition: isSnapping
                         ? 'left 0.18s cubic-bezier(.22,.68,0,1.2), top 0.18s cubic-bezier(.22,.68,0,1.2), box-shadow 0.15s'
                         : 'box-shadow 0.15s',
@@ -665,11 +668,14 @@ function RegletaFracionesCanvas({
 
     return (
         <div
+            id="regleta-interactive"
             ref={containerRef}
             onPointerDown={handlePointerDown}
-            className="relative w-full h-full rounded-xl lg:rounded-2xl overflow-hidden bg-white border border-gray-200 lg:border-2 cursor-grab active:cursor-grabbing select-none"
+            className="regleta-canvas relative w-full h-full rounded-xl lg:rounded-2xl overflow-hidden bg-white border border-gray-300 dark:border-white/20 lg:border-2 cursor-grab active:cursor-grabbing select-none text-gray-900"
             style={{
                 touchAction: 'none',
+                backgroundColor: '#ffffff',
+                color: '#111827',
             }}
         >
             {/* Contenedor del mundo virtual transformado con Pan y Zoom */}
@@ -1047,30 +1053,30 @@ const RegletaFraciones = (): React.ReactElement => {
       `}</style>
 
             {/* ── Cabecera unificada con título, modos de visualización y herramientas ── */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-gray-200/80 px-2 lg:px-4 bg-gray-50 select-none gap-1 sm:gap-2">
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-gray-200/80 dark:border-white/10 px-2 lg:px-4 bg-gray-50 dark:bg-[#0a0f1d] select-none gap-1 sm:gap-2">
                 {/* Lado izquierdo: Volver + Título + Modos (½, 0.5, 50%) */}
                 <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
                     <button
                         onClick={() => navigate(-1)}
-                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white border border-gray-300 text-gray-600 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all shrink-0 flex items-center gap-1"
+                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 dark:hover:bg-white/15 active:scale-95 transition-all shrink-0 flex items-center gap-1"
                         title="Volver"
                     >
                         <span>←</span>
                         <span className="hidden sm:inline">Volver</span>
                     </button>
 
-                    <h1 className="text-xs sm:text-sm lg:text-base font-extrabold text-gray-800 whitespace-nowrap shrink-0">
+                    <h1 className="text-xs sm:text-sm lg:text-base font-extrabold text-gray-900 dark:text-white whitespace-nowrap shrink-0">
                         <span className="hidden sm:inline">Regleta de </span>Fracciones
                     </h1>
 
                     {/* Botones de modo de visualización (½, 0.5, 50%) junto al título */}
-                    <div className="flex items-center bg-gray-200/80 p-0.5 rounded-lg shrink-0 gap-0.5">
+                    <div className="flex items-center bg-gray-200/80 dark:bg-white/10 p-0.5 rounded-lg shrink-0 gap-0.5">
                         <button
                             onClick={() => setDisplayMode('fractions')}
                             className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
                                 displayMode === 'fractions'
                                     ? 'bg-blue-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/10'
                             }`}
                             title="Mostrar como fracción"
                         >
@@ -1081,7 +1087,7 @@ const RegletaFraciones = (): React.ReactElement => {
                             className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
                                 displayMode === 'decimals'
                                     ? 'bg-emerald-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/10'
                             }`}
                             title="Mostrar como decimal"
                         >
@@ -1092,7 +1098,7 @@ const RegletaFraciones = (): React.ReactElement => {
                             className={`h-6 lg:h-7 px-2 rounded-md font-bold text-[11px] lg:text-xs transition-all ${
                                 displayMode === 'percentages'
                                     ? 'bg-yellow-500 text-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/10'
                             }`}
                             title="Mostrar como porcentaje"
                         >
@@ -1126,22 +1132,22 @@ const RegletaFraciones = (): React.ReactElement => {
                         ↺
                     </button>
 
-                    <div className="h-4 w-px bg-gray-300 mx-0.5" />
+                    <div className="h-4 w-px bg-gray-300 dark:bg-white/20 mx-0.5" />
 
                     <button
                         onClick={resetView}
                         title="Centrar vista del lienzo"
-                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 active:scale-95 transition-all flex items-center gap-1"
+                        className="h-7 lg:h-8 px-2 lg:px-2.5 rounded-lg bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 text-[11px] lg:text-xs font-semibold shadow-sm hover:bg-gray-100 dark:hover:bg-white/15 active:scale-95 transition-all flex items-center gap-1"
                     >
                         <span>🎯</span>
                         <span className="hidden md:inline">Centrar</span>
-                        <span className="text-[10px] text-gray-400 font-mono">({Math.round(zoom * 100)}%)</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-300 font-mono">({Math.round(zoom * 100)}%)</span>
                     </button>
 
                     <button
                         onClick={() => setShowHelp(true)}
                         title="Ayuda"
-                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-white border border-gray-300 text-gray-600 text-xs lg:text-sm font-bold flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all"
+                        className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-600 dark:text-gray-200 text-xs lg:text-sm font-bold flex items-center justify-center shadow-sm hover:bg-gray-100 dark:hover:bg-white/15 active:scale-95 transition-all"
                     >
                         ?
                     </button>
@@ -1174,11 +1180,11 @@ const RegletaFraciones = (): React.ReactElement => {
             </div>
 
             {/* ── Footer ── */}
-            <div className="text-center text-gray-400 text-[10px] lg:text-xs py-0.5 lg:pb-1 shrink-0 flex items-center justify-center gap-2 sm:gap-3">
+            <div className="text-center text-gray-500 dark:text-gray-400 text-[10px] lg:text-xs py-0.5 lg:pb-1 shrink-0 flex items-center justify-center gap-2 sm:gap-3">
                 <span>{fractions.length} barra{fractions.length !== 1 ? 's' : ''} en la regleta</span>
                 <span>·</span>
-                <span className="font-mono text-gray-500">Zoom: {Math.round(zoom * 100)}%</span>
-                <span className="hidden sm:inline text-gray-400">· Arrastra el fondo para mover · Rueda o pellizca para zoom</span>
+                <span className="font-mono text-gray-600 dark:text-gray-300">Zoom: {Math.round(zoom * 100)}%</span>
+                <span className="hidden sm:inline text-gray-500 dark:text-gray-400">· Arrastra el fondo para mover · Rueda o pellizca para zoom</span>
             </div>
 
             <ModalHelp

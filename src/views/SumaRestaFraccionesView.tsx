@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ const CONFETTI_PIECES = Array.from({ length: 45 }, (_, i) => ({
 const FractionDisplay = ({
     numerator,
     denominator,
-    color = "text-white",
+    color,
     size = "normal",
 }: {
     numerator: number;
@@ -76,6 +77,8 @@ const FractionDisplay = ({
     color?: string;
     size?: "normal" | "large" | "small";
 }) => {
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    const textColor = color ?? (isDark ? "text-white" : "text-slate-900");
     const textSize =
         size === "large"
             ? "text-base lg:text-xl"
@@ -84,7 +87,7 @@ const FractionDisplay = ({
                 : "text-xs lg:text-sm";
     const lineH = size === "large" ? "h-0.5 my-0.5" : "h-px my-0.5";
     return (
-        <div className={`inline-flex flex-col items-center font-bold ${color} ${textSize} leading-none select-none`}>
+        <div className={`inline-flex flex-col items-center font-bold ${textColor} ${textSize} leading-none select-none`}>
             <span>{numerator}</span>
             <span className={`w-full bg-current ${lineH} rounded`} />
             <span>{denominator}</span>
@@ -160,6 +163,7 @@ const FractionBar = ({
     setupPartsDisabled,
     compact = false,
 }: FractionBarProps) => {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const num = coloredCount(bar);
     const den = bar.parts;
     const barH = compact ? "h-6 sm:h-7" : "h-7 sm:h-8 lg:h-9";
@@ -183,7 +187,9 @@ const FractionBar = ({
                                 if (m > 1 && onScale) onScale(snap.denominator * (m - 1));
                             }}
                             disabled={disabled || bar.parts / snap.denominator <= 1}
-                            className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-md border border-rose-500/40 bg-rose-500/20 text-rose-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation"
+                            className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-md border font-bold text-xs flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation ${
+                                isDark ? "border-rose-500/40 bg-rose-500/20 text-rose-300" : "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 shadow-xs"
+                            }`}
                             title="Reducir ampliación"
                         >
                             ÷
@@ -191,11 +197,12 @@ const FractionBar = ({
                     )}
 
                     {/* Fraction display */}
-                    <div className="flex items-center px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10">
+                    <div className={`flex items-center px-1.5 py-0.5 rounded-md border ${
+                        isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-300 shadow-xs"
+                    }`}>
                         <FractionDisplay
                             numerator={showScaleControls && snap ? snap.numerator : num}
                             denominator={showScaleControls && snap ? snap.denominator : den}
-                            color="text-white"
                         />
                     </div>
 
@@ -206,7 +213,9 @@ const FractionBar = ({
                                 if (onScale) onScale(snap.denominator * (bar.parts / snap.denominator + 1));
                             }}
                             disabled={disabled || bar.parts >= 24}
-                            className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-md border border-indigo-500/40 bg-indigo-500/20 text-indigo-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation"
+                            className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-md border font-bold text-xs flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation ${
+                                isDark ? "border-indigo-500/40 bg-indigo-500/20 text-indigo-300" : "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 shadow-xs"
+                            }`}
                             title="Aumentar ampliación"
                         >
                             ×
@@ -215,25 +224,27 @@ const FractionBar = ({
 
                     {/* Equivalent fraction display */}
                     {showScaleControls && snap && snap.denominator !== den && (
-                        <div className="flex items-center gap-1 text-[10px] lg:text-xs font-semibold bg-violet-500/15 text-violet-300 px-1.5 py-0.5 rounded-full border border-violet-500/30">
+                        <div className={`flex items-center gap-1 text-[10px] lg:text-xs font-semibold px-1.5 py-0.5 rounded-full border ${
+                            isDark ? "bg-violet-500/15 text-violet-300 border-violet-500/30" : "bg-violet-50 text-violet-800 border-violet-300 font-bold"
+                        }`}>
                             <div className="inline-flex flex-col items-center leading-none select-none font-bold">
-                                <span>{snap.numerator} <span className="text-violet-400">×{den / snap.denominator}</span></span>
-                                <span className="w-full h-px bg-violet-400/50 my-0.5" />
-                                <span>{snap.denominator} <span className="text-violet-400">×{den / snap.denominator}</span></span>
+                                <span>{snap.numerator} <span className={isDark ? "text-violet-400" : "text-violet-600"}>×{den / snap.denominator}</span></span>
+                                <span className={`w-full h-px my-0.5 ${isDark ? "bg-violet-400/50" : "bg-violet-300"}`} />
+                                <span>{snap.denominator} <span className={isDark ? "text-violet-400" : "text-violet-600"}>×{den / snap.denominator}</span></span>
                             </div>
-                            <span className="font-bold text-violet-400">=</span>
-                            <FractionDisplay numerator={num} denominator={den} color="text-violet-200" size="small" />
+                            <span className={`font-bold ${isDark ? "text-violet-400" : "text-violet-600"}`}>=</span>
+                            <FractionDisplay numerator={num} denominator={den} color={isDark ? "text-violet-200" : "text-violet-800"} size="small" />
                         </div>
                     )}
 
                     {showScaleControls && snap && snap.denominator === den && (
-                        <span className="text-[10px] text-white/40 italic">original</span>
+                        <span className={`text-[10px] italic ${isDark ? "text-white/40" : "text-slate-500"}`}>original</span>
                     )}
                 </div>
 
                 {/* Setup parts label */}
                 {onChangePartsSetup && (
-                    <span className="text-[10px] lg:text-xs text-white/50 font-medium">
+                    <span className={`text-[10px] lg:text-xs font-medium ${isDark ? "text-white/50" : "text-slate-600 font-semibold"}`}>
                         {den} partes
                     </span>
                 )}
@@ -245,7 +256,9 @@ const FractionBar = ({
                     <button
                         onClick={() => onChangePartsSetup(-1)}
                         disabled={setupPartsDisabled || bar.parts <= 2}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-base flex items-center justify-center shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation select-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg border font-bold text-base flex items-center justify-center shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation select-none ${
+                            isDark ? "border-white/20 bg-white/10 hover:bg-white/20 text-white" : "border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-800 shadow-xs"
+                        }`}
                         aria-label="Reducir partes"
                     >
                         −
@@ -254,7 +267,9 @@ const FractionBar = ({
 
                 <div className="flex-1">
                     <div
-                        className={`flex w-full rounded-xl overflow-hidden border-2 border-white/40 bg-slate-900/90 shadow-inner ${barH}`}
+                        className={`flex w-full rounded-xl overflow-hidden border-2 shadow-inner ${barH} ${
+                            isDark ? "border-white/40 bg-slate-900/90" : "border-slate-300 bg-slate-100"
+                        }`}
                     >
                         {bar.colored.map((filled, i) => {
                             const isDimmed = dimmedIndices?.has(i);
@@ -276,12 +291,14 @@ const FractionBar = ({
                                         }
                                     }}
                                     className={[
-                                        "flex-1 border-r-2 last:border-r-0 border-black transition-all duration-150 select-none",
+                                        `flex-1 border-r-2 last:border-r-0 transition-all duration-150 select-none ${
+                                            isDark ? "border-black" : "border-slate-300"
+                                        }`,
                                         filled
                                             ? isDimmed
-                                                ? `${colorClass} opacity-20`
+                                                ? `${colorClass} ${isDark ? "opacity-20" : "opacity-30"}`
                                                 : `${colorClass}`
-                                            : "bg-slate-800/80 hover:bg-slate-700/80",
+                                            : (isDark ? "bg-slate-800/80 hover:bg-slate-700/80" : "bg-slate-200/90 hover:bg-slate-300/90"),
                                         tapable
                                             ? "cursor-pointer hover:brightness-125 active:scale-y-90"
                                             : onToggleCell && !disabled
@@ -299,7 +316,9 @@ const FractionBar = ({
                     <button
                         onClick={() => onChangePartsSetup(1)}
                         disabled={setupPartsDisabled || bar.parts >= 12}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-base flex items-center justify-center shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation select-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg border font-bold text-base flex items-center justify-center shrink-0 active:scale-95 transition-all disabled:opacity-20 disabled:cursor-not-allowed touch-manipulation select-none ${
+                            isDark ? "border-white/20 bg-white/10 hover:bg-white/20 text-white" : "border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-800 shadow-xs"
+                        }`}
                         aria-label="Aumentar partes"
                     >
                         +
@@ -327,16 +346,19 @@ const ResultBarRow = ({
     eliminatingCells,
     compact = false,
 }: ResultBarRowProps) => {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const barH = compact ? "h-6 sm:h-7" : "h-7 sm:h-8 lg:h-9";
     return (
         <div className="w-full flex items-center gap-1.5">
             {totalBars > 1 && (
-                <span className="text-[10px] font-mono font-bold text-white/50 shrink-0 w-5 text-right">
+                <span className={`text-[10px] font-mono font-bold shrink-0 w-5 text-right ${isDark ? "text-white/50" : "text-slate-500 font-bold"}`}>
                     #{index + 1}
                 </span>
             )}
             <div
-                className={`flex-1 flex rounded-xl overflow-hidden border-2 border-emerald-500/50 bg-slate-900/90 shadow-inner ${barH}`}
+                className={`flex-1 flex rounded-xl overflow-hidden border-2 shadow-inner ${barH} ${
+                    isDark ? "border-emerald-500/50 bg-slate-900/90" : "border-emerald-500/60 bg-emerald-50/50"
+                }`}
             >
                 {bar.filled.map((f, i) => {
                     const isEliminating = eliminatingCells.has(`${index}-${i}`);
@@ -344,12 +366,14 @@ const ResultBarRow = ({
                         <div
                             key={i}
                             className={[
-                                "flex-1 border-r-2 last:border-r-0 border-black transition-all duration-300",
+                                `flex-1 border-r-2 last:border-r-0 transition-all duration-300 ${
+                                    isDark ? "border-black" : "border-slate-300"
+                                }`,
                                 isEliminating
                                     ? "bg-rose-500"
                                     : f
                                         ? "bg-gradient-to-r from-emerald-500 to-emerald-400"
-                                        : "bg-slate-800/80",
+                                        : (isDark ? "bg-slate-800/80" : "bg-slate-200/90"),
                             ].join(" ")}
                             style={isEliminating ? { animation: "eliminateCell 0.45s ease-in forwards" } : undefined}
                         />
@@ -362,11 +386,14 @@ const ResultBarRow = ({
 
 // ─── OpSign / MathStep ───────────────────────────────────────────────────────
 
-const OpSign = ({ op }: { op: string }) => (
-    <span className="text-lg lg:text-2xl font-bold text-white/40 mx-1 select-none">
-        {op}
-    </span>
-);
+const OpSign = ({ op }: { op: string }) => {
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    return (
+        <span className={`text-lg lg:text-2xl font-bold mx-1 select-none ${isDark ? "text-white/40" : "text-slate-500 font-black"}`}>
+            {op}
+        </span>
+    );
+};
 
 const MathStep = ({
     label,
@@ -376,26 +403,30 @@ const MathStep = ({
     label: string;
     highlight?: boolean;
     children: React.ReactNode;
-}) => (
-    <div
-        className={[
-            "flex items-center justify-center flex-wrap gap-2 p-2.5 rounded-xl border",
-            highlight
-                ? "bg-violet-500/15 border-violet-500/30"
-                : "bg-white/5 border-white/10",
-        ].join(" ")}
-    >
-        <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-xs">
-            {label}
-        </span>
-        {children}
-    </div>
-);
+}) => {
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    return (
+        <div
+            className={[
+                "flex items-center justify-center flex-wrap gap-2 p-2.5 rounded-xl border",
+                highlight
+                    ? (isDark ? "bg-violet-500/15 border-violet-500/30" : "bg-violet-50 border-violet-300 text-slate-900")
+                    : (isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200 text-slate-900"),
+            ].join(" ")}
+        >
+            <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-xs">
+                {label}
+            </span>
+            {children}
+        </div>
+    );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SumaRestaFraccionesView() {
     const navigate = useNavigate();
+    const isDark = useThemeStore((s) => s.theme === "dark");
 
     // ── Core state ──────────────────────────────────────────────────────────────
     const [operation, setOperation] = useState<Operation>("sum");
@@ -725,10 +756,10 @@ export default function SumaRestaFraccionesView() {
     const { text: instrText, tone: instrTone } = getInstruction();
 
     const instrStyles = {
-        amber: "bg-amber-500/15 border-amber-500/30 text-amber-300",
-        green: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300",
-        emerald: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300",
-        blue: "bg-sky-500/15 border-sky-500/30 text-sky-300",
+        amber: isDark ? "bg-amber-500/15 border-amber-500/30 text-amber-300" : "bg-amber-50 border-amber-300 text-amber-800 font-bold",
+        green: isDark ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold",
+        emerald: isDark ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold",
+        blue: isDark ? "bg-sky-500/15 border-sky-500/30 text-sky-300" : "bg-sky-50 border-sky-300 text-sky-800 font-bold",
     };
     const instrClass = instrStyles[instrTone];
 
@@ -739,27 +770,27 @@ export default function SumaRestaFraccionesView() {
 
         if (!isHeterogeneous) {
             return (
-                <div className="space-y-2 text-center text-white">
+                <div className={`space-y-2 text-center ${isDark ? "text-white" : "text-slate-900"}`}>
                     <MathStep label="1">
                         <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" />
                         <OpSign op={opSym} />
                         <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" />
                         <OpSign op="=" />
-                        <span className="text-xl font-bold text-white/40">?</span>
+                        <span className={`text-xl font-bold ${isDark ? "text-white/40" : "text-slate-400"}`}>?</span>
                     </MathStep>
                     <MathStep label="2">
-                        <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" color="text-teal-400" />
+                        <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" color={isDark ? "text-teal-400" : "text-teal-600"} />
                         <OpSign op={opSym} />
-                        <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" color="text-amber-400" />
+                        <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" color={isDark ? "text-amber-400" : "text-amber-600"} />
                         <OpSign op="=" />
-                        <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-400" />
+                        <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color={isDark ? "text-emerald-400" : "text-emerald-600"} />
                     </MathStep>
                     {needsSimplify && (
                         <MathStep label="3" highlight>
-                            <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-400" />
+                            <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color={isDark ? "text-emerald-400" : "text-emerald-600"} />
                             <OpSign op="=" />
-                            <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-violet-400" />
-                            <span className="text-xs text-white/60 ml-1">(simplificado)</span>
+                            <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color={isDark ? "text-violet-400" : "text-violet-600"} />
+                            <span className={`text-xs ml-1 ${isDark ? "text-white/60" : "text-slate-500"}`}>(simplificado)</span>
                         </MathStep>
                     )}
                 </div>
@@ -773,50 +804,50 @@ export default function SumaRestaFraccionesView() {
         const eqDen = barA.parts;
 
         return (
-            <div className="space-y-2 text-center text-white">
+            <div className={`space-y-2 text-center ${isDark ? "text-white" : "text-slate-900"}`}>
                 <MathStep label="1">
                     <FractionDisplay numerator={snapA.numerator} denominator={snapA.denominator} size="large" />
                     <OpSign op={opSym} />
                     <FractionDisplay numerator={snapB.numerator} denominator={snapB.denominator} size="large" />
                     <OpSign op="=" />
-                    <span className="text-xl font-bold text-white/40">?</span>
+                    <span className={`text-xl font-bold ${isDark ? "text-white/40" : "text-slate-400"}`}>?</span>
                 </MathStep>
                 <MathStep label="2">
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                         <div className="flex items-center gap-1.5">
-                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-base lg:text-lg text-teal-300">
-                                <span>{snapA.numerator} <span className="text-indigo-400 text-xs">×{multA}</span></span>
-                                <span className="w-full h-0.5 bg-teal-400 my-0.5 rounded" />
-                                <span>{snapA.denominator} <span className="text-indigo-400 text-xs">×{multA}</span></span>
+                            <div className={`inline-flex flex-col items-center leading-none select-none font-bold text-base lg:text-lg ${isDark ? "text-teal-300" : "text-teal-700"}`}>
+                                <span>{snapA.numerator} <span className={`text-xs ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>×{multA}</span></span>
+                                <span className={`w-full h-0.5 my-0.5 rounded ${isDark ? "bg-teal-400" : "bg-teal-600"}`} />
+                                <span>{snapA.denominator} <span className={`text-xs ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>×{multA}</span></span>
                             </div>
-                            <span className="text-white/40 font-bold">=</span>
-                            <FractionDisplay numerator={eqNumA} denominator={eqDen} size="large" color="text-teal-400" />
+                            <span className={`font-bold ${isDark ? "text-white/40" : "text-slate-400"}`}>=</span>
+                            <FractionDisplay numerator={eqNumA} denominator={eqDen} size="large" color={isDark ? "text-teal-400" : "text-teal-600"} />
                         </div>
-                        <div className="w-px h-6 bg-white/10 hidden sm:block" />
+                        <div className={`w-px h-6 hidden sm:block ${isDark ? "bg-white/10" : "bg-slate-300"}`} />
                         <div className="flex items-center gap-1.5">
-                            <div className="inline-flex flex-col items-center leading-none select-none font-bold text-base lg:text-lg text-amber-300">
-                                <span>{snapB.numerator} <span className="text-indigo-400 text-xs">×{multB}</span></span>
-                                <span className="w-full h-0.5 bg-amber-400 my-0.5 rounded" />
-                                <span>{snapB.denominator} <span className="text-indigo-400 text-xs">×{multB}</span></span>
+                            <div className={`inline-flex flex-col items-center leading-none select-none font-bold text-base lg:text-lg ${isDark ? "text-amber-300" : "text-amber-700"}`}>
+                                <span>{snapB.numerator} <span className={`text-xs ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>×{multB}</span></span>
+                                <span className={`w-full h-0.5 my-0.5 rounded ${isDark ? "bg-amber-400" : "bg-amber-600"}`} />
+                                <span>{snapB.denominator} <span className={`text-xs ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>×{multB}</span></span>
                             </div>
-                            <span className="text-white/40 font-bold">=</span>
-                            <FractionDisplay numerator={eqNumB} denominator={eqDen} size="large" color="text-amber-400" />
+                            <span className={`font-bold ${isDark ? "text-white/40" : "text-slate-400"}`}>=</span>
+                            <FractionDisplay numerator={eqNumB} denominator={eqDen} size="large" color={isDark ? "text-amber-400" : "text-amber-600"} />
                         </div>
                     </div>
                 </MathStep>
                 <MathStep label="3">
-                    <FractionDisplay numerator={eqNumA} denominator={eqDen} size="large" color="text-teal-400" />
+                    <FractionDisplay numerator={eqNumA} denominator={eqDen} size="large" color={isDark ? "text-teal-400" : "text-teal-600"} />
                     <OpSign op={opSym} />
-                    <FractionDisplay numerator={eqNumB} denominator={eqDen} size="large" color="text-amber-400" />
+                    <FractionDisplay numerator={eqNumB} denominator={eqDen} size="large" color={isDark ? "text-amber-400" : "text-amber-600"} />
                     <OpSign op="=" />
-                    <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-400" />
+                    <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color={isDark ? "text-emerald-400" : "text-emerald-600"} />
                 </MathStep>
                 {needsSimplify && (
                     <MathStep label="4" highlight>
-                        <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color="text-emerald-400" />
+                        <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} size="large" color={isDark ? "text-emerald-400" : "text-emerald-600"} />
                         <OpSign op="=" />
-                        <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color="text-violet-400" />
-                        <span className="text-xs text-white/60 ml-1">(simplificado)</span>
+                        <FractionDisplay numerator={simplified.num} denominator={simplified.den} size="large" color={isDark ? "text-violet-400" : "text-violet-600"} />
+                        <span className={`text-xs ml-1 ${isDark ? "text-white/60" : "text-slate-500"}`}>(simplificado)</span>
                     </MathStep>
                 )}
             </div>
@@ -825,28 +856,30 @@ export default function SumaRestaFraccionesView() {
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none">
+        <div className={`flex h-dvh flex-col overflow-hidden select-none ${isDark ? "bg-[#080c18] text-white" : "bg-slate-100 text-slate-900"}`}>
             <ConfettiOverlay active={showConfetti} />
 
             {/* 1. Header (34-44px) */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+            <header className={`flex h-9 lg:h-11 shrink-0 items-center justify-between border-b px-2 lg:px-4 ${isDark ? "border-white/10 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"}`}>
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-white/80 active:scale-95 transition-all"
+                    className={`flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg text-xs font-bold active:scale-95 transition-all ${
+                        isDark ? "bg-white/10 hover:bg-white/15 text-white/80" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
+                    }`}
                 >
                     ← <span className="hidden xs:inline">Volver</span>
                 </button>
 
                 <div className="flex items-center gap-1.5 truncate px-1">
-                    <h1 className="text-[13px] lg:text-[15px] font-bold text-white truncate">
+                    <h1 className={`text-[13px] lg:text-[15px] font-bold truncate ${isDark ? "text-white" : "text-slate-900"}`}>
                         Suma y Resta de Fracciones
                     </h1>
                     {phase !== "setup" && (
                         <span className={[
                             "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0",
                             phase === "complete"
-                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                                : "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+                                ? (isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-50 text-emerald-800 border-emerald-300 font-bold")
+                                : (isDark ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" : "bg-indigo-50 text-indigo-800 border-indigo-300 font-bold"),
                         ].join(" ")}>
                             {phase === "complete" ? "¡Completado!" : "Resolviendo"}
                         </span>
@@ -855,7 +888,9 @@ export default function SumaRestaFraccionesView() {
 
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs lg:text-sm active:scale-95 transition-all"
+                    className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg font-bold text-xs lg:text-sm active:scale-95 transition-all ${
+                        isDark ? "bg-white/10 hover:bg-white/15 text-white/80" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
+                    }`}
                     title="Ayuda"
                 >
                     ?
@@ -863,17 +898,19 @@ export default function SumaRestaFraccionesView() {
             </header>
 
             {/* 2. Barra de entrada o control superior (32-38px) */}
-            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs">
+            <div className={`shrink-0 flex items-center justify-between gap-2 border-b px-2 lg:px-4 py-1 lg:py-1.5 text-[11px] lg:text-xs ${
+                isDark ? "border-white/5 bg-[#0d1424]" : "border-slate-300 bg-white shadow-xs"
+            }`}>
                 {/* Selector de operación en setup */}
                 {phase === "setup" ? (
-                    <div className="flex gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10 shrink-0">
+                    <div className={`flex gap-1 p-0.5 rounded-lg border shrink-0 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-300"}`}>
                         <button
                             onClick={() => setOperation("sum")}
                             className={[
                                 "px-2 py-0.5 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95 flex items-center gap-1",
                                 operation === "sum"
                                     ? "bg-indigo-600 text-white shadow-xs"
-                                    : "text-white/60 hover:text-white/90",
+                                    : (isDark ? "text-white/60 hover:text-white/90" : "text-slate-600 hover:text-slate-900"),
                             ].join(" ")}
                         >
                             <span>+</span>
@@ -885,7 +922,7 @@ export default function SumaRestaFraccionesView() {
                                 "px-2 py-0.5 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95 flex items-center gap-1",
                                 operation === "sub"
                                     ? "bg-rose-600 text-white shadow-xs"
-                                    : "text-white/60 hover:text-white/90",
+                                    : (isDark ? "text-white/60 hover:text-white/90" : "text-slate-600 hover:text-slate-900"),
                             ].join(" ")}
                         >
                             <span>−</span>
@@ -900,7 +937,7 @@ export default function SumaRestaFraccionesView() {
                         ].join(" ")}>
                             {operation === "sum" ? "+" : "−"}
                         </span>
-                        <span className="font-bold text-white/80 text-[11px] lg:text-xs">
+                        <span className={`font-bold text-[11px] lg:text-xs ${isDark ? "text-white/80" : "text-slate-800"}`}>
                             {operation === "sum" ? "Suma" : "Resta"}
                         </span>
                     </div>
@@ -909,7 +946,9 @@ export default function SumaRestaFraccionesView() {
                 {/* Banner de instrucción / Alerta */}
                 <div className="flex-1 min-w-0 flex items-center justify-end">
                     {(alertMsg || subtractionAlert) ? (
-                        <div className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] lg:text-xs font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-300 truncate">
+                        <div className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] lg:text-xs font-semibold truncate border ${
+                            isDark ? "bg-rose-500/20 border-rose-500/40 text-rose-300" : "bg-rose-50 border-rose-300 text-rose-700 font-bold"
+                        }`}>
                             <span>⚠️</span>
                             <span className="truncate">{alertMsg ?? "No puedes restar más de lo que hay en la Barra A."}</span>
                         </div>
@@ -926,7 +965,9 @@ export default function SumaRestaFraccionesView() {
 
             {/* 3. Área de trabajo central (flex-1 min-h-0) */}
             <main className="flex-1 min-h-0 flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 overflow-hidden relative">
-                <div className={`w-full max-w-2xl bg-[#0d1424]/90 border border-white/10 rounded-2xl shadow-xl flex flex-col justify-center transition-all ${
+                <div className={`w-full max-w-2xl border rounded-2xl flex flex-col justify-center transition-all ${
+                    isDark ? "bg-[#0d1424]/90 border-white/10 shadow-xl" : "bg-white border-slate-300 shadow-md"
+                } ${
                     resultBars.length > 1
                         ? "p-2 sm:p-2.5 lg:p-3 gap-1.5 lg:gap-2"
                         : "p-2.5 sm:p-3 lg:p-4 gap-2 lg:gap-3"
@@ -937,7 +978,7 @@ export default function SumaRestaFraccionesView() {
                         label="Barra A"
                         colorClass="bg-gradient-to-r from-teal-500 to-teal-400"
                         dotColor="bg-teal-400"
-                        accentColor="bg-teal-500/15 text-teal-300 border-teal-500/30"
+                        accentColor={isDark ? "bg-teal-500/15 text-teal-300 border-teal-500/30" : "bg-teal-50 text-teal-800 border-teal-300 font-bold"}
                         onToggleCell={phase === "setup" ? (i) => handleToggleCell("A", i) : undefined}
                         onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("A", d) : undefined}
                         setupPartsDisabled={phase !== "setup"}
@@ -953,7 +994,7 @@ export default function SumaRestaFraccionesView() {
 
                     {/* Divisor con signo de operación */}
                     <div className="flex items-center justify-center my-0.5 relative">
-                        <div className="w-full h-px bg-white/10" />
+                        <div className={`w-full h-px ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
                         <div className={[
                             "absolute rounded-full flex items-center justify-center font-black text-white shadow-md transition-all",
                             resultBars.length > 1 ? "w-5 h-5 text-[10px]" : "w-6 h-6 lg:w-7 lg:h-7 text-xs lg:text-sm",
@@ -969,7 +1010,7 @@ export default function SumaRestaFraccionesView() {
                         label="Barra B"
                         colorClass="bg-gradient-to-r from-amber-500 to-amber-400"
                         dotColor="bg-amber-400"
-                        accentColor="bg-amber-500/15 text-amber-300 border-amber-500/30"
+                        accentColor={isDark ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-amber-50 text-amber-800 border-amber-300 font-bold"}
                         onToggleCell={phase === "setup" ? (i) => handleToggleCell("B", i) : undefined}
                         onChangePartsSetup={phase === "setup" ? (d) => handleChangePartsSetup("B", d) : undefined}
                         setupPartsDisabled={phase !== "setup"}
@@ -987,19 +1028,23 @@ export default function SumaRestaFraccionesView() {
                     {(phase === "solving" || phase === "complete") &&
                         resultBars.length > 0 &&
                         resultBars[0].parts > 0 && (
-                            <div className="pt-1.5 border-t border-white/10 space-y-1">
+                            <div className={`pt-1.5 border-t space-y-1 ${isDark ? "border-white/10" : "border-slate-200"}`}>
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] lg:text-xs font-bold uppercase tracking-wide">
+                                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] lg:text-xs font-bold uppercase tracking-wide ${
+                                        isDark ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" : "bg-emerald-50 text-emerald-800 border-emerald-300 font-bold"
+                                    }`}>
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                         <span>Resultado</span>
                                     </div>
                                     {phase === "complete" && (
-                                        <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                                            <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} color="text-emerald-300" />
+                                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${
+                                            isDark ? "bg-emerald-500/10 border-emerald-500/30" : "bg-emerald-50 border-emerald-300"
+                                        }`}>
+                                            <FractionDisplay numerator={resultNumerator} denominator={resultDenominator} color={isDark ? "text-emerald-300" : "text-emerald-700"} />
                                             {needsSimplify && (
                                                 <>
-                                                    <span className="text-white/50 font-bold text-xs">=</span>
-                                                    <FractionDisplay numerator={simplified.num} denominator={simplified.den} color="text-violet-300" />
+                                                    <span className={`font-bold text-xs ${isDark ? "text-white/50" : "text-slate-400"}`}>=</span>
+                                                    <FractionDisplay numerator={simplified.num} denominator={simplified.den} color={isDark ? "text-violet-300" : "text-violet-700"} />
                                                 </>
                                             )}
                                         </div>
@@ -1023,35 +1068,41 @@ export default function SumaRestaFraccionesView() {
             </main>
 
             {/* 4. Barra inferior de acción y feedback (40-48px) */}
-            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+            <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 ${
+                isDark ? "border-white/10 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"
+            }`}>
                 {/* Feedback / Progreso a la izquierda */}
                 <div className="flex items-center gap-2 min-w-0">
                     {phase === "setup" && (
-                        <div className="text-[10px] sm:text-[11px] lg:text-xs text-white/50 truncate font-mono">
+                        <div className={`text-[10px] sm:text-[11px] lg:text-xs truncate font-mono ${isDark ? "text-white/50" : "text-slate-600 font-semibold"}`}>
                             A: {numA}/{barA.parts} · B: {numB}/{barB.parts}
                         </div>
                     )}
                     {phase === "solving" && !isHeterogeneous && (
                         <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] lg:text-xs font-bold">
-                            <span className="text-white/60">Trasladadas:</span>
-                            <span className="px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                            <span className={isDark ? "text-white/60" : "text-slate-600"}>Trasladadas:</span>
+                            <span className={`px-1.5 py-0.5 rounded border ${
+                                isDark ? "bg-teal-500/20 text-teal-300 border-teal-500/30" : "bg-teal-50 text-teal-800 border-teal-300"
+                            }`}>
                                 A: {movedA.size}/{totalAColored}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <span className={`px-1.5 py-0.5 rounded border ${
+                                isDark ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-amber-50 text-amber-800 border-amber-300"
+                            }`}>
                                 B: {movedB.size}/{totalBColored}
                             </span>
                         </div>
                     )}
                     {phase === "solving" && isHeterogeneous && (
                         <div className="flex items-center gap-1 text-[10px] sm:text-[11px] lg:text-xs font-bold">
-                            <span className="text-white/60">Denominadores:</span>
-                            <span className={denominatorsMatch ? "text-emerald-400" : "text-amber-400"}>
+                            <span className={isDark ? "text-white/60" : "text-slate-600"}>Denominadores:</span>
+                            <span className={denominatorsMatch ? (isDark ? "text-emerald-400" : "text-emerald-700 font-black") : (isDark ? "text-amber-400" : "text-amber-700 font-black")}>
                                 {denominatorsMatch ? "¡Coinciden!" : "Distintos"}
                             </span>
                         </div>
                     )}
                     {phase === "complete" && (
-                        <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] lg:text-xs font-bold text-emerald-400">
+                        <div className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] lg:text-xs font-bold ${isDark ? "text-emerald-400" : "text-emerald-700"}`}>
                             <span>🎉 ¡Operación correcta!</span>
                         </div>
                     )}
@@ -1091,7 +1142,9 @@ export default function SumaRestaFraccionesView() {
                         <>
                             <button
                                 onClick={() => setShowMath(true)}
-                                className="h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-indigo-300 border border-indigo-500/30 transition-all active:scale-95"
+                                className={`h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg text-[11px] lg:text-xs font-bold border transition-all active:scale-95 ${
+                                    isDark ? "bg-white/10 hover:bg-white/15 text-indigo-300 border-indigo-500/30" : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300 shadow-xs"
+                                }`}
                             >
                                 📐 Ver matemática
                             </button>
@@ -1109,15 +1162,19 @@ export default function SumaRestaFraccionesView() {
             {/* Modal de Pasos Matemáticos */}
             {showMath && (
                 <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3">
-                    <div className="w-full max-w-lg bg-[#0d1424] border border-white/20 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
-                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div className={`w-full max-w-lg border rounded-2xl shadow-2xl p-4 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150 ${
+                        isDark ? "bg-[#0d1424] border-white/20 text-white" : "bg-white border-slate-300 text-slate-900"
+                    }`}>
+                        <div className={`flex items-center justify-between pb-3 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}>
                             <div className="flex items-center gap-2">
                                 <span className="text-base">📐</span>
-                                <h3 className="text-sm font-bold text-white">Pasos Matemáticos Detallados</h3>
+                                <h3 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}>Pasos Matemáticos Detallados</h3>
                             </div>
                             <button
                                 onClick={() => setShowMath(false)}
-                                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white font-bold text-xs transition-all"
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-all ${
+                                    isDark ? "bg-white/10 hover:bg-white/20 text-white/70 hover:text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900"
+                                }`}
                             >
                                 ✕
                             </button>
@@ -1125,10 +1182,10 @@ export default function SumaRestaFraccionesView() {
                         <div className="overflow-y-auto py-3 pr-1 flex-1 min-h-0">
                             {renderMathSteps()}
                         </div>
-                        <div className="pt-3 border-t border-white/10 flex justify-end">
+                        <div className={`pt-3 border-t flex justify-end ${isDark ? "border-white/10" : "border-slate-200"}`}>
                             <button
                                 onClick={() => setShowMath(false)}
-                                className="h-8 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all"
+                                className="h-8 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all shadow-sm"
                             >
                                 Entendido
                             </button>
@@ -1142,18 +1199,18 @@ export default function SumaRestaFraccionesView() {
                 open={showHelp}
                 onClose={() => setShowHelp(false)}
                 title="¿Cómo sumar y restar fracciones?"
-                bgColor="#0d1424"
-                titleColor="#f8fafc"
+                bgColor={isDark ? "#0d1424" : "#f8fafc"}
+                titleColor={isDark ? "#f8fafc" : "#0f172a"}
                 buttonColor="bg-indigo-600 hover:bg-indigo-500"
             >
-                <ol className="space-y-2.5 text-white/80 text-xs sm:text-sm leading-relaxed list-decimal list-inside">
-                    <li>Elige la operación: <strong className="text-indigo-400">Suma</strong> o <strong className="text-rose-400">Resta</strong>.</li>
-                    <li>Ajusta la <strong className="text-teal-400">Barra A</strong> y la <strong className="text-amber-400">Barra B</strong> usando los botones <strong>+</strong> y <strong>−</strong> para cambiar el número de partes, y toca las celdas para colorearlas.</li>
-                    <li>Presiona <strong className="text-indigo-400">Resolver</strong> para comenzar la interactividad.</li>
+                <ol className={`space-y-2.5 text-xs sm:text-sm leading-relaxed list-decimal list-inside ${isDark ? "text-white/80" : "text-slate-700"}`}>
+                    <li>Elige la operación: <strong className={isDark ? "text-indigo-400" : "text-indigo-600 font-bold"}>Suma</strong> o <strong className={isDark ? "text-rose-400" : "text-rose-600 font-bold"}>Resta</strong>.</li>
+                    <li>Ajusta la <strong className={isDark ? "text-teal-400" : "text-teal-700 font-bold"}>Barra A</strong> y la <strong className={isDark ? "text-amber-400" : "text-amber-700 font-bold"}>Barra B</strong> usando los botones <strong>+</strong> y <strong>−</strong> para cambiar el número de partes, y toca las celdas para colorearlas.</li>
+                    <li>Presiona <strong className={isDark ? "text-indigo-400" : "text-indigo-600 font-bold"}>Resolver</strong> para comenzar la interactividad.</li>
                     <li>Si tienen el <strong>mismo denominador</strong>, toca las partes de la Barra A y luego de la Barra B para trasladarlas o restarlas en el resultado.</li>
-                    <li>Si tienen <strong>distinto denominador</strong>, usa los botones <strong className="text-indigo-400">×</strong> y <strong className="text-rose-400">÷</strong> para ampliar o reducir cada barra hasta igualar los denominadores. Luego pulsa <strong className="text-emerald-400">Juntar</strong> o <strong className="text-rose-400">Eliminar</strong>.</li>
-                    <li>Pulsa <strong className="text-emerald-400">Comprobar</strong> para verificar tu respuesta.</li>
-                    <li>Al completar, pulsa <strong className="text-indigo-300">📐 Ver matemática</strong> para consultar la resolución paso a paso.</li>
+                    <li>Si tienen <strong>distinto denominador</strong>, usa los botones <strong className={isDark ? "text-indigo-400" : "text-indigo-600 font-bold"}>×</strong> y <strong className={isDark ? "text-rose-400" : "text-rose-600 font-bold"}>÷</strong> para ampliar o reducir cada barra hasta igualar los denominadores. Luego pulsa <strong className={isDark ? "text-emerald-400" : "text-emerald-700 font-bold"}>Juntar</strong> o <strong className={isDark ? "text-rose-400" : "text-rose-600 font-bold"}>Eliminar</strong>.</li>
+                    <li>Pulsa <strong className={isDark ? "text-emerald-400" : "text-emerald-700 font-bold"}>Comprobar</strong> para verificar tu respuesta.</li>
+                    <li>Al completar, pulsa <strong className={isDark ? "text-indigo-300" : "text-indigo-600 font-bold"}>📐 Ver matemática</strong> para consultar la resolución paso a paso.</li>
                 </ol>
             </ModalHelp>
         </div>

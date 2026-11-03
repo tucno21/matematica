@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,8 +180,9 @@ const FractionCard: React.FC<{
 }> = ({ frac, placed, checking, correct, onPointerDown }) => {
     const displayNum = Math.abs(frac.num);
     const parts = frac.label.split(" ");
+    const isDark = useThemeStore((s) => s.theme === "dark");
 
-    let borderStyle = "border-white/15 bg-white/5";
+    let borderStyle = "";
     if (checking) {
         if (correct === true) borderStyle = "border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-xs shadow-emerald-500/30";
         else if (correct === false) borderStyle = "border-rose-400 bg-rose-500/20 text-rose-300 shadow-xs shadow-rose-500/30";
@@ -194,34 +196,36 @@ const FractionCard: React.FC<{
             }}
             className={`relative flex items-center justify-center rounded-xl border-2 px-3 py-1.5 sm:px-4 sm:py-2 select-none transition-all duration-200 ${borderStyle} ${
                 placed
-                    ? "opacity-25 scale-95 cursor-default"
+                    ? (isDark ? "opacity-35 scale-95 cursor-default border-dashed" : "opacity-45 scale-95 cursor-default border-dashed text-slate-500")
                     : "cursor-grab active:cursor-grabbing hover:scale-105 active:scale-95 shadow-sm"
             }`}
             style={{
-                backgroundColor: placed ? "transparent" : frac.color + "18",
-                borderColor: placed ? "rgba(255,255,255,0.1)" : checking ? undefined : frac.color + "55",
+                backgroundColor: placed ? (isDark ? "transparent" : "#f1f5f9") : frac.color + (isDark ? "18" : "25"),
+                borderColor: placed ? (isDark ? "rgba(255,255,255,0.3)" : "#64748b") : checking ? undefined : frac.color + (isDark ? "55" : "99"),
+                borderStyle: placed ? "dashed" : "solid",
+                borderWidth: 2,
                 minWidth: 70,
                 touchAction: "none",
             }}
         >
             {frac.type === "mixed" && parts.length === 2 ? (
                 <div className="flex items-baseline gap-1">
-                    <span className="text-white font-black text-sm lg:text-base font-mono">{parts[0]}</span>
+                    <span className={`font-black text-sm lg:text-base font-mono ${isDark ? "text-white" : "text-slate-900"}`}>{parts[0]}</span>
                     <div className="flex flex-col items-center">
-                        <span className="text-white font-bold text-xs lg:text-sm leading-none font-mono">{Math.abs(frac.num)}</span>
-                        <div className="w-full h-px bg-white/70 my-0.5" />
-                        <span className="text-white font-bold text-xs lg:text-sm leading-none font-mono">{frac.den}</span>
+                        <span className={`font-bold text-xs lg:text-sm leading-none font-mono ${isDark ? "text-white" : "text-slate-900"}`}>{Math.abs(frac.num)}</span>
+                        <div className="w-full h-px my-0.5" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.7)" : "#334155" }} />
+                        <span className={`font-bold text-xs lg:text-sm leading-none font-mono ${isDark ? "text-white" : "text-slate-900"}`}>{frac.den}</span>
                     </div>
                 </div>
             ) : (
                 <div className="flex items-center gap-0.5">
                     {frac.num < 0 && (
-                        <span className="text-rose-300 font-black text-sm lg:text-base leading-none mr-0.5">−</span>
+                        <span className={`font-black text-sm lg:text-base leading-none mr-0.5 ${isDark ? "text-rose-300" : "text-rose-600"}`}>−</span>
                     )}
                     <div className="flex flex-col items-center">
-                        <span className="text-white font-bold text-xs lg:text-sm leading-none font-mono">{displayNum}</span>
-                        <div className="w-full h-px bg-white/70 my-0.5" />
-                        <span className="text-white font-bold text-xs lg:text-sm leading-none font-mono">{frac.den}</span>
+                        <span className={`font-bold text-xs lg:text-sm leading-none font-mono ${isDark ? "text-white" : "text-slate-900"}`}>{displayNum}</span>
+                        <div className="w-full h-px my-0.5" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.7)" : "#334155" }} />
+                        <span className={`font-bold text-xs lg:text-sm leading-none font-mono ${isDark ? "text-white" : "text-slate-900"}`}>{frac.den}</span>
                     </div>
                 </div>
             )}
@@ -244,6 +248,7 @@ const FractionCard: React.FC<{
 
 export default function RectaNumericaFraccionesView() {
     const navigate = useNavigate();
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const lineRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [lineWidth, setLineWidth] = useState(0);
@@ -465,11 +470,13 @@ export default function RectaNumericaFraccionesView() {
             style={{ fontFamily: "'Nunito', sans-serif", touchAction: "none" }}
         >
             {/* 1. Header (34-44px) */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/20 px-2 lg:px-4 bg-[#0a0f1d]">
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg active:scale-95 transition-all shrink-0 border ${
+                            isDark ? "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                        }`}
                         title="Volver"
                     >
                         <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -482,12 +489,16 @@ export default function RectaNumericaFraccionesView() {
                 </div>
 
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/70">
+                    <span className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                        isDark ? "bg-white/5 border-white/20 text-white/70" : "bg-slate-100 border-slate-300 text-slate-700"
+                    }`}>
                         {placed.size}/4 ubicadas
                     </span>
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg active:scale-95 transition-all border font-bold text-xs ${
+                            isDark ? "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                        }`}
                         title="Ayuda didáctica"
                     >
                         ?
@@ -496,7 +507,9 @@ export default function RectaNumericaFraccionesView() {
             </header>
 
             {/* 2. Bandeja Superior de Fracciones (Dock de tarjetas arrastrables) */}
-            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0d1424] px-2 sm:px-4 py-1.5 lg:py-2">
+            <div className={`shrink-0 flex items-center justify-between gap-2 border-b px-2 sm:px-4 py-1.5 lg:py-2 ${
+                isDark ? "bg-[#0d1424] border-white/20" : "bg-white border-slate-300 shadow-xs"
+            }`}>
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 flex-1 justify-center sm:justify-start">
                     {fractions.map((f) => (
                         <FractionCard
@@ -515,8 +528,8 @@ export default function RectaNumericaFraccionesView() {
                     disabled={!canRandomize}
                     className={`h-8 px-2.5 lg:h-9 lg:px-3 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                         canRandomize
-                            ? "border-sky-400/40 bg-sky-500/15 text-sky-200 hover:bg-sky-500/25 active:scale-95 cursor-pointer shadow-xs"
-                            : "border-white/5 bg-white/5 text-white/20 cursor-not-allowed"
+                            ? (isDark ? "border-sky-400/40 bg-sky-500/15 text-sky-200 hover:bg-sky-500/25 active:scale-95 cursor-pointer shadow-xs" : "border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100 active:scale-95 cursor-pointer shadow-xs font-bold")
+                            : (isDark ? "border-white/5 bg-white/5 text-white/20 cursor-not-allowed" : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed")
                     }`}
                     title={canRandomize ? "Generar nuevo conjunto de fracciones" : "Reinicia para generar nuevas fracciones"}
                 >
@@ -529,7 +542,9 @@ export default function RectaNumericaFraccionesView() {
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 sm:px-8 lg:px-12 relative w-full overflow-hidden">
                 {/* Micro-guía superior */}
                 <div className="absolute top-2 left-0 right-0 text-center pointer-events-none">
-                    <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                    <span className={`text-[10px] uppercase tracking-widest font-bold ${
+                        isDark ? "text-white/40" : "text-slate-600 font-extrabold"
+                    }`}>
                         Arrastra las tarjetas sobre la recta numérica
                     </span>
                 </div>
@@ -617,7 +632,7 @@ export default function RectaNumericaFraccionesView() {
                                 <div
                                     key={`t-${n}`}
                                     className={`absolute rounded-full -translate-x-1/2 ${
-                                        isZero ? "bg-cyan-300 w-1 h-7 z-10 shadow-xs shadow-cyan-300/50" : "bg-white/80 w-[3px] h-6"
+                                        isZero ? (isDark ? "bg-cyan-300 w-1.5 h-7 z-10 shadow-xs shadow-cyan-300/50" : "bg-cyan-600 w-1.5 h-7 z-10") : (isDark ? "bg-white/80 w-[3px] h-6" : "bg-slate-700 w-[3px] h-6")
                                     }`}
                                     style={{ left: x }}
                                 />
@@ -636,7 +651,7 @@ export default function RectaNumericaFraccionesView() {
                                     ticks.push(
                                         <div
                                             key={`sub-${base}-${d}`}
-                                            className="absolute w-[2px] h-3.5 bg-amber-400 rounded-full -translate-x-1/2 opacity-85"
+                                            className={`absolute w-[2px] h-3.5 rounded-full -translate-x-1/2 ${isDark ? "bg-amber-400 opacity-85" : "bg-amber-600 font-bold"}`}
                                             style={{ left: x }}
                                         />
                                     );
@@ -648,7 +663,9 @@ export default function RectaNumericaFraccionesView() {
 
                     {/* Línea horizontal principal */}
                     <div className="absolute w-full pointer-events-none" style={{ top: 82, height: 6 }}>
-                        <div className="w-full h-1.5 bg-linear-to-r from-rose-500/40 via-cyan-400/80 to-blue-500/40 rounded-full shadow-sm" />
+                        <div className={`w-full h-1.5 rounded-full shadow-sm ${
+                            isDark ? "bg-linear-to-r from-rose-500/40 via-cyan-400/80 to-blue-500/40" : "bg-linear-to-r from-rose-600 via-cyan-600 to-blue-600"
+                        }`} />
                     </div>
 
                     {/* Etiquetas numéricas de enteros */}
@@ -660,7 +677,7 @@ export default function RectaNumericaFraccionesView() {
                                 <span
                                     key={n}
                                     className={`absolute font-mono font-black -translate-x-1/2 text-sm lg:text-base ${
-                                        isZero ? "text-cyan-300 font-extrabold scale-110" : n < 0 ? "text-rose-300/80" : "text-blue-300/80"
+                                        isZero ? (isDark ? "text-cyan-300 font-extrabold scale-110" : "text-cyan-700 font-extrabold scale-110") : n < 0 ? (isDark ? "text-rose-300/80" : "text-rose-700 font-bold") : (isDark ? "text-blue-300/80" : "text-blue-700 font-bold")
                                     }`}
                                     style={{ left: x }}
                                 >
@@ -673,34 +690,48 @@ export default function RectaNumericaFraccionesView() {
             </div>
 
             {/* 4. Barra Inferior de Acción y Feedback (40-48px) */}
-            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+            <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 ${
+                isDark ? "border-white/20 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"
+            }`}>
                 {/* Control de subdivisiones */}
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <span className="text-[10px] lg:text-[11px] font-bold text-white/50 hidden xs:inline">
+                    <span className={`text-[10px] lg:text-[11px] font-bold hidden xs:inline ${
+                        isDark ? "text-white/50" : "text-slate-600"
+                    }`}>
                         Subdivisiones:
                     </span>
-                    <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+                    <div className={`flex items-center gap-1 border rounded-lg p-0.5 ${
+                        isDark ? "bg-white/5 border-white/20" : "bg-slate-100 border-slate-300"
+                    }`}>
                         <button
                             onClick={() => setDivisions((d) => Math.max(MIN_DIVISIONS, d - 1))}
                             disabled={divisions <= MIN_DIVISIONS}
-                            className="w-6 h-6 lg:w-7 lg:h-7 rounded bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-20 text-xs font-black flex items-center justify-center transition-all"
+                            className={`w-6 h-6 lg:w-7 lg:h-7 rounded active:scale-95 disabled:opacity-20 text-xs font-black flex items-center justify-center transition-all border ${
+                                isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                            }`}
                             title="Disminuir divisiones"
                         >
                             −
                         </button>
-                        <span className="w-5 text-center font-mono font-bold text-xs lg:text-sm text-amber-300">
+                        <span className={`w-5 text-center font-mono font-black text-xs lg:text-sm ${
+                            isDark ? "text-amber-300" : "text-amber-700"
+                        }`}>
                             {divisions}
                         </span>
                         <button
                             onClick={() => setDivisions((d) => Math.min(MAX_DIVISIONS, d + 1))}
                             disabled={divisions >= MAX_DIVISIONS}
-                            className="w-6 h-6 lg:w-7 lg:h-7 rounded bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-20 text-xs font-black flex items-center justify-center transition-all"
+                            className={`w-6 h-6 lg:w-7 lg:h-7 rounded active:scale-95 disabled:opacity-20 text-xs font-black flex items-center justify-center transition-all border ${
+                                isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                            }`}
                             title="Aumentar divisiones"
                         >
                             +
                         </button>
                     </div>
-                    <span className="text-[10px] text-amber-300/70 font-mono hidden md:inline">
+                    <span className={`text-[10px] font-mono hidden md:inline ${
+                        isDark ? "text-amber-300/70" : "text-amber-800 font-bold"
+                    }`}>
                         (1/{divisions})
                     </span>
                 </div>
@@ -718,7 +749,9 @@ export default function RectaNumericaFraccionesView() {
                         </p>
                     )}
                     {!celebration && !errorMsg && (
-                        <p className="text-[10px] lg:text-[11px] text-white/50 truncate">
+                        <p className={`text-[10px] lg:text-[11px] truncate ${
+                            isDark ? "text-white/60" : "text-slate-700 font-semibold"
+                        }`}>
                             {allPlaced
                                 ? "¡Todas las fracciones están ubicadas! Presiona Comprobar."
                                 : `Ubica las ${4 - placed.size} fracciones restantes arrastrándolas.`}
@@ -730,7 +763,9 @@ export default function RectaNumericaFraccionesView() {
                 <div className="flex items-center gap-1.5 shrink-0">
                     <button
                         onClick={handleReset}
-                        className="h-7 px-2.5 lg:h-8 lg:px-3 text-[11px] lg:text-xs font-bold rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 active:scale-95 transition-all"
+                        className={`h-7 px-2.5 lg:h-8 lg:px-3 text-[11px] lg:text-xs font-bold rounded-lg border active:scale-95 transition-all ${
+                            isDark ? "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20" : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs"
+                        }`}
                     >
                         Reiniciar
                     </button>
@@ -738,7 +773,7 @@ export default function RectaNumericaFraccionesView() {
                     {celebration ? (
                         <button
                             onClick={handleNewSet}
-                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 active:scale-95 shadow-sm shadow-emerald-500/20 transition-all cursor-pointer"
+                            className="h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
                         >
                             Nuevo Reto 🎲
                         </button>
@@ -748,8 +783,8 @@ export default function RectaNumericaFraccionesView() {
                             disabled={!allPlaced}
                             className={`h-7 px-3 lg:h-8 lg:px-4 text-[11px] lg:text-xs font-bold rounded-lg transition-all ${
                                 allPlaced
-                                    ? "bg-teal-500 hover:bg-teal-400 text-teal-950 active:scale-95 shadow-sm shadow-teal-500/20 cursor-pointer"
-                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                                    ? "bg-teal-600 hover:bg-teal-500 text-white active:scale-95 shadow-md shadow-teal-600/20 cursor-pointer"
+                                    : (isDark ? "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed" : "bg-slate-100 border border-slate-300 text-slate-400 cursor-not-allowed")
                             }`}
                         >
                             Comprobar

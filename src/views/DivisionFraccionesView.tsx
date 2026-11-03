@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalHelp from "../components/ModalHelp";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,78 +114,88 @@ function generateExercise(level: number): Exercise {
 
 // ─── Shared Sub-components ────────────────────────────────────────────────────
 
-function InlineFrac({ num, den, color }: { num: number; den: number; color: string }) {
+function InlineFrac({ num, den, color }: { num: number; den: number; color?: string }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    const defaultColor = isDark ? "#2dd4bf" : "#0f766e";
+    const c = color ?? defaultColor;
     return (
-        <div className="flex flex-col items-center min-w-[28px]" style={{ color }}>
-            <span className="font-bold text-lg leading-tight">{num}</span>
-            <div className="w-full h-px" style={{ backgroundColor: color }} />
-            <span className="font-bold text-lg leading-tight">{den}</span>
+        <div className="flex flex-col items-center min-w-[28px]" style={{ color: c }}>
+            <span className="font-bold text-lg leading-tight font-mono">{num}</span>
+            <div className="w-full h-px" style={{ backgroundColor: c }} />
+            <span className="font-bold text-lg leading-tight font-mono">{den}</span>
         </div>
     );
 }
 
-function FractionDisplay({ num, den, color }: { num: number; den: number; color: string }) {
+function FractionDisplay({ num, den, color }: { num: number; den: number; color?: string }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    const defaultColor = isDark ? "#2dd4bf" : "#0f766e";
+    const c = color ?? defaultColor;
     return (
-        <div className="flex flex-col items-center" style={{ color }}>
-            <span className="font-bold text-lg leading-tight">{num}</span>
-            <div className="w-full h-px" style={{ backgroundColor: color }} />
-            <span className="font-bold text-lg leading-tight">{den}</span>
+        <div className="flex flex-col items-center" style={{ color: c }}>
+            <span className="font-bold text-lg leading-tight font-mono">{num}</span>
+            <div className="w-full h-px" style={{ backgroundColor: c }} />
+            <span className="font-bold text-lg leading-tight font-mono">{den}</span>
         </div>
     );
 }
 
 function OpDisplay({ ex }: { ex: Exercise }) {
-    const teal = "#2dd4bf";
-    const amber = "#fbbf24";
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    const teal = isDark ? "#2dd4bf" : "#0f766e";
+    const amber = isDark ? "#fbbf24" : "#b45309";
+    const labelColor = isDark ? "text-white/50" : "text-slate-600 font-semibold";
+    const arrowColor = isDark ? "text-white/40" : "text-slate-400";
+    const signColor = isDark ? "text-white/60" : "text-slate-700 font-bold";
 
     if (ex.caseType === "int-int") {
         return (
-            <div className="flex items-center gap-2 text-2xl font-bold">
-                <span className="text-white/40 text-xs font-normal whitespace-nowrap">Cant. Barras</span>
-                <span className="text-white/30 text-sm">←</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl font-bold">
+                <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>Cant. Barras</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>←</span>
                 <span style={{ color: teal }}>{ex.n1}</span>
-                <span className="text-white/60">÷</span>
+                <span className={signColor}>÷</span>
                 <span style={{ color: amber }}>{ex.n2}</span>
-                <span className="text-white/30 text-sm">→</span>
-                <span className="text-white/40 text-xs font-normal whitespace-nowrap">Cant. Grupos</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>→</span>
+                <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>Cant. Grupos</span>
             </div>
         );
     }
     if (ex.caseType === "frac-int") {
         return (
-            <div className="flex items-center gap-2 text-2xl font-bold">
-                <span className="text-white/40 text-xs font-normal whitespace-nowrap">Cant. Barras</span>
-                <span className="text-white/30 text-sm">←</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl font-bold">
+                <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>Cant. Barras</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>←</span>
                 <FractionDisplay num={ex.n1} den={ex.d1} color={teal} />
-                <span className="text-white/60">÷</span>
+                <span className={signColor}>÷</span>
                 <span style={{ color: amber }}>{ex.n2}</span>
-                <span className="text-white/30 text-sm">→</span>
-                <span className="text-white/40 text-xs font-normal whitespace-nowrap">Cant. Grupos</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>→</span>
+                <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>Cant. Grupos</span>
             </div>
         );
     }
     if (ex.caseType === "int-frac") {
         return (
-            <div className="flex items-center gap-2 text-2xl font-bold">
-                <span className="text-white/40 text-xs font-normal">Cantidad</span>
-                <span className="text-white/30 text-sm">←</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl font-bold">
+                <span className={`text-[10px] sm:text-xs font-normal ${labelColor}`}>Cantidad</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>←</span>
                 <span style={{ color: teal }}>{ex.n1}</span>
-                <span className="text-white/60">÷</span>
+                <span className={signColor}>÷</span>
                 <FractionDisplay num={ex.n2} den={ex.d2} color={amber} />
-                <span className="text-white/30 text-sm">→</span>
-                <span className="text-white/40 text-xs font-normal whitespace-nowrap">¿Cuántas veces cabe?</span>
+                <span className={`text-xs sm:text-sm ${arrowColor}`}>→</span>
+                <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>¿Cuántas veces cabe?</span>
             </div>
         );
     }
     return (
-        <div className="flex items-center gap-2 text-2xl font-bold">
-            <span className="text-white/40 text-xs font-normal">Cantidad</span>
-            <span className="text-white/30 text-sm">←</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl font-bold">
+            <span className={`text-[10px] sm:text-xs font-normal ${labelColor}`}>Cantidad</span>
+            <span className={`text-xs sm:text-sm ${arrowColor}`}>←</span>
             <FractionDisplay num={ex.n1} den={ex.d1} color={teal} />
-            <span className="text-white/60">÷</span>
+            <span className={signColor}>÷</span>
             <FractionDisplay num={ex.n2} den={ex.d2} color={amber} />
-            <span className="text-white/30 text-sm">→</span>
-            <span className="text-white/40 text-xs font-normal whitespace-nowrap">¿Cuántas veces cabe?</span>
+            <span className={`text-xs sm:text-sm ${arrowColor}`}>→</span>
+            <span className={`text-[10px] sm:text-xs font-normal whitespace-nowrap ${labelColor}`}>¿Cuántas veces cabe?</span>
         </div>
     );
 }
@@ -214,6 +225,7 @@ function CaseIntInt({
     errorMessage: string;
     setErrorMessage: (msg: string) => void;
 }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const { n1, n2 } = ex;
     const totalPieces = n1 * groupCount;
 
@@ -301,20 +313,24 @@ function CaseIntInt({
     return (
         <div className="flex flex-col items-center gap-4 w-[95%] sm:w-[80%] mx-auto">
             <div className="flex items-center gap-3 flex-wrap justify-center">
-                <span className="text-white/70 text-sm font-semibold">¿En cuántos grupos repartes?</span>
+                <span className={`text-sm font-bold ${isDark ? "text-white/80" : "text-slate-800"}`}>¿En cuántos grupos repartes?</span>
                 <button
                     onClick={() => { setGroupCount(Math.max(1, groupCount - 1)); setDistributed(new Array(Math.max(1, groupCount - 1)).fill(0)); setErrorMessage(""); }}
-                    className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >−</button>
-                <span className="w-10 text-center font-mono font-bold text-2xl text-white">{groupCount}</span>
+                <span className={`w-8 sm:w-10 text-center font-mono font-black text-2xl ${isDark ? "text-white" : "text-slate-900"}`}>{groupCount}</span>
                 <button
                     onClick={() => { setGroupCount(Math.min(12, groupCount + 1)); setDistributed(new Array(Math.min(12, groupCount + 1)).fill(0)); setErrorMessage(""); }}
-                    className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >+</button>
             </div>
 
             <div className="flex flex-col gap-3 w-full">
-                <div className="text-white/50 text-xs text-center mb-1">
+                <div className={`text-xs text-center mb-1 font-semibold ${isDark ? "text-white/60" : "text-slate-600"}`}>
                     {groupCount === 1
                         ? `${n1} barra${n1 > 1 ? "s" : ""} entera${n1 > 1 ? "s" : ""}`
                         : `${n1} barra${n1 > 1 ? "s" : ""} cortada${n1 > 1 ? "s" : ""} en ${groupCount} → ${totalPieces} porcion${totalPieces > 1 ? "es" : ""} en total`
@@ -323,7 +339,9 @@ function CaseIntInt({
                 {Array.from({ length: n1 }, (_, barIdx) => (
                     <div
                         key={barIdx}
-                        className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/40 shadow-lg shadow-teal-500/10"
+                        className={`flex w-full rounded-xl overflow-hidden border-2 shadow-lg ${
+                            isDark ? "border-teal-400 bg-slate-900/80 shadow-teal-500/10" : "border-teal-600 bg-slate-100 shadow-xs"
+                        }`}
                         style={{ minHeight: 36 }}
                     >
                         {groupCount === 1 ? (
@@ -345,15 +363,17 @@ function CaseIntInt({
                                         ref={(el) => {
                                             if (el) barRefs.current.set(`${barIdx}-${pieceIdx}`, el);
                                         }}
-                                        className="flex-1 border-r-2 last:border-r-0 border-black transition-all duration-300"
+                                        className={`flex-1 border-r-2 last:border-r-0 transition-all duration-300 ${
+                                            isDark ? "border-teal-400" : "border-teal-600"
+                                        }`}
                                         style={{
                                             minHeight: 36,
                                             backgroundColor: isFlying
                                                 ? "rgba(52,211,153,0.3)"
                                                 : isGiven
-                                                    ? "transparent"
-                                                    : "rgba(45,212,191,0.85)",
-                                            opacity: isFlying ? 0.4 : isGiven ? 0.15 : 1,
+                                                    ? isDark ? "rgba(15,23,42,0.6)" : "rgba(226,232,240,0.7)"
+                                                    : isDark ? "rgba(13,148,136,0.85)" : "rgba(45,212,191,0.85)",
+                                            opacity: isFlying ? 0.4 : 1,
                                             transform: isFlying ? "scale(0.85)" : "scale(1)",
                                         }}
                                     />
@@ -378,11 +398,11 @@ function CaseIntInt({
                                 className={[
                                     "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all duration-300 active:scale-90",
                                     hasContent
-                                        ? "border-emerald-400/60 bg-emerald-500/20 shadow-md shadow-emerald-500/10"
-                                        : "border-white/20 bg-white/5 hover:bg-white/10",
+                                        ? "border-emerald-500 bg-emerald-500/20 shadow-md shadow-emerald-500/10"
+                                        : (isDark ? "border-white/20 bg-white/5 hover:bg-white/10" : "border-slate-300 bg-slate-50 hover:bg-slate-100 shadow-xs"),
                                 ].join(" ")}
                             >
-                                <span className="text-white/40 text-xs">Grupo {g + 1}</span>
+                                <span className={`text-xs font-bold ${isDark ? "text-white/60" : "text-slate-700"}`}>Grupo {g + 1}</span>
                                 <div className="flex flex-wrap gap-0.5 justify-center min-h-[20px]">
                                     {Array.from({ length: distributed[g] }, (_, i) => (
                                         <div
@@ -392,7 +412,7 @@ function CaseIntInt({
                                         />
                                     ))}
                                 </div>
-                                <span className="text-white/30 text-xs">{distributed[g]} porcion{distributed[g] !== 1 ? "es" : ""}</span>
+                                <span className={`text-xs ${isDark ? "text-white/40" : "text-slate-500 font-medium"}`}>{distributed[g]} porcion{distributed[g] !== 1 ? "es" : ""}</span>
                             </button>
                         );
                     })}
@@ -429,16 +449,18 @@ function CaseIntInt({
             {allDistributed && !confirmed && groupCount > 1 && (
                 <button
                     onClick={handleConfirm}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-600/30"
                 >
                     Comprobar resultado
                 </button>
             )}
 
             {confirmed && (
-                <div className="flex flex-col items-center gap-2 bg-white/5 rounded-2xl border border-white/10 p-4">
-                    <span className="text-white/70 text-sm">Cada grupo recibe:</span>
-                    <FractionDisplay num={ex.resultNum} den={ex.resultDen} color="#34d399" />
+                <div className={`flex flex-col items-center gap-2 rounded-2xl border p-4 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-50 border-slate-300 shadow-xs"
+                }`}>
+                    <span className={`text-sm font-semibold ${isDark ? "text-white/70" : "text-slate-700"}`}>Cada grupo recibe:</span>
+                    <FractionDisplay num={ex.resultNum} den={ex.resultDen} color={isDark ? "#34d399" : "#047857"} />
                 </div>
             )}
         </div>
@@ -464,6 +486,7 @@ function CaseFracInt({
     errorMessage: string;
     setErrorMessage: (msg: string) => void;
 }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const { n1, d1, n2 } = ex;
     const totalParts = d1 * subdivisions;
     const coloredParts = n1 * subdivisions;
@@ -545,56 +568,73 @@ function CaseFracInt({
     return (
         <div className="flex flex-col items-center gap-4 w-[95%] sm:w-[80%] mx-auto">
             <div className="flex items-center gap-4 flex-wrap justify-center">
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-white/70 text-xs">Grupos</span>
+                <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-100 border-slate-300"
+                }`}>
+                    <span className={`text-xs font-bold ${isDark ? "text-white/70" : "text-slate-700"}`}>Grupos</span>
                     <button
                         onClick={() => { setGroupCount(Math.max(1, groupCount - 1)); setDistributed(new Array(Math.max(1, groupCount - 1)).fill(0)); setErrorMessage(""); }}
-                        className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                        className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                            isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                        }`}
                     >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">{groupCount}</span>
+                    <span className={`w-6 text-center font-mono font-black ${isDark ? "text-white" : "text-slate-900"}`}>{groupCount}</span>
                     <button
                         onClick={() => { setGroupCount(Math.min(12, groupCount + 1)); setDistributed(new Array(Math.min(12, groupCount + 1)).fill(0)); setErrorMessage(""); }}
-                        className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                        className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                            isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                        }`}
                     >+</button>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                    <span className="text-white/70 text-xs">Subdividir</span>
+                <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-100 border-slate-300"
+                }`}>
+                    <span className={`text-xs font-bold ${isDark ? "text-white/70" : "text-slate-700"}`}>Subdividir</span>
                     <button
                         onClick={() => { setSubdivisions(Math.max(1, subdivisions - 1)); setDistributed(new Array(groupCount).fill(0)); setErrorMessage(""); }}
-                        className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                        className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                            isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                        }`}
                     >−</button>
-                    <span className="w-6 text-center font-mono font-bold text-white">×{subdivisions}</span>
+                    <span className={`w-6 text-center font-mono font-black ${isDark ? "text-white" : "text-slate-900"}`}>×{subdivisions}</span>
                     <button
                         onClick={() => { setSubdivisions(Math.min(6, subdivisions + 1)); setDistributed(new Array(groupCount).fill(0)); setErrorMessage(""); }}
-                        className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                        className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                            isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                        }`}
                     >+</button>
                 </div>
             </div>
 
-            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 36 }}>
+            <div className={`flex w-full rounded-xl overflow-hidden border-2 shadow-lg ${
+                isDark ? "border-teal-400 bg-slate-900/80 shadow-teal-500/10" : "border-teal-600 bg-slate-100 shadow-xs"
+            }`} style={{ minHeight: 36 }}>
                 {Array.from({ length: totalParts }, (_, i) => {
                     const isColored = i < coloredParts;
                     const isGiven = isColored && i < totalDistributed;
                     const isFlying = flyings.some((f) => f.pieceIdx === i);
+                    const dividerBorder = isDark
+                        ? "border-teal-400"
+                        : (isColored ? "border-teal-600" : "border-slate-400");
+                    const bgColor = isFlying
+                        ? "rgba(45,212,191,0.3)"
+                        : isGiven
+                            ? (isDark ? "rgba(15,23,42,0.6)" : "rgba(226,232,240,0.7)")
+                            : isColored
+                                ? (isDark ? "rgba(13,148,136,0.85)" : "rgba(45,212,191,0.85)")
+                                : (isDark ? "rgba(30,41,59,0.75)" : "rgba(226,232,240,0.9)");
+
                     return (
                         <div
                             key={i}
                             ref={(el) => {
                                 if (el && isColored) barRefs.current.set(i, el);
                             }}
-                            className={[
-                                "flex-1 border-r-2 last:border-r-0 border-black transition-all duration-300",
-                            ].join(" ")}
+                            className={`flex-1 border-r-2 last:border-r-0 transition-all duration-300 ${dividerBorder}`}
                             style={{
                                 minHeight: 36,
-                                backgroundColor: isFlying
-                                    ? "rgba(45,212,191,0.3)"
-                                    : isGiven
-                                        ? "rgba(45,212,191,0.1)"
-                                        : isColored
-                                            ? "rgba(45,212,191,0.85)"
-                                            : "rgba(45,212,191,0.08)",
-                                opacity: isFlying ? 0.4 : isGiven ? 0.2 : isColored ? 1 : 0.3,
+                                backgroundColor: bgColor,
+                                opacity: isFlying ? 0.4 : 1,
                                 transform: isFlying ? "scale(0.85)" : "scale(1)",
                             }}
                         />
@@ -616,11 +656,11 @@ function CaseFracInt({
                                 className={[
                                     "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all duration-300 active:scale-90",
                                     hasContent
-                                        ? "border-emerald-400/60 bg-emerald-500/20 shadow-md shadow-emerald-500/10"
-                                        : "border-white/20 bg-white/5 hover:bg-white/10",
+                                        ? "border-emerald-500 bg-emerald-500/20 shadow-md shadow-emerald-500/10"
+                                        : (isDark ? "border-white/20 bg-white/5 hover:bg-white/10" : "border-slate-300 bg-slate-50 hover:bg-slate-100 shadow-xs"),
                                 ].join(" ")}
                             >
-                                <span className="text-white/40 text-xs">Grupo {g + 1}</span>
+                                <span className={`text-xs font-bold ${isDark ? "text-white/60" : "text-slate-700"}`}>Grupo {g + 1}</span>
                                 <div className="flex flex-wrap gap-0.5 justify-center min-h-[20px]">
                                     {Array.from({ length: distributed[g] }, (_, i) => (
                                         <div
@@ -630,7 +670,7 @@ function CaseFracInt({
                                         />
                                     ))}
                                 </div>
-                                <span className="text-white/30 text-xs">{distributed[g]} de {totalParts}</span>
+                                <span className={`text-xs ${isDark ? "text-white/40" : "text-slate-500 font-medium"}`}>{distributed[g]} de {totalParts}</span>
                             </button>
                         );
                     })}
@@ -666,16 +706,18 @@ function CaseFracInt({
             {allDistributed && !confirmed && groupCount > 1 && (
                 <button
                     onClick={handleConfirm}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-600/30"
                 >
                     Comprobar resultado
                 </button>
             )}
 
             {confirmed && (
-                <div className="flex flex-col items-center gap-2 bg-white/5 rounded-2xl border border-white/10 p-4">
-                    <span className="text-white/70 text-sm">Cada grupo recibe:</span>
-                    <FractionDisplay num={ex.resultNum} den={ex.resultDen} color="#34d399" />
+                <div className={`flex flex-col items-center gap-2 rounded-2xl border p-4 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-50 border-slate-300 shadow-xs"
+                }`}>
+                    <span className={`text-sm font-semibold ${isDark ? "text-white/70" : "text-slate-700"}`}>Cada grupo recibe:</span>
+                    <FractionDisplay num={ex.resultNum} den={ex.resultDen} color={isDark ? "#34d399" : "#047857"} />
                 </div>
             )}
         </div>
@@ -695,6 +737,7 @@ function CaseIntFrac({
     confirmed: boolean;
     setConfirmed: (b: boolean) => void;
 }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const { n1, n2, d2 } = ex;
     const exactCount = Math.floor((n1 * d2) / n2);
     const hasRemainder = (n1 * d2) % n2 !== 0;
@@ -748,20 +791,24 @@ function CaseIntFrac({
 
     return (
         <div className="flex flex-col items-center gap-4 w-[95%] sm:w-[80%] mx-auto">
-            <div className="text-white/60 text-sm text-center">
+            <div className={`text-sm text-center font-medium ${isDark ? "text-white/70" : "text-slate-700"}`}>
                 Arrastra la tarjeta de fracción sobre la recta para medir cuántas veces cabe
             </div>
 
             <div className="flex items-center gap-3 flex-wrap justify-center">
-                <span className="text-white/70 text-sm font-semibold">¿Cuántas veces contaste?</span>
+                <span className={`text-sm font-semibold ${isDark ? "text-white/70" : "text-slate-800"}`}>¿Cuántas veces contaste?</span>
                 <button
                     onClick={() => setCount(Math.max(0, count - 1))}
-                    className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-10 h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 text-white hover:bg-white/20 border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >−</button>
-                <span className="w-10 text-center font-mono font-bold text-2xl text-white">{count}</span>
+                <span className={`w-10 text-center font-mono font-bold text-2xl ${isDark ? "text-white" : "text-slate-900"}`}>{count}</span>
                 <button
                     onClick={() => setCount(Math.min(20, count + 1))}
-                    className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-10 h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 text-white hover:bg-white/20 border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >+</button>
             </div>
 
@@ -770,21 +817,21 @@ function CaseIntFrac({
                 className="relative w-full select-none"
                 style={{ height: 80, touchAction: "none" }}
             >
-                <div className="absolute left-0 right-0" style={{ top: 40, height: 3, backgroundColor: "rgba(255,255,255,0.3)" }} />
+                <div className="absolute left-0 right-0" style={{ top: 40, height: 3, backgroundColor: isDark ? "rgba(255,255,255,0.4)" : "rgba(71,85,105,0.7)" }} />
 
                 {Array.from({ length: lineWidth + 1 }, (_, i) => {
                     const left = `${(i / lineWidth) * 100}%`;
                     return (
                         <React.Fragment key={`tick-${i}`}>
-                            <div className="absolute" style={{ left, top: 30, width: 2, height: 22, backgroundColor: "rgba(255,255,255,0.6)" }} />
-                            <div className="absolute text-xs font-bold text-white/60" style={{ left, top: 56, transform: "translateX(-50%)" }}>{i}</div>
+                            <div className="absolute" style={{ left, top: 30, width: 2, height: 22, backgroundColor: isDark ? "rgba(255,255,255,0.7)" : "rgba(51,65,85,0.9)" }} />
+                            <div className={`absolute text-xs font-bold ${isDark ? "text-white/70" : "text-slate-700"}`} style={{ left, top: 56, transform: "translateX(-50%)" }}>{i}</div>
                         </React.Fragment>
                     );
                 })}
 
                 <div className="absolute" style={{ left: `${(n1 / lineWidth) * 100}%`, top: 20, transform: "translateX(-50%)" }}>
                     <div className="w-0.5 h-6 bg-amber-400 mx-auto" />
-                    <div className="text-amber-400 text-xs font-bold text-center whitespace-nowrap">meta</div>
+                    <div className="text-amber-500 font-black text-xs text-center whitespace-nowrap">meta</div>
                 </div>
 
                 {Array.from({ length: placedCount }, (_, i) => {
@@ -796,14 +843,14 @@ function CaseIntFrac({
                     return (
                         <div
                             key={`seg-${i}`}
-                            className="absolute rounded-md"
+                            className="absolute rounded-md shadow-xs"
                             style={{
                                 left,
                                 top: 34,
                                 width: w,
                                 height: 14,
-                                backgroundColor: isLast ? "rgba(251,191,36,0.5)" : "rgba(52,211,153,0.5)",
-                                border: `2px solid ${isLast ? "rgba(251,191,36,0.8)" : "rgba(52,211,153,0.8)"}`,
+                                backgroundColor: isLast ? (isDark ? "rgba(251,191,36,0.6)" : "rgba(245,158,11,0.85)") : (isDark ? "rgba(52,211,153,0.6)" : "rgba(16,185,129,0.85)"),
+                                border: `2px solid ${isLast ? (isDark ? "rgba(251,191,36,0.9)" : "rgba(180,83,9,1)") : (isDark ? "rgba(52,211,153,0.9)" : "rgba(4,120,87,1)")}`,
                             }}
                         />
                     );
@@ -817,8 +864,8 @@ function CaseIntFrac({
                             top: 34,
                             width: `${(segmentWidth / lineWidth) * 100}%`,
                             height: 14,
-                            border: "2px dashed rgba(52,211,153,0.6)",
-                            backgroundColor: "rgba(52,211,153,0.1)",
+                            border: `2px dashed ${isDark ? "rgba(52,211,153,0.8)" : "rgba(5,150,105,0.9)"}`,
+                            backgroundColor: isDark ? "rgba(52,211,153,0.2)" : "rgba(16,185,129,0.2)",
                         }}
                     />
                 )}
@@ -831,7 +878,7 @@ function CaseIntFrac({
                 className={[
                     "px-5 py-3 rounded-xl font-bold text-sm transition-all active:scale-95",
                     allPlaced
-                        ? "bg-white/10 text-white/30 cursor-default"
+                        ? (isDark ? "bg-white/10 text-white/30 cursor-default" : "bg-slate-200 text-slate-400 cursor-default")
                         : "bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-lg shadow-emerald-500/30 cursor-grab",
                 ].join(" ")}
                 style={{ touchAction: "none" }}
@@ -839,29 +886,31 @@ function CaseIntFrac({
                 Colocar <InlineFrac num={n2} den={d2} color={allPlaced ? "rgba(255,255,255,0.3)" : "#fff"} />
             </button>
 
-            <div className="text-white/40 text-xs text-center">
-                Veces colocadas: <span className="text-emerald-400 font-bold">{placedCount}</span>
+            <div className={`text-xs text-center ${isDark ? "text-white/50" : "text-slate-600 font-semibold"}`}>
+                Veces colocadas: <span className="text-emerald-500 font-bold">{placedCount}</span>
             </div>
 
             {allPlaced && !confirmed && (
                 <button
                     onClick={() => setConfirmed(true)}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-600/30"
                 >
                     Comprobar: {count} veces
                 </button>
             )}
 
             {confirmed && (
-                <div className="flex items-center justify-center gap-3 flex-wrap bg-white/5 rounded-2xl border border-white/10 p-4">
-                    <span className="font-bold text-2xl" style={{ color: "#2dd4bf" }}>{n1}</span>
-                    <span className="text-white/60 text-2xl">÷</span>
-                    <InlineFrac num={n2} den={d2} color="#fbbf24" />
-                    <span className="text-white/60 text-2xl">=</span>
+                <div className={`flex items-center justify-center gap-3 flex-wrap rounded-2xl border p-4 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-50 border-slate-300 shadow-xs"
+                }`}>
+                    <span className="font-bold text-2xl" style={{ color: isDark ? "#2dd4bf" : "#0f766e" }}>{n1}</span>
+                    <span className={`text-2xl ${isDark ? "text-white/60" : "text-slate-700 font-bold"}`}>÷</span>
+                    <InlineFrac num={n2} den={d2} color={isDark ? "#fbbf24" : "#b45309"} />
+                    <span className={`text-2xl ${isDark ? "text-white/60" : "text-slate-700 font-bold"}`}>=</span>
                     {ex.resultDen > 1 ? (
-                        <InlineFrac num={ex.resultNum} den={ex.resultDen} color="#34d399" />
+                        <InlineFrac num={ex.resultNum} den={ex.resultDen} color={isDark ? "#34d399" : "#047857"} />
                     ) : (
-                        <span className="font-bold text-2xl" style={{ color: "#34d399" }}>{ex.resultNum}</span>
+                        <span className="font-bold text-2xl" style={{ color: isDark ? "#34d399" : "#047857" }}>{ex.resultNum}</span>
                     )}
                 </div>
             )}
@@ -885,6 +934,7 @@ function CaseFracFrac({
     confirmed: boolean;
     setConfirmed: (b: boolean) => void;
 }) {
+    const isDark = useThemeStore((s) => s.theme === "dark");
     const { n1, d1, n2, d2 } = ex;
     const commonD = lcm(d1, d2);
     const targetExpanded1 = n1 * (commonD / d1);
@@ -919,27 +969,35 @@ function CaseFracFrac({
 
     return (
         <div className="flex flex-col items-center gap-4 w-[95%] sm:w-[80%] mx-auto">
-            <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 px-3 py-2">
-                <span className="text-white/70 text-xs">Subdividir</span>
+            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                isDark ? "bg-white/5 border-white/20" : "bg-slate-100 border-slate-300"
+            }`}>
+                <span className={`text-xs font-bold ${isDark ? "text-white/70" : "text-slate-700"}`}>Subdividir</span>
                 <button
                     onClick={() => { setSubdivisions(Math.max(1, subdivisions - 1)); setPlacedCount(0); setCount(0); }}
-                    className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >−</button>
-                <span className="w-8 text-center font-mono font-bold text-white">{barDivisions}</span>
+                <span className={`w-8 text-center font-mono font-black ${isDark ? "text-white" : "text-slate-900"}`}>{barDivisions}</span>
                 <button
                     onClick={() => { setSubdivisions(Math.min(12, subdivisions + 1)); setPlacedCount(0); setCount(0); }}
-                    className="w-9 h-9 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                    className={`w-9 h-9 rounded-lg font-bold flex items-center justify-center active:scale-90 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-white hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                    }`}
                 >+</button>
-                <span className="text-white/40 text-xs">partes</span>
+                <span className={`text-xs font-medium ${isDark ? "text-white/50" : "text-slate-600"}`}>partes</span>
             </div>
 
-            <div className="flex w-full rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-lg shadow-teal-500/10" style={{ minHeight: 36 }}>
+            <div className={`flex w-full rounded-xl overflow-hidden border-2 shadow-lg ${
+                isDark ? "border-teal-400 bg-slate-900/80 shadow-teal-500/10" : "border-teal-600 bg-slate-100 shadow-xs"
+            }`} style={{ minHeight: 36 }}>
                 {Array.from({ length: barDivisions }, (_, i) => {
                     const isColored = i < coloredCells;
                     const isInPlacedRange = isColored && i < placedCount * divisorCells;
                     const isRemainder = hasRemainder && placedCount > maxPlacements && isColored && i >= maxPlacements * divisorCells && i < maxPlacements * divisorCells + remainderCells;
 
-                    let bg = "bg-teal-900/20";
+                    let bg = isDark ? "bg-slate-800/80" : "bg-slate-200/90";
                     let shadow = "";
                     if (isColored && isInPlacedRange && !isRemainder) {
                         bg = "bg-gradient-to-b from-violet-400 to-fuchsia-500";
@@ -948,26 +1006,32 @@ function CaseFracFrac({
                         bg = "bg-gradient-to-b from-amber-400 to-amber-500";
                         shadow = "shadow-[inset_0_0_8px_rgba(251,191,36,0.5)]";
                     } else if (isColored) {
-                        bg = "bg-gradient-to-b from-teal-400 to-teal-500";
+                        bg = isDark
+                            ? "bg-gradient-to-b from-teal-600 to-teal-700"
+                            : "bg-gradient-to-b from-teal-400 to-teal-500";
                     }
+
+                    const dividerBorder = isDark
+                        ? "border-teal-400"
+                        : (isColored ? "border-teal-600" : "border-slate-400");
 
                     return (
                         <div
                             key={i}
-                            className={`flex-1 border-r-2 last:border-r-0 border-black transition-all duration-500 ${bg} ${shadow}`}
+                            className={`flex-1 border-r-2 last:border-r-0 transition-all duration-500 ${dividerBorder} ${bg} ${shadow}`}
                             style={{ minHeight: 36 }}
                         />
                     );
                 })}
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
-                <span className="text-white/50">Coloreadas:</span>
-                <span className="text-teal-400 font-bold">{coloredCells}</span>
-                <span className="text-white/30">|</span>
-                <span className="text-white/50">Tarjeta:</span>
-                <span className="text-amber-400 font-bold">{divisorCells}</span>
-                <span className="text-white/30">celdas</span>
+            <div className="flex items-center gap-2 text-sm font-medium">
+                <span className={isDark ? "text-white/60" : "text-slate-600"}>Coloreadas:</span>
+                <span className={`${isDark ? "text-teal-400" : "text-teal-700"} font-bold`}>{coloredCells}</span>
+                <span className={isDark ? "text-white/30" : "text-slate-400"}>|</span>
+                <span className={isDark ? "text-white/60" : "text-slate-600"}>Tarjeta:</span>
+                <span className={`${isDark ? "text-amber-400" : "text-amber-700"} font-bold`}>{divisorCells}</span>
+                <span className={isDark ? "text-white/30" : "text-slate-400"}>celdas</span>
             </div>
 
             {isAtCommon && !allPlaced && (
@@ -980,13 +1044,13 @@ function CaseFracFrac({
             )}
 
             {!isAtCommon && (
-                <div className="text-amber-400/70 text-xs text-center">
+                <div className={`text-xs text-center font-medium ${isDark ? "text-amber-400/80" : "text-amber-700"}`}>
                     Necesitas subdividir a {commonD} partes para poder colocar la tarjeta
                 </div>
             )}
 
             {isAtCommon && (
-                <div className="text-white/40 text-xs text-center">
+                <div className={`text-xs text-center font-medium ${isDark ? "text-white/50" : "text-slate-600"}`}>
                     Veces colocada: <span className="text-emerald-400 font-bold">{Math.min(placedCount, maxPlacements)}</span>
                     {hasRemainder && placedCount > maxPlacements && (
                         <span className="text-amber-400"> + resto</span>
@@ -997,20 +1061,24 @@ function CaseFracFrac({
             {allPlaced && !confirmed && (
                 <div className="flex flex-col items-center gap-3">
                     <div className="flex items-center gap-3">
-                        <span className="text-white/70 text-sm font-semibold">¿Cuántas veces cabe?</span>
+                        <span className={`text-sm font-semibold ${isDark ? "text-white/70" : "text-slate-800"}`}>¿Cuántas veces cabe?</span>
                         <button
                             onClick={() => setCount(Math.max(0, count - 1))}
-                            className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                                isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                            }`}
                         >−</button>
-                        <span className="w-10 text-center font-mono font-bold text-2xl text-white">{count}</span>
+                        <span className={`w-8 sm:w-10 text-center font-mono font-black text-2xl ${isDark ? "text-white" : "text-slate-900"}`}>{count}</span>
                         <button
                             onClick={() => setCount(Math.min(20, count + 1))}
-                            className="w-10 h-10 rounded-xl bg-white/10 text-white font-bold text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all"
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all border ${
+                                isDark ? "bg-white/10 hover:bg-white/20 text-white border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                            }`}
                         >+</button>
                     </div>
                     <button
                         onClick={() => setConfirmed(true)}
-                        className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-all shadow-lg shadow-emerald-600/30"
                     >
                         Comprobar
                     </button>
@@ -1018,11 +1086,13 @@ function CaseFracFrac({
             )}
 
             {confirmed && (
-                <div className="flex items-center justify-center gap-3 flex-wrap bg-white/5 rounded-2xl border border-white/10 p-4">
+                <div className={`flex items-center justify-center gap-3 flex-wrap rounded-2xl border p-4 ${
+                    isDark ? "bg-white/5 border-white/20" : "bg-slate-50 border-slate-300 shadow-xs"
+                }`}>
                     {ex.resultDen === 1 ? (
-                        <span className="font-bold text-2xl" style={{ color: "#34d399" }}>{ex.resultNum}</span>
+                        <span className="font-bold text-2xl" style={{ color: isDark ? "#34d399" : "#047857" }}>{ex.resultNum}</span>
                     ) : (
-                        <InlineFrac num={ex.resultNum} den={ex.resultDen} color="#34d399" />
+                        <InlineFrac num={ex.resultNum} den={ex.resultDen} color={isDark ? "#34d399" : "#047857"} />
                     )}
                 </div>
             )}
@@ -1033,23 +1103,27 @@ function CaseFracFrac({
 // ─── Math Writing ─────────────────────────────────────────────────────────────
 
 function MathWriting({ ex }: { ex: Exercise }) {
-    const teal = "#2dd4bf";
-    const amber = "#fbbf24";
-    const green = "#34d399";
+    const isDark = useThemeStore((s) => s.theme === "dark");
+    const teal = isDark ? "#2dd4bf" : "#0f766e";
+    const amber = isDark ? "#fbbf24" : "#b45309";
+    const green = isDark ? "#34d399" : "#047857";
+    const sym = isDark ? "text-white/60" : "text-slate-700 font-bold";
+    const txt = isDark ? "text-white/50" : "text-slate-600 font-medium";
+    const dim = isDark ? "text-white/40" : "text-slate-500 font-semibold";
 
     if (ex.caseType === "int-int") {
         return (
             <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                     <span className="font-bold text-2xl" style={{ color: teal }}>{ex.n1}</span>
-                    <span className="text-white/50 text-2xl">÷</span>
+                    <span className={`${sym} text-2xl`}>÷</span>
                     <span className="font-bold text-2xl" style={{ color: amber }}>{ex.n2}</span>
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${sym} text-2xl`}>=</span>
                     <span className="font-bold text-xl" style={{ color: teal }}>{ex.n1}</span>
-                    <span className="text-white/50 text-lg">cosa{ex.n1 > 1 ? "s" : ""} en</span>
+                    <span className={`${txt} text-lg`}>cosa{ex.n1 > 1 ? "s" : ""} en</span>
                     <span className="font-bold text-xl" style={{ color: amber }}>{ex.n2}</span>
-                    <span className="text-white/50 text-lg">grupos</span>
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${txt} text-lg`}>grupos</span>
+                    <span className={`${sym} text-2xl`}>=</span>
                     <InlineFrac num={ex.resultNum} den={ex.resultDen} color={green} />
                 </div>
             </div>
@@ -1061,16 +1135,16 @@ function MathWriting({ ex }: { ex: Exercise }) {
             <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                     <InlineFrac num={ex.n1} den={ex.d1} color={teal} />
-                    <span className="text-white/50 text-2xl">÷</span>
+                    <span className={`${sym} text-2xl`}>÷</span>
                     <span className="font-bold text-2xl" style={{ color: amber }}>{ex.n2}</span>
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${sym} text-2xl`}>=</span>
                     <InlineFrac num={ex.n1} den={ex.d1} color={teal} />
-                    <span className="text-white/50 text-lg">en</span>
+                    <span className={`${txt} text-lg`}>en</span>
                     <span className="font-bold text-xl" style={{ color: amber }}>{ex.n2}</span>
-                    <span className="text-white/50 text-lg">grupos</span>
-                    <span className="text-white/50 text-2xl">=</span>
-                    <InlineFrac num={ex.n1} den={newDen} color="rgba(255,255,255,0.5)" />
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${txt} text-lg`}>grupos</span>
+                    <span className={`${sym} text-2xl`}>=</span>
+                    <InlineFrac num={ex.n1} den={newDen} color={isDark ? "rgba(255,255,255,0.5)" : "#64748b"} />
+                    <span className={`${sym} text-2xl`}>=</span>
                     <InlineFrac num={ex.resultNum} den={ex.resultDen} color={green} />
                 </div>
             </div>
@@ -1081,16 +1155,16 @@ function MathWriting({ ex }: { ex: Exercise }) {
             <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                     <span className="font-bold text-2xl" style={{ color: teal }}>{ex.n1}</span>
-                    <span className="text-white/50 text-2xl">÷</span>
+                    <span className={`${sym} text-2xl`}>÷</span>
                     <InlineFrac num={ex.n2} den={ex.d2} color={amber} />
-                    <span className="text-white/50 text-lg">→ cabe</span>
+                    <span className={`${txt} text-lg`}>→ cabe</span>
                     <span className="font-bold text-2xl" style={{ color: green }}>{ex.resultNum}{ex.resultDen > 1 ? `/${ex.resultDen}` : ""}</span>
-                    <span className="text-white/50 text-lg">veces</span>
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${txt} text-lg`}>veces</span>
+                    <span className={`${sym} text-2xl`}>=</span>
                     <span className="font-bold text-xl" style={{ color: teal }}>{ex.n1}</span>
-                    <span className="text-white/50 text-2xl">×</span>
+                    <span className={`${sym} text-2xl`}>×</span>
                     <InlineFrac num={ex.d2} den={ex.n2} color={amber} />
-                    <span className="text-white/50 text-2xl">=</span>
+                    <span className={`${sym} text-2xl`}>=</span>
                     {ex.resultDen === 1 ? (
                         <span className="font-bold text-2xl" style={{ color: green }}>{ex.resultNum}</span>
                     ) : (
@@ -1108,26 +1182,26 @@ function MathWriting({ ex }: { ex: Exercise }) {
         <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-3 flex-wrap">
                 <InlineFrac num={ex.n1} den={ex.d1} color={teal} />
-                <span className="text-white/50 text-2xl">÷</span>
+                <span className={`${sym} text-2xl`}>÷</span>
                 <InlineFrac num={ex.n2} den={ex.d2} color={amber} />
-                <span className="text-white/50 text-2xl">=</span>
+                <span className={`${sym} text-2xl`}>=</span>
                 <InlineFrac num={expanded1} den={commonD} color={teal} />
-                <span className="text-white/50 text-2xl">÷</span>
+                <span className={`${sym} text-2xl`}>÷</span>
                 <InlineFrac num={expanded2} den={commonD} color={amber} />
-                <span className="text-white/50 text-lg">→ cabe</span>
+                <span className={`${txt} text-lg`}>→ cabe</span>
                 {ex.resultDen === 1 ? (
                     <span className="font-bold text-2xl" style={{ color: green }}>{ex.resultNum}</span>
                 ) : (
                     <InlineFrac num={ex.resultNum} den={ex.resultDen} color={green} />
                 )}
-                <span className="text-white/50 text-lg">veces</span>
+                <span className={`${txt} text-lg`}>veces</span>
             </div>
             <div className="flex items-center justify-center gap-3 flex-wrap text-sm">
-                <span className="text-white/40">Regla:</span>
+                <span className={dim}>Regla:</span>
                 <InlineFrac num={ex.n1} den={ex.d1} color={teal} />
-                <span className="text-white/50">×</span>
+                <span className={sym}>×</span>
                 <InlineFrac num={ex.d2} den={ex.n2} color={amber} />
-                <span className="text-white/50">=</span>
+                <span className={sym}>=</span>
                 {ex.resultDen === 1 ? (
                     <span className="font-bold text-lg" style={{ color: green }}>{ex.resultNum}</span>
                 ) : (
@@ -1159,6 +1233,7 @@ function levelLabel(level: number): string {
 
 export default function DivisionFraccionesView() {
     const navigate = useNavigate();
+    const isDark = useThemeStore((s) => s.theme === "dark");
 
     const [level, setLevel] = useState(1);
     const [exercise, setExercise] = useState<Exercise>(() => generateExercise(1));
@@ -1238,10 +1313,14 @@ export default function DivisionFraccionesView() {
     return (
         <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none">
             {/* 1. Header (34-44px) */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+            <header className={`flex h-9 lg:h-11 shrink-0 items-center justify-between border-b px-2 lg:px-4 ${
+                isDark ? "bg-[#0a0f1d] border-white/20" : "bg-white border-slate-300"
+            }`}>
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-white/80 active:scale-95 transition-all"
+                    className={`flex h-7 px-2 lg:h-8 lg:px-3 items-center gap-1 rounded-lg text-xs font-bold active:scale-95 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/15 text-white/80 border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                    }`}
                 >
                     ← <span className="hidden xs:inline">Volver</span>
                 </button>
@@ -1250,14 +1329,16 @@ export default function DivisionFraccionesView() {
                     <h1 className="text-[13px] lg:text-[15px] font-bold text-white truncate">
                         División de Fracciones
                     </h1>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/30 shrink-0">
                         Nivel {level}
                     </span>
                 </div>
 
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs lg:text-sm active:scale-95 transition-all"
+                    className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg font-bold text-xs lg:text-sm active:scale-95 transition-all border ${
+                        isDark ? "bg-white/10 hover:bg-white/15 text-white/80 border-white/20" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                    }`}
                     title="Ayuda"
                 >
                     ?
@@ -1265,7 +1346,9 @@ export default function DivisionFraccionesView() {
             </header>
 
             {/* 2. Barra de niveles y operación superior (34-40px) */}
-            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-white/5 bg-[#0d1424] px-2 lg:px-4 py-1 text-[11px] lg:text-xs">
+            <div className={`shrink-0 flex items-center justify-between gap-2 border-b px-2 lg:px-4 py-1 text-[11px] lg:text-xs ${
+                isDark ? "bg-[#0d1424] border-white/15" : "bg-slate-100/90 border-slate-300 shadow-xs"
+            }`}>
                 {/* Selector de nivel */}
                 <div className="flex items-center gap-1 shrink-0">
                     {Array.from({ length: 9 }, (_, i) => i + 1).map((l) => (
@@ -1273,10 +1356,10 @@ export default function DivisionFraccionesView() {
                             key={l}
                             onClick={() => handleLevelChange(l)}
                             className={[
-                                "w-6 h-6 lg:w-7 lg:h-7 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95",
+                                "w-6 h-6 lg:w-7 lg:h-7 rounded-md font-bold text-[11px] lg:text-xs transition-all active:scale-95 border",
                                 l === level
-                                    ? "bg-rose-600 text-white shadow-xs"
-                                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80",
+                                    ? "bg-rose-600 border-rose-500 text-white shadow-xs"
+                                    : (isDark ? "bg-white/5 border-white/15 text-white/60 hover:bg-white/10 hover:text-white" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-200 shadow-xs font-bold"),
                             ].join(" ")}
                         >
                             {l}
@@ -1285,19 +1368,25 @@ export default function DivisionFraccionesView() {
                 </div>
 
                 {/* Operación central */}
-                <div className="flex items-center px-2 py-0.5 rounded-lg bg-black/40 border border-white/10 shrink-0">
+                <div className={`flex items-center px-2 py-0.5 rounded-lg border shrink-0 ${
+                    isDark ? "bg-[#060a14] border-white/20" : "bg-white border-slate-300 shadow-xs"
+                }`}>
                     <OpDisplay ex={exercise} />
                 </div>
 
                 {/* Etiqueta del nivel */}
-                <div className="text-[11px] text-white/40 font-medium truncate hidden md:inline">
+                <div className={`text-[11px] font-medium truncate hidden md:inline ${
+                    isDark ? "text-white/50" : "text-slate-600 font-semibold"
+                }`}>
                     {levelLabel(level)}
                 </div>
             </div>
 
             {/* 3. Área de trabajo central (flex-1 min-h-0) */}
             <main className="flex-1 min-h-0 flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 overflow-hidden relative">
-                <div className="w-full max-w-2xl bg-[#0d1424]/90 border border-white/10 rounded-2xl p-2.5 sm:p-3 lg:p-4 shadow-xl flex flex-col justify-center gap-2 max-h-full overflow-y-auto">
+                <div className={`w-full max-w-2xl rounded-2xl p-2.5 sm:p-3 lg:p-4 flex flex-col justify-center gap-2 max-h-full overflow-y-auto border ${
+                    isDark ? "bg-[#0d1424] border-white/20 shadow-xl" : "bg-white border-slate-300 shadow-md"
+                }`}>
                     {exercise.caseType === "int-int" && (
                         <CaseIntInt
                             ex={exercise}
@@ -1354,15 +1443,19 @@ export default function DivisionFraccionesView() {
             </main>
 
             {/* 4. Barra inferior de acción y feedback (40-48px) */}
-            <footer className="h-10 lg:h-12 shrink-0 border-t border-white/10 px-2 sm:px-3 lg:px-4 bg-[#0a0f1d] flex items-center justify-between gap-2">
+            <footer className={`h-10 lg:h-12 shrink-0 border-t px-2 sm:px-3 lg:px-4 flex items-center justify-between gap-2 ${
+                isDark ? "border-white/20 bg-[#0a0f1d]" : "border-slate-300 bg-white shadow-xs"
+            }`}>
                 {/* Feedback a la izquierda */}
                 <div className="flex items-center gap-1.5 min-w-0">
                     {celebration ? (
-                        <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-emerald-400 truncate">
+                        <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-emerald-500 truncate">
                             🎉 ¡Excelente! Operación completada con éxito
                         </span>
                     ) : (
-                        <span className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-white/60 truncate">
+                        <span className={`text-[10px] sm:text-[11px] lg:text-xs font-semibold truncate ${
+                            isDark ? "text-white/60" : "text-slate-700"
+                        }`}>
                             {levelLabel(level)}
                         </span>
                     )}
@@ -1373,7 +1466,9 @@ export default function DivisionFraccionesView() {
                     {isComplete && (
                         <button
                             onClick={handleShowMath}
-                            className="h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-rose-300 border border-rose-500/30 transition-all active:scale-95"
+                            className={`h-7 px-2.5 lg:h-8 lg:px-4 rounded-lg text-[11px] lg:text-xs font-bold border transition-all active:scale-95 ${
+                                isDark ? "bg-white/10 hover:bg-white/15 text-rose-300 border-rose-500/30" : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300 shadow-xs font-bold"
+                            }`}
                         >
                             📐 Ver matemática
                         </button>
@@ -1386,7 +1481,9 @@ export default function DivisionFraccionesView() {
                     </button>
                     <button
                         onClick={() => handleLevelChange(level)}
-                        className="h-7 px-2.5 lg:h-8 lg:px-3.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] lg:text-xs font-bold text-white/70 transition-all active:scale-95"
+                        className={`h-7 px-2.5 lg:h-8 lg:px-3.5 rounded-lg text-[11px] lg:text-xs font-bold transition-all active:scale-95 border ${
+                            isDark ? "bg-white/10 hover:bg-white/15 text-white/80 border-white/20" : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs font-bold"
+                        }`}
                     >
                         🔄 Reiniciar
                     </button>

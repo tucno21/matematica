@@ -51,7 +51,666 @@
     100% { filter: brightness(1); }
 }
 
-/* Scrollbars globales delgadas y elegantes */
+/* ==========================================================================
+   SISTEMA GLOBAL DE TEMAS (MODO CLARO POR DEFECTO / MODO OSCURO)
+   Paleta oficial de alto contraste para tablets y computadoras
+   ========================================================================== */
+
+/* 1. Variables CSS para Modo Claro (Por Defecto) */
+:root,
+html[data-theme="light"],
+html:not(.dark) {
+    color-scheme: light;
+    /* Fondos y superficies */
+    --theme-bg-main: #f1f5f9;       /* Slate-100: Lienzo raíz contrastante */
+    --theme-bg-header: #ffffff;     /* Blanco puro */
+    --theme-bg-subbar: #e2e8f0;     /* Slate-200: Barra de niveles y controles */
+    --theme-bg-card: #ffffff;       /* Blanco puro elevado */
+    --theme-bg-card-alt: #f8fafc;   /* Slate-50 */
+    --theme-bg-slot: #e2e8f0;       /* Slate-200: Ranuras y casilleros */
+    --theme-bg-board: #f8fafc;      /* Slate-50: Tablero / Lienzo de juego */
+
+    /* Bordes con nitidez y definición */
+    --theme-border-subtle: #cbd5e1; /* Slate-300: Divisiones secundarias */
+    --theme-border: #94a3b8;        /* Slate-400: Bordes de tarjetas y botones */
+    --theme-border-strong: #64748b; /* Slate-500: Bordes activos y marcos */
+
+    /* Jerarquía de Texto */
+    --theme-text-main: #0f172a;     /* Slate-900: Texto primario con máximo contraste */
+    --theme-text-muted: #334155;    /* Slate-700: Subtítulos y etiquetas */
+    --theme-text-dim: #64748b;      /* Slate-500: Pistas y unidades */
+
+    /* Acentos Didácticos */
+    --theme-accent: #0f766e;        /* Teal-700 */
+    --theme-amber: #b45309;         /* Amber-700 */
+    --fig-filled: #0d9488;          /* Teal-600 */
+    --fig-empty: #e2e8f0;           /* Slate-200: Partes vacías claras */
+    --fig-stroke: #94a3b8;          /* Slate-400 */
+    --theme-scrollbar-thumb: rgba(15, 23, 42, 0.25);
+}
+
+/* 2. Variables CSS para Modo Oscuro (.dark) */
+html.dark,
+html[data-theme="dark"] {
+    color-scheme: dark;
+    /* Fondos y superficies */
+    --theme-bg-main: #080c18;       /* Azul noche profundo */
+    --theme-bg-header: #0a0f1d;     /* Azul marino oscuro */
+    --theme-bg-subbar: #0d1424;     /* Navy medio */
+    --theme-bg-card: #0a1020;       /* Card oscura */
+    --theme-bg-card-alt: #0c1529;
+    --theme-bg-slot: #060a14;       /* Hundido muy oscuro */
+    --theme-bg-board: #060a14;
+
+    /* Bordes luminosos sobre fondo oscuro */
+    --theme-border-subtle: rgba(255, 255, 255, 0.16);
+    --theme-border: rgba(255, 255, 255, 0.28);
+    --theme-border-strong: rgba(255, 255, 255, 0.45);
+
+    /* Jerarquía de Texto */
+    --theme-text-main: #ffffff;
+    --theme-text-muted: rgba(255, 255, 255, 0.75);
+    --theme-text-dim: rgba(255, 255, 255, 0.45);
+
+    /* Acentos Didácticos */
+    --theme-accent: #2dd4bf;        /* Teal-400 */
+    --theme-amber: #fbbf24;         /* Amber-400 */
+    --fig-filled: #2dd4bf;
+    --fig-empty: #1e293b;           /* Slate-800 */
+    --fig-stroke: #475569;
+    --theme-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   REGLAS DE MODO CLARO (Cuando html no tiene .dark)
+   Transformación global limpia con alta fidelidad y contraste garantizado
+   ────────────────────────────────────────────────────────────────────────── */
+html:not(.dark) {
+    /* 1. Fondo Raíz Principal */
+    .bg-\[\#080c18\],
+    .bg-\[\#070c18\],
+    .bg-\[\#07090f\],
+    .bg-\[\#090d1a\] {
+        background-color: var(--theme-bg-main) !important;
+    }
+    .bg-\[\#080c18\]\/90 {
+        background-color: rgba(241, 245, 249, 0.95) !important;
+    }
+
+    /* 2. Cabeceras y Barras de Navegación */
+    header.bg-\[\#0a0f1d\],
+    header.bg-\[\#0a1020\],
+    footer.bg-\[\#0a0f1d\],
+    .bg-\[\#09101f\]\/85,
+    .bg-\[\#09101f\]\/90 {
+        background-color: var(--theme-bg-header) !important;
+        border-color: var(--theme-border-subtle) !important;
+    }
+    .bg-\[\#0a0f1d\]\/90,
+    .bg-\[\#0a0f1d\]\/95 {
+        background-color: rgba(255, 255, 255, 0.98) !important;
+        border-color: var(--theme-border-subtle) !important;
+    }
+
+    /* 3. Barras de Control y Sub-barras superiores */
+    .bg-\[\#0d1424\],
+    .bg-\[\#0f172a\],
+    .bg-\[\#0f1629\],
+    .bg-\[\#0c1529\] {
+        background-color: var(--theme-bg-subbar) !important;
+        border-color: var(--theme-border-subtle) !important;
+    }
+
+    /* 4. Tarjetas Principales, Paneles y Modales */
+    div.bg-\[\#0a0f1d\],
+    div.bg-\[\#0a1020\],
+    div.bg-\[\#0d1424\]\/90,
+    div.bg-\[\#0c1529\]\/80,
+    div.bg-\[\#0c1529\]\/95,
+    div.bg-\[\#0b1120\]\/95,
+    div.bg-\[\#0b1220\]\/70,
+    div.bg-\[\#0b1326\]\/90,
+    div.bg-\[\#0b1329\]\/80,
+    div.bg-\[\#0a1b1e\]\/95 {
+        background-color: var(--theme-bg-card) !important;
+        border-color: var(--theme-border) !important;
+        box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    }
+
+    /* 5. Área de Tablero / Lienzo Central y Ranuras */
+    .bg-\[\#060a14\] {
+        background-color: var(--theme-bg-board) !important;
+        border-color: var(--theme-border) !important;
+    }
+
+    /* 6. Inputs y Editores */
+    .bg-slate-900,
+    .bg-slate-900\/60,
+    .bg-slate-900\/90 {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: var(--theme-border) !important;
+    }
+
+    /* 7. Jerarquía de Texto */
+    .text-white {
+        color: var(--theme-text-main) !important;
+    }
+    .text-white\/95,
+    .text-white\/90,
+    .text-white\/85,
+    .text-white\/80 {
+        color: var(--theme-text-main) !important;
+    }
+    .text-white\/75,
+    .text-white\/70,
+    .text-white\/65,
+    .text-white\/60,
+    .text-white\/55,
+    .text-white\/50 {
+        color: var(--theme-text-muted) !important;
+    }
+    .text-white\/45,
+    .text-white\/40,
+    .text-white\/35,
+    .text-white\/30 {
+        color: var(--theme-text-dim) !important;
+    }
+    .text-white\/25,
+    .text-white\/20,
+    .text-white\/15,
+    .text-white\/10 {
+        color: #94a3b8 !important;
+    }
+
+    /* 8. Botones con fondo saturado CONSERVAN texto blanco puro siempre */
+    .bg-violet-600, .bg-violet-500, .bg-violet-700,
+    .bg-indigo-600, .bg-indigo-500, .bg-indigo-700,
+    .bg-blue-600, .bg-blue-500, .bg-blue-700,
+    .bg-emerald-600, .bg-emerald-500, .bg-emerald-700,
+    .bg-green-600, .bg-green-500, .bg-green-700,
+    .bg-rose-600, .bg-rose-500, .bg-rose-700,
+    .bg-red-600, .bg-red-500, .bg-red-700,
+    .bg-amber-600, .bg-amber-500, .bg-amber-700,
+    .bg-sky-600, .bg-sky-500, .bg-sky-700,
+    .bg-teal-600, .bg-purple-600, .bg-purple-700,
+    [class*="from-violet-5"], [class*="from-violet-6"],
+    [class*="from-indigo-5"], [class*="from-indigo-6"],
+    [class*="from-blue-4"], [class*="from-blue-5"], [class*="from-blue-6"],
+    [class*="from-red-4"], [class*="from-red-5"], [class*="from-red-6"],
+    [class*="from-emerald-4"], [class*="from-emerald-5"], [class*="from-emerald-6"],
+    [class*="from-amber-4"], [class*="from-amber-5"], [class*="from-amber-6"] {
+        color: #ffffff !important;
+    }
+
+    :is(
+        .bg-violet-600, .bg-violet-500, .bg-violet-700,
+        .bg-indigo-600, .bg-indigo-500, .bg-indigo-700,
+        .bg-blue-600, .bg-blue-500, .bg-blue-700,
+        .bg-emerald-600, .bg-emerald-500, .bg-emerald-700,
+        .bg-green-600, .bg-green-500, .bg-green-700,
+        .bg-rose-600, .bg-rose-500, .bg-rose-700,
+        .bg-red-600, .bg-red-500, .bg-red-700,
+        .bg-amber-600, .bg-amber-500, .bg-amber-700,
+        .bg-sky-600, .bg-sky-500, .bg-sky-700,
+        .bg-teal-600, .bg-purple-600, .bg-purple-700,
+        [class*="from-violet-5"], [class*="from-violet-6"],
+        [class*="from-indigo-5"], [class*="from-indigo-6"],
+        [class*="from-blue-4"], [class*="from-blue-5"], [class*="from-blue-6"],
+        [class*="from-red-4"], [class*="from-red-5"], [class*="from-red-6"],
+        [class*="from-emerald-4"], [class*="from-emerald-5"], [class*="from-emerald-6"],
+        [class*="from-amber-4"], [class*="from-amber-5"], [class*="from-amber-6"]
+    ) :is(span, strong, p, svg, [class*="text-"], div) {
+        color: #ffffff !important;
+    }
+
+    /* 9. Acentos Matemáticos Didácticos (Tonos 700 para alto contraste) */
+    /* Sky */
+    [class*="text-sky-100"], [class*="text-sky-200"], [class*="text-sky-300"], [class*="text-sky-400"],
+    [class*="text-sky-100"] > *, [class*="text-sky-200"] > *, [class*="text-sky-300"] > *, [class*="text-sky-400"] > * {
+        color: #0369a1 !important;
+    }
+
+    /* Blue */
+    [class*="text-blue-100"], [class*="text-blue-200"], [class*="text-blue-300"], [class*="text-blue-400"],
+    [class*="text-blue-100"] > *, [class*="text-blue-200"] > *, [class*="text-blue-300"] > *, [class*="text-blue-400"] > * {
+        color: #1d4ed8 !important;
+    }
+
+    /* Rose */
+    [class*="text-rose-100"], [class*="text-rose-200"], [class*="text-rose-300"], [class*="text-rose-400"],
+    [class*="text-rose-100"] > *, [class*="text-rose-200"] > *, [class*="text-rose-300"] > *, [class*="text-rose-400"] > * {
+        color: #be123c !important;
+    }
+
+    /* Red */
+    [class*="text-red-100"], [class*="text-red-200"], [class*="text-red-300"], [class*="text-red-400"],
+    [class*="text-red-100"] > *, [class*="text-red-200"] > *, [class*="text-red-300"] > *, [class*="text-red-400"] > * {
+        color: #b91c1c !important;
+    }
+
+    /* Amber */
+    [class*="text-amber-100"], [class*="text-amber-200"], [class*="text-amber-300"], [class*="text-amber-400"],
+    [class*="text-amber-100"] > *, [class*="text-amber-200"] > *, [class*="text-amber-300"] > *, [class*="text-amber-400"] > * {
+        color: #b45309 !important;
+    }
+
+    /* Yellow */
+    [class*="text-yellow-100"], [class*="text-yellow-200"], [class*="text-yellow-300"], [class*="text-yellow-400"],
+    [class*="text-yellow-100"] > *, [class*="text-yellow-200"] > *, [class*="text-yellow-300"] > *, [class*="text-yellow-400"] > * {
+        color: #a16207 !important;
+    }
+
+    /* Teal */
+    [class*="text-teal-100"], [class*="text-teal-200"], [class*="text-teal-300"], [class*="text-teal-400"],
+    [class*="text-teal-100"] > *, [class*="text-teal-200"] > *, [class*="text-teal-300"] > *, [class*="text-teal-400"] > * {
+        color: #0f766e !important;
+    }
+
+    /* Emerald */
+    [class*="text-emerald-100"], [class*="text-emerald-200"], [class*="text-emerald-300"], [class*="text-emerald-400"],
+    [class*="text-emerald-100"] > *, [class*="text-emerald-200"] > *, [class*="text-emerald-300"] > *, [class*="text-emerald-400"] > * {
+        color: #047857 !important;
+    }
+
+    /* Green */
+    [class*="text-green-100"], [class*="text-green-200"], [class*="text-green-300"], [class*="text-green-400"],
+    [class*="text-green-100"] > *, [class*="text-green-200"] > *, [class*="text-green-300"] > *, [class*="text-green-400"] > * {
+        color: #15803d !important;
+    }
+
+    /* Violet */
+    [class*="text-violet-100"], [class*="text-violet-200"], [class*="text-violet-300"], [class*="text-violet-400"],
+    [class*="text-violet-100"] > *, [class*="text-violet-200"] > *, [class*="text-violet-300"] > *, [class*="text-violet-400"] > * {
+        color: #6d28d9 !important;
+    }
+
+    /* Purple */
+    [class*="text-purple-100"], [class*="text-purple-200"], [class*="text-purple-300"], [class*="text-purple-400"],
+    [class*="text-purple-100"] > *, [class*="text-purple-200"] > *, [class*="text-purple-300"] > *, [class*="text-purple-400"] > * {
+        color: #7e22ce !important;
+    }
+
+    /* Indigo */
+    [class*="text-indigo-100"], [class*="text-indigo-200"], [class*="text-indigo-300"], [class*="text-indigo-400"],
+    [class*="text-indigo-100"] > *, [class*="text-indigo-200"] > *, [class*="text-indigo-300"] > *, [class*="text-indigo-400"] > * {
+        color: #4338ca !important;
+    }
+
+    /* Cyan */
+    [class*="text-cyan-100"], [class*="text-cyan-200"], [class*="text-cyan-300"], [class*="text-cyan-400"],
+    [class*="text-cyan-100"] > *, [class*="text-cyan-200"] > *, [class*="text-cyan-300"] > *, [class*="text-cyan-400"] > * {
+        color: #0e7490 !important;
+    }
+
+    /* 10. Fondos 950 transformados a tintes claros y nítidos */
+    [class*="bg-sky-950"] { background-color: rgba(14, 165, 233, 0.12) !important; }
+    [class*="bg-blue-950"] { background-color: rgba(59, 130, 246, 0.12) !important; }
+    [class*="bg-rose-950"] { background-color: rgba(244, 63, 94, 0.12) !important; }
+    [class*="bg-red-950"] { background-color: rgba(239, 68, 68, 0.12) !important; }
+    [class*="bg-amber-950"] { background-color: rgba(245, 158, 11, 0.12) !important; }
+    [class*="bg-teal-950"] { background-color: rgba(20, 184, 166, 0.12) !important; }
+    [class*="bg-emerald-950"] { background-color: rgba(16, 185, 129, 0.12) !important; }
+    [class*="bg-violet-950"] { background-color: rgba(139, 92, 246, 0.12) !important; }
+    [class*="bg-purple-950"] { background-color: rgba(168, 85, 247, 0.12) !important; }
+    [class*="bg-indigo-950"] { background-color: rgba(99, 102, 241, 0.12) !important; }
+    [class*="bg-cyan-950"] { background-color: rgba(6, 182, 212, 0.12) !important; }
+
+    /* 11. BORDES DEFINIDOS Y VISIBLES (Slate-400 / Slate-500) */
+    .border-white\/10,
+    .border-white\/15,
+    .border-white\/20,
+    .border-white\/25,
+    .border-white {
+        border-color: var(--theme-border) !important;
+    }
+    .border-white\/5 {
+        border-color: var(--theme-border-subtle) !important;
+    }
+    .border-white\/30,
+    .border-white\/40,
+    .border-white\/50 {
+        border-color: var(--theme-border-strong) !important;
+    }
+
+    .border-\[\#080c18\],
+    .border-\[\#0a0f1d\] {
+        border-color: #ffffff !important;
+    }
+
+    [class*="border-gray-600"] {
+        border-color: var(--theme-border) !important;
+    }
+
+    .border-sky-400, .border-sky-300 { border-color: #0284c7 !important; }
+    .border-blue-400, .border-blue-300 { border-color: #2563eb !important; }
+    .border-rose-400, .border-rose-300 { border-color: #e11d48 !important; }
+    .border-red-400, .border-red-300 { border-color: #dc2626 !important; }
+    .border-amber-400, .border-amber-300 { border-color: #d97706 !important; }
+    .border-yellow-400, .border-yellow-300 { border-color: #ca8a04 !important; }
+    .border-teal-400, .border-teal-300 { border-color: #0d9488 !important; }
+    .border-emerald-400, .border-emerald-300 { border-color: #059669 !important; }
+    .border-green-400, .border-green-300 { border-color: #16a34a !important; }
+    .border-violet-400, .border-violet-300 { border-color: #7c3aed !important; }
+    .border-purple-400, .border-purple-300 { border-color: #9333ea !important; }
+    .border-indigo-400, .border-indigo-300 { border-color: #4f46e5 !important; }
+    .border-cyan-400, .border-cyan-300 { border-color: #0891b2 !important; }
+
+    /* Contenedores de miembros del puente */
+    .border-sky-500\/20 {
+        border-color: rgba(14, 165, 233, 0.4) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+    .border-teal-500\/20 {
+        border-color: rgba(20, 184, 166, 0.4) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* 12. BOTONES Y CONTROLES INTERACTIVOS */
+    /* Botones neutros: Volver, Ayuda, Nuevos, Reiniciar, Contadores + / − */
+    button.bg-white\/5,
+    button.bg-white\/10,
+    button.bg-white\/15,
+    button.bg-white\/20,
+    a.bg-white\/5,
+    a.bg-white\/10,
+    .cursor-pointer.bg-white\/5,
+    .cursor-pointer.bg-white\/10 {
+        background-color: #ffffff !important;
+        border: 1px solid var(--theme-border) !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+    }
+    button.bg-white\/5:hover,
+    button.bg-white\/10:hover,
+    button.bg-white\/15:hover,
+    a.bg-white\/5:hover,
+    a.bg-white\/10:hover,
+    .cursor-pointer.bg-white\/5:hover,
+    .cursor-pointer.bg-white\/10:hover {
+        background-color: #f1f5f9 !important;
+        border-color: var(--theme-border-strong) !important;
+        color: #020617 !important;
+    }
+    button:disabled {
+        opacity: 0.4 !important;
+        background-color: #e2e8f0 !important;
+        border-color: #cbd5e1 !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Tarjetas y Contenedores estructurados con elevación */
+    div.bg-white\/5,
+    section.bg-white\/5 {
+        background-color: #ffffff !important;
+        border: 1px solid var(--theme-border-subtle) !important;
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+    }
+
+    div.bg-white\/10,
+    div.bg-white\/15,
+    div.bg-white\/20 {
+        background-color: #ffffff !important;
+        border: 1px solid var(--theme-border) !important;
+        color: #0f172a !important;
+    }
+
+    div.bg-white\/\[0\.02\],
+    div.bg-white\/\[0\.03\],
+    div.bg-white\/\[0\.04\],
+    div.bg-white\/\[0\.05\],
+    div.bg-white\/\[0\.06\],
+    div.bg-white\/\[0\.07\],
+    div.bg-white\/\[0\.08\] {
+        background-color: #ffffff !important;
+        border: 1px solid var(--theme-border-subtle) !important;
+        box-shadow: 0 2px 6px -1px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Barras de fracción y marcas de enteros en rectas numéricas */
+    .bg-white\/70,
+    .bg-white\/80,
+    .bg-white\/90 {
+        background-color: #334155 !important;
+    }
+
+    /* Cartas ya ubicadas en rectas numéricas */
+    .opacity-25 {
+        opacity: 0.55 !important;
+    }
+
+    /* Fondos negros translúcidos de paneles/chips */
+    .bg-black\/20,
+    .bg-black\/30,
+    .bg-black\/40 {
+        background-color: rgba(15, 23, 42, 0.08) !important;
+        border-color: var(--theme-border-subtle) !important;
+    }
+
+    /* Modales y avisos flotantes que usaban fondo negro sólido en modo oscuro */
+    div:not(.fixed).bg-black\/60,
+    div:not(.fixed).bg-black\/70,
+    div:not(.fixed).bg-black\/80,
+    div:not(.fixed).bg-black\/90 {
+        background-color: var(--theme-bg-card) !important;
+        border-color: var(--theme-border) !important;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15) !important;
+    }
+
+    /* 13. RECTAS NUMÉRICAS Y GRÁFICOS (Ticks, marcas y líneas) */
+    [style*="backgroundColor: \"rgba(255,255,255,0.3)\""],
+    [style*="background-color: rgba(255, 255, 255, 0.3)"],
+    [style*="background: rgba(255, 255, 255, 0.3)"] {
+        background-color: var(--theme-border) !important;
+    }
+
+    [style*="backgroundColor: \"rgba(255,255,255,0.6)\""],
+    [style*="background-color: rgba(255, 255, 255, 0.6)"] {
+        background-color: #475569 !important;
+    }
+
+    /* 14. PIEZAS Y FIGURAS GEOMÉTRICAS VACÍAS (Concepto Fracción) */
+    /* Las partes vacías (#1e293b) se convierten en Slate-200 claro */
+    [style*="#1e293b"],
+    [style*="rgb(30, 41, 59)"] {
+        background-color: var(--fig-empty) !important;
+        fill: var(--fig-empty) !important;
+    }
+    svg [fill="#1e293b"],
+    svg [fill="#1E293B"] {
+        fill: var(--fig-empty) !important;
+    }
+    svg [stroke="#475569"] {
+        stroke: var(--fig-stroke) !important;
+    }
+
+    /* 15. Reglas globales para inline styles con transparencias blancas y colores pastel */
+    [style*="rgba(255,255,255,0.04)"],
+    [style*="rgba(255,255,255,0.05)"],
+    [style*="rgba(255, 255, 255, 0.04)"],
+    [style*="rgba(255, 255, 255, 0.05)"] {
+        background-color: #ffffff !important;
+        border-color: var(--theme-border) !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    [style*="rgba(255,255,255,0.1)"],
+    [style*="rgba(255, 255, 255, 0.1)"] {
+        background-color: #f1f5f9 !important;
+        border-color: var(--theme-border) !important;
+        color: #0f172a !important;
+    }
+
+    [style*="color: rgba(255,255,255,.28)"],
+    [style*="color: rgba(255,255,255,.26)"],
+    [style*="color: rgba(255,255,255,.38)"],
+    [style*="color: rgba(255,255,255,.5)"],
+    [style*="color: rgba(255, 255, 255, 0.28)"],
+    [style*="color: rgba(255, 255, 255, 0.38)"],
+    [style*="color: rgba(255, 255, 255, 0.5)"] {
+        color: #475569 !important;
+    }
+
+    [style*="color: #2dd4bf"],
+    [style*="color:#2dd4bf"] {
+        color: #0f766e !important;
+    }
+
+    [style*="color: #fbbf24"],
+    [style*="color:#fbbf24"] {
+        color: #b45309 !important;
+    }
+
+    /* 16. Modales de ayuda y fondos oscuros de SVG */
+    .modal-help-content {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: var(--theme-border) !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* SVG Plano cartesiano y tableros con rect oscuro */
+    svg rect[fill="#070c18"] {
+        fill: #f8fafc !important;
+    }
+    svg line[stroke="#94a3b8"] {
+        stroke: #64748b !important;
+    }
+    svg text[fill="#94a3b8"] {
+        fill: #475569 !important;
+    }
+    svg text[fill="#cbd5e1"] {
+        fill: #1e293b !important;
+    }
+    svg text[fill="#7dd3fc"] {
+        fill: #0369a1 !important;
+    }
+    svg text[fill="#38bdf8"] {
+        fill: #0284c7 !important;
+    }
+    svg text[fill="#2dd4bf"] {
+        fill: #0f766e !important;
+    }
+    svg text[fill="#34d399"] {
+        fill: #047857 !important;
+    }
+    svg text[fill="#fbbf24"] {
+        fill: #b45309 !important;
+    }
+
+    /* 17. Vistas Recreativas con variables CSS nativas (<style>) */
+    /* Tres Jarras */
+    .game-root {
+        --navy-900: #e2e8f0 !important;
+        --navy-800: #f1f5f9 !important;
+        --navy-700: #cbd5e1 !important;
+        --navy-600: #94a3b8 !important;
+        --navy-500: #64748b !important;
+        background: linear-gradient(165deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%) !important;
+        color: #0f172a !important;
+    }
+    .game-root * {
+        --text-white: #0f172a;
+    }
+
+    /* Tres Pescados */
+    .game-root {
+        --bg-900: #fef3c7 !important;
+        --bg-800: #fffbeb !important;
+        --cream: #78350f !important;
+        --cream-dim: #92400e !important;
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   REGLAS DE MODO OSCURO PARA VISTAS QUE ERAN CLARAS POR DEFECTO
+   (MonedaFalsaView, RegletaFracionesView, GranjeroRioView)
+   ────────────────────────────────────────────────────────────────────────── */
+html.dark {
+    /* Bordes luminosos de alta definición en modo oscuro sin aumentar grosor (1px fino y nítido) */
+    .border-white\/5 {
+        border-color: rgba(255, 255, 255, 0.18) !important;
+    }
+    .border-white\/10 {
+        border-color: rgba(255, 255, 255, 0.28) !important;
+    }
+    .border-white\/15 {
+        border-color: rgba(255, 255, 255, 0.36) !important;
+    }
+    .border-white\/20 {
+        border-color: rgba(255, 255, 255, 0.44) !important;
+    }
+    .border-white\/25 {
+        border-color: rgba(255, 255, 255, 0.52) !important;
+    }
+    .border-white\/30 {
+        border-color: rgba(255, 255, 255, 0.60) !important;
+    }
+    .border-slate-800,
+    .border-gray-800 {
+        border-color: rgba(255, 255, 255, 0.20) !important;
+    }
+    .border-slate-700,
+    .border-gray-700 {
+        border-color: rgba(255, 255, 255, 0.28) !important;
+    }
+
+    /* Moneda Falsa */
+    .bg-amber-50 {
+        background-color: #080c18 !important;
+        color: #f8fafc !important;
+    }
+    .bg-amber-100 {
+        background-color: #0a0f1d !important;
+        border-color: rgba(245, 158, 11, 0.3) !important;
+    }
+    .text-amber-800,
+    .text-amber-900 {
+        color: #fde68a !important;
+    }
+
+    /* Regleta de Fracciones */
+    .bg-gray-50 {
+        background-color: #080c18 !important;
+        color: #ffffff !important;
+    }
+    header.bg-gray-50 {
+        background-color: #0a0f1d !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    /* Área interactiva de Regleta de Fracciones: 100% protegida del modo oscuro */
+    #regleta-interactive,
+    #regleta-interactive * {
+        color-scheme: light !important;
+    }
+    #regleta-interactive {
+        background-color: #ffffff !important;
+        color: #111827 !important;
+    }
+    #regleta-interactive .fraction-bar {
+        color: #111827 !important;
+    }
+    #regleta-interactive .border-gray-800,
+    #regleta-interactive .border-gray-900 {
+        border-color: #111827 !important;
+    }
+
+    /* Granjero y el Río */
+    .bg-sky-100 {
+        background-color: #080c18 !important;
+    }
+    header.bg-sky-200\/50 {
+        background-color: #0a0f1d !important;
+        border-color: rgba(56, 189, 248, 0.2) !important;
+    }
+    .text-sky-900,
+    .text-sky-800 {
+        color: #bae6fd !important;
+    }
+}
+
+/* Scrollbars globales adaptativas */
 ::-webkit-scrollbar {
     height: 4px;
     width: 4px;
@@ -60,15 +719,18 @@
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--theme-scrollbar-thumb);
     border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 23, 42, 0.4);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
 * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: var(--theme-scrollbar-thumb) transparent;
 }
 
 /* Scrollbar estilizada personalizada con color de la vista (Teal) */

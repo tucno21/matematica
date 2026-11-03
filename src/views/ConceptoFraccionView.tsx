@@ -1,14 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ModalHelp from '../components/ModalHelp'
+import { useThemeStore } from '../store/useThemeStore'
 
 type FigureType = 'bar' | 'circle' | 'hexagon' | 'square'
 
 const FIGURES: FigureType[] = ['bar', 'circle', 'hexagon', 'square']
-
-const FILLED = '#2dd4bf'
-const EMPTY = '#1e293b'
-const STROKE = '#475569'
 
 function squareGrid(d: number): [number, number] {
     if (d <= 1) return [1, 1]
@@ -42,7 +39,9 @@ function getGroups(num: number, den: number): FigGroup[] {
 }
 
 function Frac({ num, den, color, small }: { num: number; den: number; color?: string; small?: boolean }) {
-    const c = color ?? '#fff'
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const defaultColor = isDark ? '#2dd4bf' : '#0f766e'
+    const c = color ?? defaultColor
     const sz = small ? 'text-xs lg:text-sm' : 'text-lg lg:text-2xl'
     return (
         <div className="flex flex-col items-center min-w-[1.6rem] lg:min-w-[2.2rem]" style={{ color: c }}>
@@ -71,21 +70,30 @@ function FigureIcon({ type }: { type: FigureType }) {
 }
 
 function BarFigure({ parts, colored }: { parts: number; colored: number }) {
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const filled = isDark ? '#2dd4bf' : '#0d9488'
+    const empty = isDark ? '#1e293b' : '#e2e8f0'
+    const divider = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.18)'
+    const border = isDark ? 'border-teal-400/50' : 'border-teal-600'
+
     if (parts <= 1) {
         return (
             <div
-                className="w-full h-7 sm:h-9 lg:h-11 rounded-lg sm:rounded-xl overflow-hidden border-2 border-teal-400/50 transition-all duration-300"
-                style={{ background: colored > 0 ? FILLED : EMPTY }}
+                className={`w-full h-7 sm:h-9 lg:h-11 rounded-lg sm:rounded-xl overflow-hidden border-2 ${border} transition-all duration-300 shadow-xs`}
+                style={{ background: colored > 0 ? filled : empty }}
             />
         )
     }
     return (
-        <div className="flex w-full h-7 sm:h-9 lg:h-11 rounded-lg sm:rounded-xl overflow-hidden border-2 border-teal-400/50 transition-all duration-300">
+        <div className={`flex w-full h-7 sm:h-9 lg:h-11 rounded-lg sm:rounded-xl overflow-hidden border-2 ${border} transition-all duration-300 shadow-xs`}>
             {Array.from({ length: parts }, (_, i) => (
                 <div
                     key={i}
-                    className="flex-1 border-r-[2px] sm:border-r-[3px] last:border-r-0 border-gray-600/80 transition-all duration-300"
-                    style={{ background: i < colored ? FILLED : EMPTY }}
+                    className="flex-1 border-r-[2px] sm:border-r-[3px] last:border-r-0 transition-all duration-300"
+                    style={{
+                        background: i < colored ? filled : empty,
+                        borderColor: divider,
+                    }}
                 />
             ))}
         </div>
@@ -93,6 +101,11 @@ function BarFigure({ parts, colored }: { parts: number; colored: number }) {
 }
 
 function CircleFigure({ parts, colored }: { parts: number; colored: number }) {
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const filled = isDark ? '#2dd4bf' : '#0d9488'
+    const empty = isDark ? '#1e293b' : '#e2e8f0'
+    const stroke = isDark ? '#475569' : '#94a3b8'
+
     const s = 200
     const cx = s / 2
     const cy = s / 2
@@ -101,7 +114,7 @@ function CircleFigure({ parts, colored }: { parts: number; colored: number }) {
     if (parts <= 1) {
         return (
             <svg viewBox={`0 0 ${s} ${s}`} className="w-full max-h-[min(30vh,140px)] sm:max-h-[min(35vh,170px)] lg:max-h-[220px] aspect-square">
-                <circle cx={cx} cy={cy} r={r} fill={colored > 0 ? FILLED : EMPTY} stroke={STROKE} strokeWidth={2.5} className="transition-all duration-300" />
+                <circle cx={cx} cy={cy} r={r} fill={colored > 0 ? filled : empty} stroke={stroke} strokeWidth={2.5} className="transition-all duration-300" />
             </svg>
         )
     }
@@ -120,8 +133,8 @@ function CircleFigure({ parts, colored }: { parts: number; colored: number }) {
                     <path
                         key={i}
                         d={`M${cx} ${cy}L${x0} ${y0}A${r} ${r} 0 ${la} 1 ${x1} ${y1}Z`}
-                        fill={i < colored ? FILLED : EMPTY}
-                        stroke={STROKE}
+                        fill={i < colored ? filled : empty}
+                        stroke={stroke}
                         strokeWidth={2}
                         className="transition-all duration-300"
                     />
@@ -132,6 +145,11 @@ function CircleFigure({ parts, colored }: { parts: number; colored: number }) {
 }
 
 function HexagonFigure({ parts, colored, uid }: { parts: number; colored: number; uid: string }) {
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const filled = isDark ? '#2dd4bf' : '#0d9488'
+    const empty = isDark ? '#1e293b' : '#e2e8f0'
+    const stroke = isDark ? '#475569' : '#94a3b8'
+
     const s = 200
     const cx = s / 2
     const cy = s / 2
@@ -145,7 +163,7 @@ function HexagonFigure({ parts, colored, uid }: { parts: number; colored: number
     if (parts <= 1) {
         return (
             <svg viewBox={`0 0 ${s} ${s}`} className="w-full max-h-[min(30vh,140px)] sm:max-h-[min(35vh,170px)] lg:max-h-[220px] aspect-square">
-                <polygon points={hexPts} fill={colored > 0 ? FILLED : EMPTY} stroke={STROKE} strokeWidth={2.5} className="transition-all duration-300" />
+                <polygon points={hexPts} fill={colored > 0 ? filled : empty} stroke={stroke} strokeWidth={2.5} className="transition-all duration-300" />
             </svg>
         )
     }
@@ -170,25 +188,30 @@ function HexagonFigure({ parts, colored, uid }: { parts: number; colored: number
                         <path
                             key={i}
                             d={`M${cx} ${cy}L${x0} ${y0}A${r} ${r} 0 ${la} 1 ${x1} ${y1}Z`}
-                            fill={i < colored ? FILLED : EMPTY}
-                            stroke={STROKE}
+                            fill={i < colored ? filled : empty}
+                            stroke={stroke}
                             strokeWidth={2}
                             className="transition-all duration-300"
                         />
                     )
                 })}
             </g>
-            <polygon points={hexPts} fill="none" stroke={STROKE} strokeWidth={2.5} />
+            <polygon points={hexPts} fill="none" stroke={stroke} strokeWidth={2.5} />
         </svg>
     )
 }
 
 function SquareFigure({ parts, colored }: { parts: number; colored: number }) {
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const filled = isDark ? '#2dd4bf' : '#0d9488'
+    const empty = isDark ? '#1e293b' : '#e2e8f0'
+    const stroke = isDark ? '#475569' : '#94a3b8'
+
     const s = 200
     if (parts <= 1) {
         return (
             <svg viewBox={`0 0 ${s} ${s}`} className="w-full max-h-[min(30vh,140px)] sm:max-h-[min(35vh,170px)] lg:max-h-[220px] aspect-square">
-                <rect x={4} y={4} width={s - 8} height={s - 8} rx={4} fill={colored > 0 ? FILLED : EMPTY} stroke={STROKE} strokeWidth={2.5} className="transition-all duration-300" />
+                <rect x={4} y={4} width={s - 8} height={s - 8} rx={4} fill={colored > 0 ? filled : empty} stroke={stroke} strokeWidth={2.5} className="transition-all duration-300" />
             </svg>
         )
     }
@@ -211,8 +234,8 @@ function SquareFigure({ parts, colored }: { parts: number; colored: number }) {
                         y={pad + row * ch}
                         width={cw}
                         height={ch}
-                        fill={i < colored ? FILLED : EMPTY}
-                        stroke={STROKE}
+                        fill={i < colored ? filled : empty}
+                        stroke={stroke}
                         strokeWidth={2}
                         className="transition-all duration-300"
                     />
@@ -237,6 +260,7 @@ function FigureRender({ type, parts, colored, uid }: { type: FigureType; parts: 
 
 export default function ConceptoFraccionView() {
     const navigate = useNavigate()
+    const isDark = useThemeStore((s) => s.theme === 'dark')
     const [figType, setFigType] = useState<FigureType>('bar')
     const [num, setNum] = useState(1)
     const [den, setDen] = useState(1)
@@ -273,18 +297,20 @@ export default function ConceptoFraccionView() {
                     onClick={() => setFigType(type)}
                     className={`h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-xl border flex items-center justify-center transition-all ${
                         type === figType
-                            ? 'border-teal-400 bg-teal-500/25 text-teal-300 shadow-sm shadow-teal-500/30'
-                            : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 active:scale-95'
+                            ? (isDark ? 'border-teal-400 bg-teal-500/25 text-teal-300 shadow-sm shadow-teal-500/30' : 'border-teal-600 bg-teal-50 text-teal-700 shadow-xs font-bold')
+                            : (isDark ? 'border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 active:scale-95' : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:scale-95 shadow-xs')
                     }`}
                     title={`Figura: ${type}`}
                 >
                     <FigureIcon type={type} />
                 </button>
             ))}
-            <div className="w-px h-6 bg-white/10 mx-0.5" />
+            <div className={`w-px h-6 mx-0.5 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} />
             <button
                 onClick={() => { setNum(1); setDen(1) }}
-                className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-xl border border-amber-400/40 bg-amber-500/10 hover:bg-amber-500/20 active:scale-90 transition-all flex items-center justify-center text-amber-400"
+                className={`h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-xl border active:scale-90 transition-all flex items-center justify-center ${
+                    isDark ? 'border-amber-400/50 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25' : 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 shadow-xs'
+                }`}
                 title="Reiniciar a 1/1"
             >
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -296,31 +322,39 @@ export default function ConceptoFraccionView() {
     )
 
     const fractionCard = (
-        <div className="flex flex-col items-center bg-white/5 rounded-2xl border border-white/10 p-2 sm:p-3 lg:p-4 w-full">
+        <div className={`flex flex-col items-center rounded-2xl border p-2 sm:p-3 lg:p-4 w-full ${
+            isDark ? 'bg-white/5 border-white/20' : 'bg-white border-slate-300 shadow-sm'
+        }`}>
             {/* Numerator row */}
             <div className="flex items-center justify-between w-full gap-2">
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     <button
                         onClick={handleDecNum}
                         disabled={!canDecNum}
-                        className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl bg-white/10 text-white font-bold text-base lg:text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl font-bold text-base lg:text-lg flex items-center justify-center active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none border ${
+                            isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs'
+                        }`}
                     >−</button>
-                    <span className="w-8 sm:w-9 text-center font-mono font-bold text-xl sm:text-2xl lg:text-3xl transition-all duration-300 text-teal-300">
+                    <span className={`w-8 sm:w-9 text-center font-mono font-black text-xl sm:text-2xl lg:text-3xl transition-all duration-300 ${
+                        isDark ? 'text-teal-300' : 'text-teal-700'
+                    }`}>
                         {num}
                     </span>
                     <button
                         onClick={handleIncNum}
                         disabled={!canIncNum}
-                        className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl bg-white/10 text-white font-bold text-base lg:text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl font-bold text-base lg:text-lg flex items-center justify-center active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none border ${
+                            isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs'
+                        }`}
                     >+</button>
                 </div>
                 <div className="flex flex-col items-end">
-                    <span className="text-teal-400 font-bold text-xs lg:text-sm">← <span className="italic">numerador</span></span>
-                    <span className="text-[9px] lg:text-[10px] text-white/40 uppercase tracking-wider">partes coloreadas</span>
+                    <span className={`font-bold text-xs lg:text-sm ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>← <span className="italic">numerador</span></span>
+                    <span className={`text-[9px] lg:text-[10px] uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-500 font-semibold'}`}>partes coloreadas</span>
                 </div>
             </div>
 
-            <div className="w-full h-px bg-white/20 my-1.5 sm:my-2" />
+            <div className={`w-full h-px my-1.5 sm:my-2 ${isDark ? 'bg-white/20' : 'bg-slate-200'}`} />
 
             {/* Denominator row */}
             <div className="flex items-center justify-between w-full gap-2">
@@ -328,20 +362,26 @@ export default function ConceptoFraccionView() {
                     <button
                         onClick={handleDecDen}
                         disabled={!canDecDen}
-                        className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl bg-white/10 text-white font-bold text-base lg:text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl font-bold text-base lg:text-lg flex items-center justify-center active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none border ${
+                            isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs'
+                        }`}
                     >−</button>
-                    <span className="w-8 sm:w-9 text-center font-mono font-bold text-xl sm:text-2xl lg:text-3xl transition-all duration-300 text-amber-300">
+                    <span className={`w-8 sm:w-9 text-center font-mono font-black text-xl sm:text-2xl lg:text-3xl transition-all duration-300 ${
+                        isDark ? 'text-amber-300' : 'text-amber-700'
+                    }`}>
                         {den}
                     </span>
                     <button
                         onClick={handleIncDen}
                         disabled={!canIncDen}
-                        className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl bg-white/10 text-white font-bold text-base lg:text-lg flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                        className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-lg sm:rounded-xl font-bold text-base lg:text-lg flex items-center justify-center active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none border ${
+                            isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs'
+                        }`}
                     >+</button>
                 </div>
                 <div className="flex flex-col items-end">
-                    <span className="text-amber-400 font-bold text-xs lg:text-sm">← <span className="italic">denominador</span></span>
-                    <span className="text-[9px] lg:text-[10px] text-white/40 uppercase tracking-wider">partes totales</span>
+                    <span className={`font-bold text-xs lg:text-sm ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>← <span className="italic">denominador</span></span>
+                    <span className={`text-[9px] lg:text-[10px] uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-500 font-semibold'}`}>partes totales</span>
                 </div>
             </div>
         </div>
@@ -350,11 +390,13 @@ export default function ConceptoFraccionView() {
     return (
         <div className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none" style={{ fontFamily: "'Nunito', sans-serif" }}>
             {/* 1. Header (34-44px) */}
-            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/10 px-2 lg:px-4 bg-[#0a0f1d]">
+            <header className="flex h-9 lg:h-11 shrink-0 items-center justify-between border-b border-white/20 px-2 lg:px-4 bg-[#0a0f1d]">
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white/70 hover:text-white shrink-0 border border-white/10"
+                        className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg active:scale-95 transition-all shrink-0 border ${
+                            isDark ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        }`}
                         title="Volver"
                     >
                         <svg className="w-3.5 h-3.5 lg:w-4 lg:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -369,7 +411,9 @@ export default function ConceptoFraccionView() {
                 <div className="flex items-center gap-2 shrink-0">
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white active:scale-95 transition-all border border-white/10 font-bold text-xs"
+                        className={`flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg active:scale-95 transition-all border font-bold text-xs ${
+                            isDark ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        }`}
                         title="Ayuda didáctica"
                     >
                         ?
@@ -380,9 +424,13 @@ export default function ConceptoFraccionView() {
             {/* 2. Área Central Adaptable (Responsive para Portrait y Landscape en Tablets y Escritorio) */}
             <div className="flex-1 min-h-0 flex flex-col landscape:flex-row items-stretch p-1 sm:p-2 lg:p-3 gap-2 lg:gap-3 overflow-hidden">
                 {/* Panel de Controles: Columna lateral en landscape, superior en portrait */}
-                <div className="shrink-0 flex flex-col justify-between gap-1.5 sm:gap-2 w-full landscape:w-[260px] sm:landscape:w-[280px] lg:landscape:w-[330px] bg-[#0a0f1d] border border-white/10 rounded-2xl p-2 lg:p-3">
+                <div className={`shrink-0 flex flex-col justify-between gap-1.5 sm:gap-2 w-full landscape:w-[260px] sm:landscape:w-[280px] lg:landscape:w-[330px] border rounded-2xl p-2 lg:p-3 ${
+                    isDark ? 'bg-[#0a0f1d] border-white/20' : 'bg-white border-slate-300 shadow-sm'
+                }`}>
                     <div className="flex flex-col gap-1.5 sm:gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider text-center ${
+                            isDark ? 'text-white/40' : 'text-slate-600'
+                        }`}>
                             Selecciona representación
                         </span>
                         {figureToolbar}
@@ -392,18 +440,22 @@ export default function ConceptoFraccionView() {
                         {fractionCard}
                     </div>
 
-                    <div className="hidden landscape:block bg-teal-500/10 border border-teal-500/20 rounded-xl px-2.5 py-1.5 text-center">
-                        <p className="text-[11px] text-teal-300 font-bold leading-tight">
+                    <div className={`hidden landscape:block border rounded-xl px-2.5 py-1.5 text-center ${
+                        isDark ? 'bg-teal-500/10 border-teal-400/40' : 'bg-teal-50 border-teal-300 shadow-xs'
+                    }`}>
+                        <p className={`text-[11px] font-bold leading-tight ${isDark ? 'text-teal-300' : 'text-teal-800'}`}>
                             El denominador divide el todo
                         </p>
-                        <p className="text-[10px] text-white/50 leading-tight mt-0.5">
+                        <p className={`text-[10px] leading-tight mt-0.5 ${isDark ? 'text-white/60' : 'text-teal-950 font-medium'}`}>
                             El numerador indica cuántas partes tomas
                         </p>
                     </div>
                 </div>
 
                 {/* Lienzo Visual de Figuras y Ecuación */}
-                <div className="flex-1 min-w-0 flex flex-col justify-between items-center bg-[#060a14] border border-white/10 rounded-2xl p-2 lg:p-3 overflow-hidden">
+                <div className={`flex-1 min-w-0 flex flex-col justify-between items-center border rounded-2xl p-2 lg:p-3 overflow-hidden ${
+                    isDark ? 'bg-[#060a14] border-white/20' : 'bg-white border-slate-300 shadow-sm'
+                }`}>
                     {/* Contenedor de figuras */}
                     <div className="flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
                         <div className="flex gap-2 lg:gap-4 justify-center items-center flex-wrap w-full max-w-4xl max-h-full overflow-hidden p-1">
@@ -428,44 +480,46 @@ export default function ConceptoFraccionView() {
                                             uid={`${uid}-${i}`}
                                         />
                                     </div>
-                                    <Frac num={g.colored} den={g.total} color="#2dd4bf" small />
+                                    <Frac num={g.colored} den={g.total} small />
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     {/* Barra de interpretación y equivalencia matemática (nunca se corta) */}
-                    <div className="h-10 lg:h-12 shrink-0 border-t border-white/10 w-full flex items-center justify-center gap-2 sm:gap-3 flex-wrap px-2 text-sm sm:text-base lg:text-lg">
-                        <Frac num={num} den={den} color="#2dd4bf" />
+                    <div className={`h-10 lg:h-12 shrink-0 border-t w-full flex items-center justify-center gap-2 sm:gap-3 flex-wrap px-2 text-sm sm:text-base lg:text-lg ${
+                        isDark ? 'border-white/20' : 'border-slate-200'
+                    }`}>
+                        <Frac num={num} den={den} />
 
                         {num === 0 && (
                             <>
-                                <span className="text-white/40">·</span>
-                                <span className="text-white/60 font-semibold text-xs sm:text-sm lg:text-base">ninguna parte</span>
+                                <span className={isDark ? "text-white/40" : "text-slate-400"}>·</span>
+                                <span className={`font-semibold text-xs sm:text-sm lg:text-base ${isDark ? "text-white/60" : "text-slate-600"}`}>ninguna parte</span>
                             </>
                         )}
 
                         {num > 0 && num === den && (
                             <>
-                                <span className="text-white/40">=</span>
-                                <span className="text-teal-400 font-bold text-xs sm:text-sm lg:text-base">1 entero completo</span>
+                                <span className={isDark ? "text-white/40" : "text-slate-400"}>=</span>
+                                <span className={`font-bold text-xs sm:text-sm lg:text-base ${isDark ? "text-teal-400" : "text-teal-700"}`}>1 entero completo</span>
                             </>
                         )}
 
                         {num > den && rem === 0 && (
                             <>
-                                <span className="text-white/40">=</span>
-                                <span className="text-teal-400 font-bold text-base sm:text-lg lg:text-xl font-mono">{whole}</span>
-                                <span className="text-white/50 text-xs sm:text-sm">enteros</span>
+                                <span className={isDark ? "text-white/40" : "text-slate-400"}>=</span>
+                                <span className={`font-bold text-base sm:text-lg lg:text-xl font-mono ${isDark ? "text-teal-400" : "text-teal-700"}`}>{whole}</span>
+                                <span className={`text-xs sm:text-sm ${isDark ? "text-white/50" : "text-slate-600 font-medium"}`}>enteros</span>
                             </>
                         )}
 
                         {num > den && rem > 0 && (
                             <>
-                                <span className="text-white/40">=</span>
-                                <span className="text-teal-400 font-bold text-base sm:text-lg lg:text-xl font-mono">{whole}</span>
-                                <span className="text-white/40">+</span>
-                                <Frac num={rem} den={den} color="#2dd4bf" />
+                                <span className={isDark ? "text-white/40" : "text-slate-400"}>=</span>
+                                <span className={`font-bold text-base sm:text-lg lg:text-xl font-mono ${isDark ? "text-teal-400" : "text-teal-700"}`}>{whole}</span>
+                                <span className={isDark ? "text-white/40" : "text-slate-400"}>+</span>
+                                <Frac num={rem} den={den} />
                             </>
                         )}
                     </div>

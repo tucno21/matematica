@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check, Eraser, HelpCircle, Sparkles, Target, Trash2, Undo2, X } from 'lucide-react'
+import { useThemeStore } from '../store/useThemeStore'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,7 @@ interface Point {
 interface Band {
     id: number
     color: string
+    colorIndex?: number
     points: Point[]
     closed: boolean
 }
@@ -35,7 +37,8 @@ interface Layout {
 
 // Puntos que caben en el lado corto de la pantalla; el lado largo se llena solo.
 const DENSITIES = [13, 7, 5]
-const COLORS = ['#2dd4bf', '#818cf8', '#fbbf24', '#fb7185']
+const COLORS_DARK = ['#2dd4bf', '#818cf8', '#fbbf24', '#fb7185']
+const COLORS_LIGHT = ['#0d9488', '#4f46e5', '#d97706', '#e11d48']
 const COLOR_NAMES = ['Turquesa', 'Violeta', 'Ámbar', 'Rosa']
 const MAX_BANDS = 10
 const EPS = 1e-6
@@ -183,6 +186,8 @@ const formatNumber = (value: number) => (Number.isInteger(value) ? String(value)
 
 export default function GeoplanoView() {
     const navigate = useNavigate()
+    const isDark = useThemeStore((s) => s.theme === 'dark')
+    const colors = useMemo(() => (isDark ? COLORS_DARK : COLORS_LIGHT), [isDark])
 
     const [shortSidePoints, setShortSidePoints] = useState(13)
     const [bands, setBands] = useState<Band[]>([])
@@ -280,16 +285,31 @@ export default function GeoplanoView() {
             y: offsetY + point.y * cell,
         })
 
-        // Puntos de la cuadrícula
+        // Puntos de la cuadrícula (clavos del geoplano)
         const dotRadius = Math.min(4.5, Math.max(2.4, cell * 0.06))
-        context.fillStyle = 'rgba(255,255,255,0.22)'
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const px = offsetX + col * cell
                 const py = offsetY + row * cell
-                context.beginPath()
-                context.arc(px, py, dotRadius, 0, Math.PI * 2)
-                context.fill()
+                if (isDark) {
+                    context.fillStyle = 'rgba(255,255,255,0.22)'
+                    context.beginPath()
+                    context.arc(px, py, dotRadius, 0, Math.PI * 2)
+                    context.fill()
+                    context.fillStyle = 'rgba(255,255,255,0.55)'
+                    context.beginPath()
+                    context.arc(px, py, dotRadius * 0.45, 0, Math.PI * 2)
+                    context.fill()
+                } else {
+                    context.fillStyle = '#cbd5e1'
+                    context.beginPath()
+                    context.arc(px, py, dotRadius, 0, Math.PI * 2)
+                    context.fill()
+                    context.fillStyle = '#475569'
+                    context.beginPath()
+                    context.arc(px, py, dotRadius * 0.5, 0, Math.PI * 2)
+                    context.fill()
+                }
             }
         }
 
@@ -297,6 +317,25 @@ export default function GeoplanoView() {
         for (const band of bands) {
             if (band.points.length < 2) continue
             const selected = band.id === selectedId
+            const bandColor = band.colorIndex !== undefined ? colors[band.colorIndex] : band.color
+
+            // Relleno sutil si la figura está cerrada
+            if (band.closed && band.points.length >= 3) {
+                context.beginPath()
+                const first = toPixels(band.points[0])
+                context.moveTo(first.x, first.y)
+                for (let i = 1; i < band.points.length; i++) {
+                    const px = toPixels(band.points[i])
+                    context.lineTo(px.x, px.y)
+                }
+                context.closePath()
+                context.fillStyle = bandColor
+                context.globalAlpha = isDark ? 0.22 : 0.16
+                context.fill()
+                context.globalAlpha = 1
+            }
+
+            // Trazo elástico de la liga
             context.beginPath()
             const first = toPixels(band.points[0])
             context.moveTo(first.x, first.y)
@@ -308,11 +347,11 @@ export default function GeoplanoView() {
             context.lineCap = 'round'
             context.lineJoin = 'round'
             context.lineWidth = Math.min(8, Math.max(3.5, cell * 0.1))
-            context.strokeStyle = band.color
+            context.strokeStyle = bandColor
             context.globalAlpha = band.closed ? 1 : 0.95
             if (selected) {
-                context.shadowColor = band.color
-                context.shadowBlur = 14
+                context.shadowColor = bandColor
+                context.shadowBlur = isDark ? 14 : 8
             }
             context.stroke()
             context.shadowBlur = 0
@@ -324,10 +363,10 @@ export default function GeoplanoView() {
                     const px = toPixels(point)
                     context.beginPath()
                     context.arc(px.x, px.y, radius, 0, Math.PI * 2)
-                    context.fillStyle = '#0b1120'
+                    context.fillStyle = isDark ? '#0b1120' : '#ffffff'
                     context.fill()
-                    context.lineWidth = 2
-                    context.strokeStyle = band.color
+                    context.lineWidth = 2.5
+                    context.strokeStyle = bandColor
                     context.stroke()
                 }
             }
@@ -335,11 +374,12 @@ export default function GeoplanoView() {
 
         // Liga en borrador
         if (draft) {
+            const activeColor = colors[colorIdx]
             const from = toPixels(draft.from)
             context.beginPath()
             context.arc(from.x, from.y, Math.min(7, Math.max(4, cell * 0.09)), 0, Math.PI * 2)
-            context.fillStyle = COLORS[colorIdx]
-            context.globalAlpha = 0.35
+            context.fillStyle = activeColor
+            context.globalAlpha = isDark ? 0.35 : 0.4
             context.fill()
             context.globalAlpha = 1
 
@@ -349,8 +389,8 @@ export default function GeoplanoView() {
                 context.moveTo(from.x, from.y)
                 context.lineTo(to.x, to.y)
                 context.lineWidth = Math.min(8, Math.max(3.5, cell * 0.1))
-                context.strokeStyle = COLORS[colorIdx]
-                context.globalAlpha = 0.75
+                context.strokeStyle = activeColor
+                context.globalAlpha = 0.8
                 context.lineCap = 'round'
                 context.stroke()
                 context.globalAlpha = 1
@@ -358,11 +398,11 @@ export default function GeoplanoView() {
                 context.beginPath()
                 context.arc(to.x, to.y, Math.min(8, Math.max(5, cell * 0.11)), 0, Math.PI * 2)
                 context.lineWidth = 2
-                context.strokeStyle = '#ffffff'
+                context.strokeStyle = isDark ? '#ffffff' : '#0f172a'
                 context.stroke()
             }
         }
-    }, [bands, draft, selectedId, dims, layout, colorIdx])
+    }, [bands, draft, selectedId, dims, layout, colorIdx, isDark, colors])
 
     // ── Historial ────────────────────────────────────────────────────────────
     const pushHistory = useCallback((current: Band[]) => {
@@ -559,7 +599,7 @@ export default function GeoplanoView() {
         }
         pushHistory(bands)
         const id = nextIdRef.current++
-        const next = [...bands, { id, color: COLORS[colorIdx], points: [gesture.from, target], closed: false }]
+        const next = [...bands, { id, color: colors[colorIdx], colorIndex: colorIdx, points: [gesture.from, target], closed: false }]
         setBands(next)
         setSelectedId(id)
         evaluateChallenge(activeChallenge, next, id)
@@ -602,9 +642,15 @@ export default function GeoplanoView() {
         setSolved(null)
     }
 
-    // El color solo aplica a la liga que se creará después; no recolorea las existentes
+    // Selecciona el color para la siguiente liga, o actualiza la liga seleccionada
     const pickColor = (index: number) => {
         setColorIdx(index)
+        if (selectedId !== null) {
+            pushHistory(bands)
+            setBands((prev) =>
+                prev.map((b) => (b.id === selectedId ? { ...b, color: colors[index], colorIndex: index } : b))
+            )
+        }
     }
 
     const requestDensity = (size: number) => {
@@ -677,25 +723,37 @@ export default function GeoplanoView() {
     // ── Render ───────────────────────────────────────────────────────────────
     return (
         <div
-            className="flex h-dvh flex-col overflow-hidden bg-[#080c18] text-white select-none"
+            className={`flex h-dvh flex-col overflow-hidden select-none transition-colors ${
+                isDark ? 'bg-[#080c18] text-white' : 'bg-slate-100 text-slate-900'
+            }`}
             style={{ fontFamily: "'Nunito', sans-serif" }}
         >
             {/* Barra superior compacta */}
-            <header className="flex shrink-0 items-center gap-1.5 border-b border-white/5 px-2 py-1 lg:py-1.5">
+            <header className={`flex shrink-0 items-center gap-1.5 border-b px-2 py-1 lg:py-1.5 transition-colors ${
+                isDark ? 'border-white/5 bg-[#0a0f1d]' : 'border-slate-200 bg-white shadow-xs'
+            }`}>
                 <button
                     type="button"
                     onClick={() => navigate(-1)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/60 transition-colors hover:bg-white/10 hover:text-white active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                     aria-label="Volver"
                 >
                     <ArrowLeft size={16} />
                 </button>
 
-                <h1 className="shrink-0 text-[13px] font-black leading-none tracking-tight sm:text-sm">Geoplano</h1>
+                <h1 className={`shrink-0 text-[13px] font-black leading-none tracking-tight sm:text-sm ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                }`}>Geoplano</h1>
 
                 <div className="min-w-0 flex-1" />
 
-                <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-0.5">
+                <div className={`flex shrink-0 items-center gap-0.5 rounded-lg border p-0.5 ${
+                    isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-100'
+                }`}>
                     {DENSITIES.map((size) => (
                         <button
                             key={size}
@@ -704,10 +762,15 @@ export default function GeoplanoView() {
                             title={`${size} puntos en el lado corto de la pantalla`}
                             aria-label={`${size} puntos en el lado corto`}
                             aria-pressed={shortSidePoints === size}
-                            className={`h-7 w-7 rounded-md text-[11px] font-bold transition-colors lg:h-8 lg:w-8 ${shortSidePoints === size
-                                ? 'bg-teal-400 text-[#06272a]'
-                                : 'text-white/45 hover:bg-white/10'
-                                }`}
+                            className={`h-7 w-7 rounded-md text-[11px] font-bold transition-colors lg:h-8 lg:w-8 ${
+                                shortSidePoints === size
+                                    ? isDark
+                                        ? 'bg-teal-400 text-[#06272a] shadow-xs'
+                                        : 'bg-teal-600 text-white shadow-xs'
+                                    : isDark
+                                        ? 'text-white/45 hover:bg-white/10'
+                                        : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                            }`}
                         >
                             {size}
                         </button>
@@ -717,7 +780,11 @@ export default function GeoplanoView() {
                 <button
                     type="button"
                     onClick={() => setShowHelp(true)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/50 transition-colors hover:bg-white/10 hover:text-white active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                     aria-label="Ayuda"
                 >
                     <HelpCircle size={16} />
@@ -725,7 +792,11 @@ export default function GeoplanoView() {
                 <button
                     type="button"
                     onClick={undo}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/50 transition-colors hover:bg-white/10 hover:text-white active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                     aria-label="Deshacer"
                 >
                     <Undo2 size={16} />
@@ -733,7 +804,11 @@ export default function GeoplanoView() {
                 <button
                     type="button"
                     onClick={requestClear}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/50 transition-colors hover:bg-rose-500/15 hover:text-rose-300 active:scale-95 lg:h-8 lg:w-8"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors active:scale-95 lg:h-8 lg:w-8 ${
+                        isDark
+                            ? 'border-white/10 bg-white/5 text-white/50 hover:bg-rose-500/15 hover:text-rose-300'
+                            : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                    }`}
                     aria-label="Borrar todo"
                 >
                     <Trash2 size={16} />
@@ -742,27 +817,39 @@ export default function GeoplanoView() {
 
             {/* Reto activo: franja fina que no tapa el tablero */}
             {activeChallenge && (
-                <div className="flex shrink-0 items-center gap-1.5 border-b border-white/5 bg-teal-400/[0.06] px-2 py-1">
-                    <Target size={12} className="shrink-0 text-teal-300/80" />
+                <div className={`flex shrink-0 items-center gap-1.5 border-b px-2 py-1 transition-colors ${
+                    isDark
+                        ? 'border-white/5 bg-teal-400/[0.06] text-white'
+                        : 'border-teal-200/60 bg-teal-50 text-slate-800'
+                }`}>
+                    <Target size={12} className={`shrink-0 ${isDark ? 'text-teal-300/80' : 'text-teal-600'}`} />
                     <button
                         type="button"
                         onClick={() => setShowRetos(true)}
                         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
                     >
-                        <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.16em] text-teal-300/70">
+                        <span className={`shrink-0 text-[9px] font-black uppercase tracking-[0.16em] ${
+                            isDark ? 'text-teal-300/70' : 'text-teal-700 font-extrabold'
+                        }`}>
                             Reto {CHALLENGES.findIndex((challenge) => challenge.id === activeChallenge.id) + 1}
                         </span>
-                        <span className="truncate text-[11px] font-bold leading-none">{activeChallenge.title}</span>
+                        <span className={`truncate text-[11px] font-bold leading-none ${
+                            isDark ? 'text-white' : 'text-slate-900'
+                        }`}>{activeChallenge.title}</span>
                     </button>
                     {completed.includes(activeChallenge.id) ? (
-                        <Check size={12} className="shrink-0 text-teal-300" />
+                        <Check size={12} className={`shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-600'}`} />
                     ) : (
-                        <span className="hidden shrink-0 text-[9px] text-white/25 sm:inline">{activeChallenge.hint}</span>
+                        <span className={`hidden shrink-0 text-[9px] sm:inline ${
+                            isDark ? 'text-white/35' : 'text-slate-500'
+                        }`}>{activeChallenge.hint}</span>
                     )}
                     <button
                         type="button"
                         onClick={() => startChallenge(null)}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/40 transition-colors hover:bg-white/10 hover:text-white lg:h-7 lg:w-7"
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors lg:h-7 lg:w-7 ${
+                            isDark ? 'text-white/40 hover:bg-white/10 hover:text-white' : 'text-slate-400 hover:bg-teal-100 hover:text-slate-700'
+                        }`}
                         aria-label="Quitar reto"
                     >
                         <X size={12} />
@@ -774,7 +861,11 @@ export default function GeoplanoView() {
             <div className="relative min-h-0 flex-1 p-1 sm:p-1.5">
                 <div
                     ref={boardRef}
-                    className="relative h-full w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02]"
+                    className={`relative h-full w-full overflow-hidden rounded-xl border transition-colors ${
+                        isDark
+                            ? 'border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02]'
+                            : 'border-slate-300/80 bg-white shadow-inner'
+                    }`}
                 >
                     <canvas
                         ref={canvasRef}
@@ -788,7 +879,11 @@ export default function GeoplanoView() {
 
                     {bands.length === 0 && !draft && (
                         <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-4">
-                            <p className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] leading-tight text-white/40">
+                            <p className={`rounded-full border px-3 py-1 text-[10px] leading-tight ${
+                                isDark
+                                    ? 'border-white/10 bg-black/40 text-white/50'
+                                    : 'border-slate-300 bg-white/95 text-slate-600 shadow-sm'
+                            }`}>
                                 Arrastra de un punto a otro para empezar
                             </p>
                         </div>
@@ -796,14 +891,20 @@ export default function GeoplanoView() {
 
                     {/* Reto logrado */}
                     {solved && (
-                        <div className="absolute inset-x-2 bottom-2 rounded-2xl border border-teal-400/30 bg-[#0a1b1e]/95 p-3 shadow-2xl backdrop-blur sm:left-1/2 sm:w-80 sm:-translate-x-1/2">
+                        <div className={`absolute inset-x-2 bottom-2 rounded-2xl border p-3 shadow-2xl backdrop-blur sm:left-1/2 sm:w-80 sm:-translate-x-1/2 ${
+                            isDark
+                                ? 'border-teal-400/30 bg-[#0a1b1e]/95 text-white'
+                                : 'border-teal-300 bg-white/95 text-slate-800 shadow-teal-900/10'
+                        }`}>
                             <div className="flex items-center gap-2.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-400/15">
-                                    <Sparkles size={18} className="text-teal-300" />
+                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>
+                                    <Sparkles size={18} />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-sm font-black leading-tight">¡Reto logrado!</p>
-                                    <p className="truncate text-[10px] text-white/40">
+                                    <p className={`text-sm font-black leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>¡Reto logrado!</p>
+                                    <p className={`truncate text-[10px] ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
                                         {solved.title} · área {formatNumber(solved.area)} · perímetro {formatNumber(solved.perimeter)}
                                     </p>
                                 </div>
@@ -812,14 +913,22 @@ export default function GeoplanoView() {
                                 <button
                                     type="button"
                                     onClick={() => setSolved(null)}
-                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2 text-[11px] font-bold text-white/60 hover:bg-white/10 active:scale-95"
+                                    className={`flex-1 rounded-xl border py-2 text-[11px] font-bold active:scale-95 ${
+                                        isDark
+                                            ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                    }`}
                                 >
                                     Seguir dibujando
                                 </button>
                                 <button
                                     type="button"
                                     onClick={goNextChallenge}
-                                    className="flex-1 rounded-xl bg-teal-400 py-2 text-[11px] font-black text-[#06272a] hover:bg-teal-300 active:scale-95"
+                                    className={`flex-1 rounded-xl py-2 text-[11px] font-black active:scale-95 ${
+                                        isDark
+                                            ? 'bg-teal-400 text-[#06272a] hover:bg-teal-300'
+                                            : 'bg-teal-600 text-white hover:bg-teal-700'
+                                    }`}
                                 >
                                     Siguiente reto
                                 </button>
@@ -830,7 +939,11 @@ export default function GeoplanoView() {
                     {/* Aviso */}
                     {notice && (
                         <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
-                            <p className="rounded-full border border-white/10 bg-[#0b1120]/95 px-3 py-1.5 text-[11px] font-semibold text-white/70 shadow-lg">
+                            <p className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg ${
+                                isDark
+                                    ? 'border-white/10 bg-[#0b1120]/95 text-white/80'
+                                    : 'border-slate-300 bg-white/95 text-slate-800 shadow-slate-300/40'
+                            }`}>
                                 {notice}
                             </p>
                         </div>
@@ -839,10 +952,12 @@ export default function GeoplanoView() {
             </div>
 
             {/* Barra inferior */}
-            <footer className="shrink-0 border-t border-white/5 px-2 py-1 lg:py-1.5">
+            <footer className={`shrink-0 border-t px-2 py-1 lg:py-1.5 transition-colors ${
+                isDark ? 'border-white/5 bg-[#0a0f1d]' : 'border-slate-200 bg-white'
+            }`}>
                 <div className="mx-auto flex max-w-6xl items-center gap-2">
                     <div className="flex shrink-0 items-center gap-1.5">
-                        {COLORS.map((color, index) => (
+                        {colors.map((color, index) => (
                             <button
                                 key={color}
                                 type="button"
@@ -850,20 +965,27 @@ export default function GeoplanoView() {
                                 title={COLOR_NAMES[index]}
                                 aria-label={`Color ${COLOR_NAMES[index]}`}
                                 aria-pressed={colorIdx === index}
-                                className={`h-6 w-6 rounded-full transition-all lg:h-8 lg:w-8 ${colorIdx === index
-                                    ? 'scale-110 ring-2 ring-white/80'
-                                    : 'ring-1 ring-white/15 hover:scale-105'
-                                    }`}
+                                className={`h-6 w-6 rounded-full transition-all lg:h-8 lg:w-8 ${
+                                    colorIdx === index
+                                        ? isDark
+                                            ? 'scale-110 ring-2 ring-white/90 shadow-sm'
+                                            : 'scale-110 ring-2 ring-slate-800 shadow-sm'
+                                        : isDark
+                                            ? 'ring-1 ring-white/20 hover:scale-105'
+                                            : 'ring-1 ring-slate-300 hover:scale-105'
+                                }`}
                                 style={{ backgroundColor: color }}
                             />
                         ))}
                     </div>
 
                     {measure ? (
-                        <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1 text-[10px] font-bold leading-none text-white/55 max-[460px]:hidden">
-                            <span className="shrink-0 text-white/25">{measure.vertices} lados</span>
+                        <div className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1 text-[10px] font-bold leading-none max-[460px]:hidden ${
+                            isDark ? 'text-white/70' : 'text-slate-600'
+                        }`}>
+                            <span className={`shrink-0 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{measure.vertices} lados</span>
                             <span className="shrink-0">{formatNumber(measure.area)} u²</span>
-                            <span className="shrink-0 text-white/15">·</span>
+                            <span className={`shrink-0 ${isDark ? 'text-white/20' : 'text-slate-300'}`}>·</span>
                             <span className="shrink-0">{formatNumber(measure.perimeter)} u</span>
                         </div>
                     ) : (
@@ -874,7 +996,11 @@ export default function GeoplanoView() {
                         <button
                             type="button"
                             onClick={deleteSelected}
-                            className="flex h-6 shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] font-bold text-white/60 transition-colors hover:bg-rose-500/15 hover:text-rose-300 active:scale-95 lg:h-8"
+                            className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition-colors active:scale-95 lg:h-8 ${
+                                isDark
+                                    ? 'border-white/10 bg-white/5 text-white/60 hover:bg-rose-500/15 hover:text-rose-300'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                            }`}
                             aria-label="Eliminar liga seleccionada"
                         >
                             <Eraser size={14} />
@@ -886,7 +1012,11 @@ export default function GeoplanoView() {
                         type="button"
                         onClick={closeSelected}
                         disabled={!canClose}
-                        className="flex h-6 shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] font-bold text-white/60 transition-colors hover:bg-white/10 hover:text-white active:scale-95 disabled:opacity-30 lg:h-8"
+                        className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-30 lg:h-8 ${
+                            isDark
+                                ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
                         aria-label="Cerrar figura"
                     >
                         <Check size={14} />
@@ -896,12 +1026,18 @@ export default function GeoplanoView() {
                     <button
                         type="button"
                         onClick={() => setShowRetos(true)}
-                        className="flex h-6 shrink-0 items-center gap-1 rounded-lg border border-teal-400/30 bg-teal-400/10 px-2 text-[11px] font-bold text-teal-300 transition-colors hover:bg-teal-400/20 active:scale-95 lg:h-8"
+                        className={`flex h-6 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition-colors active:scale-95 lg:h-8 ${
+                            isDark
+                                ? 'border-teal-400/30 bg-teal-400/10 text-teal-300 hover:bg-teal-400/20'
+                                : 'border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100'
+                        }`}
                         aria-label={`Retos: ${completed.length} de ${CHALLENGES.length}`}
                     >
                         <Target size={14} />
                         <span className="hidden sm:inline">Retos</span>
-                        <span className="rounded-full bg-teal-400/20 px-1 text-[10px] leading-4">
+                        <span className={`rounded-full px-1 text-[10px] leading-4 ${
+                            isDark ? 'bg-teal-400/20 text-teal-200' : 'bg-teal-200/70 text-teal-800'
+                        }`}>
                             {completed.length}/{CHALLENGES.length}
                         </span>
                     </button>
@@ -911,18 +1047,24 @@ export default function GeoplanoView() {
             {/* Modal de retos */}
             {showRetos && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 backdrop-blur-sm sm:items-center">
-                    <div className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#0f1629] p-4 shadow-2xl">
+                    <div className={`max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-2xl border p-4 shadow-2xl ${
+                        isDark ? 'border-white/10 bg-[#0f1629] text-white' : 'border-slate-200 bg-white text-slate-900'
+                    }`}>
                         <div className="mb-3 flex items-center justify-between">
                             <div>
                                 <h2 className="text-base font-black">Retos</h2>
-                                <p className="text-[11px] text-white/35">
+                                <p className={`text-[11px] ${isDark ? 'text-white/35' : 'text-slate-500'}`}>
                                     {completed.length} de {CHALLENGES.length} completados
                                 </p>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowRetos(false)}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-colors ${
+                                    isDark
+                                        ? 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                                        : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
+                                }`}
                                 aria-label="Cerrar"
                             >
                                 <X size={16} />
@@ -938,25 +1080,41 @@ export default function GeoplanoView() {
                                         key={challenge.id}
                                         type="button"
                                         onClick={() => startChallenge(challenge)}
-                                        className={`flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors ${active
-                                            ? 'border-teal-400/40 bg-teal-400/10'
-                                            : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.07]'
-                                            }`}
+                                        className={`flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors ${
+                                            active
+                                                ? isDark
+                                                    ? 'border-teal-400/40 bg-teal-400/10'
+                                                    : 'border-teal-500 bg-teal-50/80 shadow-xs'
+                                                : isDark
+                                                    ? 'border-white/10 bg-white/[0.03] hover:bg-white/[0.07]'
+                                                    : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100'
+                                        }`}
                                     >
                                         <span
-                                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${done
-                                                ? 'bg-teal-400 text-[#06272a]'
-                                                : 'border border-white/10 bg-white/5 text-white/35'
-                                                }`}
+                                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
+                                                done
+                                                    ? isDark
+                                                        ? 'bg-teal-400 text-[#06272a]'
+                                                        : 'bg-teal-600 text-white'
+                                                    : isDark
+                                                        ? 'border border-white/10 bg-white/5 text-white/35'
+                                                        : 'border border-slate-200 bg-white text-slate-400'
+                                            }`}
                                         >
                                             {done ? <Check size={12} /> : index + 1}
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block text-xs font-bold leading-tight">{challenge.title}</span>
-                                            <span className="block text-[10px] leading-tight text-white/30">{challenge.hint}</span>
+                                            <span className={`block text-xs font-bold leading-tight ${
+                                                isDark ? 'text-white' : 'text-slate-900'
+                                            }`}>{challenge.title}</span>
+                                            <span className={`block text-[10px] leading-tight ${
+                                                isDark ? 'text-white/30' : 'text-slate-500'
+                                            }`}>{challenge.hint}</span>
                                         </span>
                                         {active && (
-                                            <span className="shrink-0 rounded-full bg-teal-400/15 px-1.5 py-0.5 text-[9px] font-bold text-teal-300">
+                                            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                                                isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                            }`}>
                                                 Activo
                                             </span>
                                         )}
@@ -968,7 +1126,11 @@ export default function GeoplanoView() {
                         <button
                             type="button"
                             onClick={() => startChallenge(null)}
-                            className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/50 hover:bg-white/10"
+                            className={`mt-3 w-full rounded-xl border py-2.5 text-xs font-bold transition-colors ${
+                                isDark
+                                    ? 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                                    : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                            }`}
                         >
                             Explorar sin reto
                         </button>
@@ -979,47 +1141,71 @@ export default function GeoplanoView() {
             {/* Modal de ayuda */}
             {showHelp && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
-                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0f1629] p-4 shadow-2xl">
+                    <div className={`w-full max-w-sm rounded-2xl border p-4 shadow-2xl ${
+                        isDark ? 'border-white/10 bg-[#0f1629] text-white' : 'border-slate-200 bg-white text-slate-900'
+                    }`}>
                         <div className="mb-3 flex items-center justify-between">
                             <h2 className="text-base font-black">Cómo usar el geoplano</h2>
                             <button
                                 type="button"
                                 onClick={() => setShowHelp(false)}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-colors ${
+                                    isDark
+                                        ? 'border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                                        : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
+                                }`}
                                 aria-label="Cerrar ayuda"
                             >
                                 <X size={16} />
                             </button>
                         </div>
-                        <ol className="space-y-2 text-[11px] text-white/55">
+                        <ol className={`space-y-2 text-[11px] ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
                             <li className="flex gap-2">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-400/15 text-[9px] font-black text-teal-300">1</span>
-                                <span>Toca un punto y <b className="text-white/80">arrastra</b> hasta otro para crear una liga.</span>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>1</span>
+                                <span>Toca un punto y <b className={isDark ? 'text-white/90' : 'text-slate-900'}>arrastra</b> hasta otro para crear una liga.</span>
                             </li>
                             <li className="flex gap-2">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-400/15 text-[9px] font-black text-teal-300">2</span>
-                                <span>Desde el <b className="text-white/80">último punto</b> de la liga seleccionada puedes alargarla. Vuelve al primer punto para cerrarla.</span>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>2</span>
+                                <span>Desde el <b className={isDark ? 'text-white/90' : 'text-slate-900'}>último punto</b> de la liga seleccionada puedes alargarla. Vuelve al primer punto para cerrarla.</span>
                             </li>
                             <li className="flex gap-2">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-400/15 text-[9px] font-black text-teal-300">3</span>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>3</span>
                                 <span>Toca una liga para seleccionarla: cambia su color, bórrala o arrastra sus vértices para moverla.</span>
                             </li>
                             <li className="flex gap-2">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-400/15 text-[9px] font-black text-teal-300">4</span>
-                                <span>Con la figura cerrada verás <b className="text-white/80">área</b> y <b className="text-white/80">perímetro</b>. Entra a <b className="text-white/80">Retos</b> para practicar.</span>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>4</span>
+                                <span>Con la figura cerrada verás <b className={isDark ? 'text-white/90' : 'text-slate-900'}>área</b> y <b className={isDark ? 'text-white/90' : 'text-slate-900'}>perímetro</b>. Entra a <b className={isDark ? 'text-white/90' : 'text-slate-900'}>Retos</b> para practicar.</span>
                             </li>
                             <li className="flex gap-2">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-teal-400/15 text-[9px] font-black text-teal-300">5</span>
-                                <span>Los botones <b className="text-white/80">13 · 7 · 5</b> cambian el número de puntos del lado corto. El resto del tablero se llena solo: más columnas en horizontal y más filas en vertical.</span>
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
+                                    isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
+                                }`}>5</span>
+                                <span>Los botones <b className={isDark ? 'text-white/90' : 'text-slate-900'}>13 · 7 · 5</b> cambian el número de puntos del lado corto. El resto del tablero se llena solo: más columnas en horizontal y más filas en vertical.</span>
                             </li>
                         </ol>
-                        <p className="mt-3 rounded-xl border border-white/5 bg-white/[0.03] p-2 text-[9px] leading-relaxed text-white/30">
+                        <p className={`mt-3 rounded-xl border p-2 text-[9px] leading-relaxed ${
+                            isDark
+                                ? 'border-white/5 bg-white/[0.03] text-white/35'
+                                : 'border-slate-200 bg-slate-50 text-slate-500'
+                        }`}>
                             Si giras la tablet, el tablero se adapta y se reinicia. Al salir del geoplano la figura también se borra.
                         </p>
                         <button
                             type="button"
                             onClick={() => setShowHelp(false)}
-                            className="mt-3 w-full rounded-xl bg-teal-400 py-2.5 text-xs font-black text-[#06272a] hover:bg-teal-300 active:scale-95"
+                            className={`mt-3 w-full rounded-xl py-2.5 text-xs font-black active:scale-95 ${
+                                isDark
+                                    ? 'bg-teal-400 text-[#06272a] hover:bg-teal-300'
+                                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                            }`}
                         >
                             Entendido
                         </button>
@@ -1030,11 +1216,13 @@ export default function GeoplanoView() {
             {/* Confirmación */}
             {confirmAction && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm">
-                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0f1629] p-4 shadow-2xl">
+                    <div className={`w-full max-w-sm rounded-2xl border p-4 shadow-2xl ${
+                        isDark ? 'border-white/10 bg-[#0f1629] text-white' : 'border-slate-200 bg-white text-slate-900'
+                    }`}>
                         <h2 className="text-base font-black">
                             {confirmAction.kind === 'clear' ? '¿Borrar toda la figura?' : `¿Cuadrícula de ${confirmAction.size} puntos?`}
                         </h2>
-                        <p className="mt-1.5 text-xs leading-relaxed text-white/40">
+                        <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
                             {confirmAction.kind === 'clear'
                                 ? 'Se perderán las ligas y los retos en curso de esta figura.'
                                 : `El lado corto tendrá ${confirmAction.size} puntos y el lado largo se llena solo. Se perderán las ligas y los retos en curso.`}
@@ -1043,7 +1231,11 @@ export default function GeoplanoView() {
                             <button
                                 type="button"
                                 onClick={() => setConfirmAction(null)}
-                                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/60 hover:bg-white/10"
+                                className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-colors ${
+                                    isDark
+                                        ? 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+                                        : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                                }`}
                             >
                                 Cancelar
                             </button>
