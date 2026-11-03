@@ -281,37 +281,25 @@ export default function GeoplanoView() {
 
         const { cell, offsetX, offsetY, cols, rows } = layout
         const toPixels = (point: Point) => ({
-            x: offsetX + point.x * cell,
-            y: offsetY + point.y * cell,
+            x: Math.round(offsetX + point.x * cell),
+            y: Math.round(offsetY + point.y * cell),
         })
 
-        // Puntos de la cuadrícula (clavos del geoplano)
-        const dotRadius = Math.min(4.5, Math.max(2.4, cell * 0.06))
+        // Puntos de la cuadrícula (clavos del geoplano nítidos y sólidos)
+        const dotRadius = Math.max(2.5, Math.min(4, Math.round(cell * 0.055 * 2) / 2))
+        context.shadowBlur = 0
+        context.globalAlpha = 1
+        context.beginPath()
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                const px = offsetX + col * cell
-                const py = offsetY + row * cell
-                if (isDark) {
-                    context.fillStyle = 'rgba(255,255,255,0.22)'
-                    context.beginPath()
-                    context.arc(px, py, dotRadius, 0, Math.PI * 2)
-                    context.fill()
-                    context.fillStyle = 'rgba(255,255,255,0.55)'
-                    context.beginPath()
-                    context.arc(px, py, dotRadius * 0.45, 0, Math.PI * 2)
-                    context.fill()
-                } else {
-                    context.fillStyle = '#cbd5e1'
-                    context.beginPath()
-                    context.arc(px, py, dotRadius, 0, Math.PI * 2)
-                    context.fill()
-                    context.fillStyle = '#475569'
-                    context.beginPath()
-                    context.arc(px, py, dotRadius * 0.5, 0, Math.PI * 2)
-                    context.fill()
-                }
+                const px = Math.round(offsetX + col * cell)
+                const py = Math.round(offsetY + row * cell)
+                context.moveTo(px + dotRadius, py)
+                context.arc(px, py, dotRadius, 0, Math.PI * 2)
             }
         }
+        context.fillStyle = isDark ? 'rgba(255, 255, 255, 0.45)' : '#475569'
+        context.fill()
 
         // Ligas
         for (const band of bands) {
