@@ -116,3 +116,18 @@ Validar siempre con las dos orientaciones de la tablet (**506×809** y **809×50
 - Vercel with SPA rewrites (`vercel.json`). No special build command — uses default `npm run build`
 - PWA configured: `public/manifest.json`, `public/sw.js`, icons in `public/pwa-icons/`
 - Regenerate PWA icons: `node scripts/generate-pwa-icons.mjs` (requires Sharp)
+
+## Modo Oscuro / Claro (Pruebas y Verificación)
+
+El botón flotante para alternar entre Modo Claro y Modo Oscuro (`FloatingThemeToggle`) está oculto para producción/estudiantes.
+
+Para volver a activarlo temporalmente durante desarrollo o pruebas:
+1. Abrir `src/App.tsx`.
+2. Descomentar el import de `FloatingThemeToggle` y el componente `<FloatingThemeToggle />`:
+   ```tsx
+   import FloatingThemeToggle from './components/FloatingThemeToggle'
+   // ...
+   <FloatingThemeToggle />
+   ```
+3. Guardar el archivo. El botón volverá a aparecer flotante en la esquina inferior derecha de todas las vistas, permitiendo alternar el tema y arrastrar libremente el botón por la pantalla.
+
