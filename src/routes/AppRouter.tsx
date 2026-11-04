@@ -30,6 +30,7 @@ import AngulosView from '../views/AngulosView'
 import MedirAngulosView from '../views/MedirAngulosView'
 import ExistenciaTrianguloView from '../views/ExistenciaTrianguloView'
 import DescubrirFuncionView from '../views/DescubrirFuncionView'
+import FuncionLinealAfinView from '../views/FuncionLinealAfinView'
 
 const router = createBrowserRouter([
     {
@@ -155,6 +156,10 @@ const router = createBrowserRouter([
     {
         path: '/descubrir-funcion',
         element: <DescubrirFuncionView />
+    },
+    {
+        path: '/funcion-lineal-afin',
+        element: <FuncionLinealAfinView />
     }
 ])
 

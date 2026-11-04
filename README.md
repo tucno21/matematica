@@ -381,6 +381,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/barras-ecuacion` | `BarrasEcuacionView` | Modelo de barras estilo Singapur |
 | `/puente-ecuacion` | `PuenteEcuacionView` | El puente del igual con transposición |
 | `/descubrir-funcion` | `DescubrirFuncionView` | Máquina de funciones: descubre la regla, tabla y plano |
+| `/funcion-lineal-afin` | `FuncionLinealAfinView` | Función lineal y afín: tabla contextual, plano cartesiano y deslizadores y = mx + b |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |
