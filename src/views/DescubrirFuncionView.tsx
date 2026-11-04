@@ -318,7 +318,8 @@ export default function DescubrirFuncionView() {
   const [isRuleConfirmed, setIsRuleConfirmed] = useState(false)
 
   // Reto de predicción
-  const [challengeUserGuess, setChallengeUserGuess] = useState<number | ''>('')
+  const [challengeUserGuess, setChallengeUserGuess] = useState<string>('')
+  const [showKb, setShowKb] = useState<boolean>(false)
   const [challengeResolved, setChallengeResolved] = useState(false)
 
   // Opciones barajadas para la razón de cambio (m) y ajuste (b)
@@ -405,6 +406,7 @@ export default function DescubrirFuncionView() {
     setShowSubtleClues(false)
     setIsRuleConfirmed(false)
     setChallengeUserGuess('')
+    setShowKb(false)
     setChallengeResolved(false)
     setActiveTab('machine')
   }
@@ -516,11 +518,47 @@ export default function DescubrirFuncionView() {
     setPlaneFeedback('Puntos ubicados en el plano. Observa la alineación recta.')
   }
 
+  // Manejo de pulsaciones del teclado virtual para el reto de predicción
+  const handleKbPress = (key: string) => {
+    if (key === 'clear') {
+      setChallengeUserGuess('')
+      return
+    }
+    if (key === 'backspace') {
+      const s = String(challengeUserGuess)
+      if (s.length <= 1 || (s.length === 2 && s.startsWith('-'))) {
+        setChallengeUserGuess('')
+      } else {
+        setChallengeUserGuess(s.slice(0, -1))
+      }
+      return
+    }
+    if (key === '±') {
+      if (challengeUserGuess === '' || challengeUserGuess === '0') return
+      const s = String(challengeUserGuess)
+      if (s.startsWith('-')) {
+        setChallengeUserGuess(s.slice(1))
+      } else {
+        setChallengeUserGuess('-' + s)
+      }
+      return
+    }
+    // Números 0-9
+    const currentStr = challengeUserGuess === '' ? '' : String(challengeUserGuess)
+    if (currentStr.replace('-', '').length >= 4) return
+    if (currentStr === '0') {
+      setChallengeUserGuess(key)
+    } else {
+      setChallengeUserGuess(currentStr + key)
+    }
+  }
+
   // Resolver reto final
   const handleCheckChallenge = () => {
     if (challengeUserGuess !== '' && Number(challengeUserGuess) === currentMission.expectedChallengeY) {
       setChallengeResolved(true)
       setIsRuleConfirmed(true)
+      setShowKb(false)
     }
   }
 
@@ -529,10 +567,10 @@ export default function DescubrirFuncionView() {
     return steps.filter(s => s.isPlaced)
   }, [steps])
 
-  // Coordenadas extremas de la recta para dibujarla cuando se ubiquen los puntos o la regla esté confirmada
+  // Coordenadas extremas de la recta para dibujarla ÚNICAMENTE cuando se ubiquen todos los puntos en el plano
   const linePoints = useMemo(() => {
     const allPlaced = steps.every(s => s.isPlaced)
-    if (!isRuleConfirmed && !allPlaced) return null
+    if (!allPlaced) return null
     const x1 = -2
     const y1 = currentMission.slopeM * x1 + currentMission.interceptB
     const x2 = 10
@@ -543,7 +581,7 @@ export default function DescubrirFuncionView() {
       x2: toSvgX(x2),
       y2: toSvgY(y2)
     }
-  }, [isRuleConfirmed, steps, currentMission])
+  }, [steps, currentMission])
 
   // Punto objetivo actual
   const currentTargetPoint = targetPointIndex < steps.length ? steps[targetPointIndex] : null
@@ -1594,20 +1632,23 @@ export default function DescubrirFuncionView() {
                           }`}>
                             Salida y =
                           </span>
-                          <input
-                            type="number"
-                            value={challengeUserGuess}
-                            onChange={e => setChallengeUserGuess(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
-                            placeholder="?"
-                            className={`w-16 rounded p-1 font-mono text-center text-xs font-bold border ${
-                              isDark
-                                ? 'bg-slate-900 border-white/20 text-white'
-                                : 'bg-white border-slate-300 text-slate-900 shadow-xs'
-                            }`}
-                          />
                           <button
+                            type="button"
+                            onClick={() => setShowKb(true)}
+                            className={`min-w-16 h-7 px-2.5 rounded font-mono text-center text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95 ${
+                              isDark
+                                ? 'bg-slate-900 border-amber-400/60 text-amber-300 hover:border-amber-400'
+                                : 'bg-white border-amber-500/70 text-amber-900 hover:border-amber-600 shadow-xs'
+                            }`}
+                            title="Tocar para abrir teclado virtual"
+                          >
+                            <span>{challengeUserGuess !== '' ? challengeUserGuess : '?'}</span>
+                            <span className="text-[10px] opacity-70">⌨️</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={handleCheckChallenge}
-                            className="h-6 px-3 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] sm:text-xs cursor-pointer shadow-xs transition-all active:scale-95"
+                            className="h-7 px-3 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] sm:text-xs cursor-pointer shadow-xs transition-all active:scale-95"
                           >
                             Comprobar
                           </button>
@@ -1990,32 +2031,6 @@ export default function DescubrirFuncionView() {
                       </g>
                     )
                   })}
-
-                  {/* Punto del reto final si fue resuelto */}
-                  {challengeResolved && (
-                    <g>
-                      <circle
-                        cx={toSvgX(currentMission.challengeX)}
-                        cy={toSvgY(currentMission.expectedChallengeY)}
-                        r={6}
-                        fill={isDark ? "#10b981" : "#059669"}
-                        stroke="#ffffff"
-                        strokeWidth={1.5}
-                      />
-                      <text
-                        x={toSvgX(currentMission.challengeX) + 8}
-                        y={toSvgY(currentMission.expectedChallengeY) - 6}
-                        fill={isDark ? "#6ee7b7" : "#065f46"}
-                        fontSize="10"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        stroke={isDark ? "#000000" : "#ffffff"}
-                        strokeWidth={isDark ? 0.5 : 0.8}
-                      >
-                        ({currentMission.challengeX}; {currentMission.expectedChallengeY})
-                      </text>
-                    </g>
-                  )}
                 </svg>
                 </div>
               </div>
@@ -2024,6 +2039,120 @@ export default function DescubrirFuncionView() {
 
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          TECLADO VIRTUAL FLOTANTE (Reto de Predicción)
+      ────────────────────────────────────────────────────────────────────────── */}
+      {showKb && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs"
+            onClick={() => setShowKb(false)}
+          />
+          <div
+            className={`fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[270px] lg:w-[290px] rounded-xl border shadow-2xl p-3 select-none animate-in zoom-in-95 duration-150 ${
+              isDark
+                ? 'bg-[#0f172a] border-amber-500/40 text-white'
+                : 'bg-white border-amber-500 text-slate-900'
+            }`}
+          >
+            {/* Header */}
+            <div className={`flex items-center justify-between pb-1.5 border-b mb-2 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+              <span className={`text-xs font-bold flex items-center gap-1 ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                <span>⌨️ Ingresa la Salida (y)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowKb(false)}
+                className={`h-6 w-6 rounded-md flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+                title="Cerrar teclado"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Display de valor actual */}
+            <div
+              className={`mb-2 py-1 px-3 rounded-lg border font-mono text-center flex items-center justify-center h-9 ${
+                isDark ? 'bg-black/40 border-white/10 text-emerald-300' : 'bg-slate-50 border-slate-200 text-emerald-700'
+              }`}
+            >
+              <span className="text-xs mr-2 font-sans font-bold opacity-70">y =</span>
+              <span className="text-lg font-black">{challengeUserGuess !== '' ? challengeUserGuess : '?'}</span>
+            </div>
+
+            {/* Teclado Numérico */}
+            <div className="grid grid-cols-3 gap-1.5 text-xs font-mono font-bold">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(key => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleKbPress(key)}
+                  className={`h-8 rounded-lg shadow-xs active:scale-95 transition-all cursor-pointer ${
+                    isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleKbPress('±')}
+                className={`h-8 rounded-lg shadow-xs active:scale-95 transition-all cursor-pointer ${
+                  isDark ? 'bg-white/10 hover:bg-white/20 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-amber-800'
+                }`}
+                title="Cambiar signo (+/-)"
+              >
+                ±
+              </button>
+              <button
+                type="button"
+                onClick={() => handleKbPress('0')}
+                className={`h-8 rounded-lg shadow-xs active:scale-95 transition-all cursor-pointer ${
+                  isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                }`}
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={() => handleKbPress('backspace')}
+                className={`h-8 rounded-lg shadow-xs active:scale-95 transition-all cursor-pointer ${
+                  isDark ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300' : 'bg-rose-50 hover:bg-rose-100 text-rose-700'
+                }`}
+                title="Borrar dígito"
+              >
+                ⌫
+              </button>
+            </div>
+
+            {/* Acciones */}
+            <div className="grid grid-cols-2 gap-1.5 mt-2">
+              <button
+                type="button"
+                onClick={() => handleKbPress('clear')}
+                className={`h-7 rounded-lg text-[11px] font-bold cursor-pointer transition-colors ${
+                  isDark ? 'bg-white/10 hover:bg-white/20 text-white/70' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Limpiar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleCheckChallenge()
+                  setShowKb(false)
+                }}
+                className="h-7 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] cursor-pointer shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1"
+              >
+                <span>✓ Comprobar</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ──────────────────────────────────────────────────────────────────────────
           MODAL DE AYUDA PEDAGÓGICA (ModalHelp)
