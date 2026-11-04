@@ -129,20 +129,23 @@ function getCircleCircleIntersections(
   const dy = p2.y - p1.y
   const d = Math.hypot(dx, dy)
 
-  // Tolerancia de 3px para asegurar toque en casos tangenciales límite
-  if (d > r1 + r2 + 3 || d < Math.abs(r1 - r2) - 3 || d < 1e-4) {
+  // Debe haber espacio estrictamente positivo para formar altura/área (triángulo real, no degenerado)
+  if (d >= r1 + r2 - 0.5 || d <= Math.abs(r1 - r2) + 0.5 || d < 1e-4) {
     return null
   }
 
-  const clampedD = Math.max(Math.abs(r1 - r2), Math.min(r1 + r2, d))
-  const a = (r1 * r1 - r2 * r2 + clampedD * clampedD) / (2 * clampedD)
-  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a))
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+  const hSq = r1 * r1 - a * a
+  if (hSq <= 1.0) {
+    return null
+  }
+  const h = Math.sqrt(hSq)
 
-  const x2 = p1.x + (a * dx) / clampedD
-  const y2 = p1.y + (a * dy) / clampedD
+  const x2 = p1.x + (a * dx) / d
+  const y2 = p1.y + (a * dy) / d
 
-  const rx = -dy * (h / clampedD)
-  const ry = dx * (h / clampedD)
+  const rx = -dy * (h / d)
+  const ry = dx * (h / d)
 
   return [
     { x: Math.round(x2 + rx), y: Math.round(y2 + ry) },
@@ -193,6 +196,11 @@ function tryTriangleClosingSnap(
     const thirdFreeEnd: 'p1' | 'p2' = thirdConnToP1 ? 'p2' : 'p1'
     const thirdFreePt = sThird[thirdFreeEnd]
     const rThird = sThird.units * pxPerUnit
+
+    // Requisito 0: Desigualdad triangular estricta (en el caso límite o imposible, no forman triángulo en el aire)
+    const maxUnits = Math.max(sDrag.units, sBase.units, sThird.units)
+    const sumOthers = sDrag.units + sBase.units + sThird.units - maxUnits
+    if (sumOthers <= maxUnits) continue
 
     // Requisito 1: Ambos extremos DEBEN estar ya muy cerca entre sí (círculos casi tocándose)
     const distBetweenTips = getDistance(candidateP, thirdFreePt)
@@ -403,6 +411,14 @@ export default function ExistenciaTrianguloView() {
     const sA = segments[0]
     const sB = segments[1]
     const sC = segments[2]
+
+    // Desigualdad triangular estricta: en el caso límite (ej. 10, 6, 4) o imposible (11, 4, 3),
+    // los lados menores colapsan en una línea plana recta sobre la base y NUNCA forman un triángulo con área
+    const maxUnits = Math.max(sA.units, sB.units, sC.units)
+    const sumOthers = sA.units + sB.units + sC.units - maxUnits
+    if (sumOthers <= maxUnits) {
+      return { isClosed: false, vertices: [], area: 0 }
+    }
 
     const ptsA = [sA.p1, sA.p2]
     const ptsB = [sB.p1, sB.p2]
@@ -1499,6 +1515,24 @@ export default function ExistenciaTrianguloView() {
               <span className="truncate">
                 ¡Triángulo cerrado! {sideA} + {sideB} &gt; {sideC}, {sideA} + {sideC} &gt; {sideB} y{' '}
                 {sideB} + {sideC} &gt; {sideA}.
+              </span>
+            </div>
+          ) : inequalityCheck.status === 'degenerate' ? (
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-amber-300' : 'text-amber-800'
+            }`}>
+              <AlertCircle size={14} className="shrink-0" />
+              <span className="truncate">
+                Caso límite: {inequalityCheck.sumBC === inequalityCheck.sumAB ? sideC : sideB} + {sideC} = {sideA}. La suma es igual al lado mayor: colapsan en una línea recta (no forman triángulo).
+              </span>
+            </div>
+          ) : inequalityCheck.status === 'impossible' ? (
+            <div className={`flex items-center gap-1.5 font-bold truncate ${
+              isDark ? 'text-rose-300' : 'text-rose-700'
+            }`}>
+              <XCircle size={14} className="shrink-0" />
+              <span className="truncate">
+                Imposible: la suma de los dos lados menores es menor al lado mayor. Los extremos no se alcanzan.
               </span>
             </div>
           ) : (
