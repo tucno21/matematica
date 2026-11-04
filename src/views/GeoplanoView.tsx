@@ -630,15 +630,9 @@ export default function GeoplanoView() {
         setSolved(null)
     }
 
-    // Selecciona el color para la siguiente liga, o actualiza la liga seleccionada
+    // El color solo aplica a las ligas que se creen a continuación; no modifica las ya dibujadas
     const pickColor = (index: number) => {
         setColorIdx(index)
-        if (selectedId !== null) {
-            pushHistory(bands)
-            setBands((prev) =>
-                prev.map((b) => (b.id === selectedId ? { ...b, color: colors[index], colorIndex: index } : b))
-            )
-        }
     }
 
     const requestDensity = (size: number) => {
@@ -1164,7 +1158,7 @@ export default function GeoplanoView() {
                                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
                                     isDark ? 'bg-teal-400/15 text-teal-300' : 'bg-teal-100 text-teal-700'
                                 }`}>3</span>
-                                <span>Toca una liga para seleccionarla: cambia su color, bórrala o arrastra sus vértices para moverla.</span>
+                                <span>Toca una liga para seleccionarla: bórrala, ciérrala o arrastra sus vértices para moverla. Los colores seleccionan el tono de la siguiente liga.</span>
                             </li>
                             <li className="flex gap-2">
                                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-black ${
