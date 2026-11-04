@@ -234,12 +234,12 @@ html:not(.dark) {
     .bg-amber-600, .bg-amber-500, .bg-amber-700,
     .bg-sky-600, .bg-sky-500, .bg-sky-700,
     .bg-teal-600, .bg-purple-600, .bg-purple-700,
-    [class*="from-violet-5"], [class*="from-violet-6"],
-    [class*="from-indigo-5"], [class*="from-indigo-6"],
-    [class*="from-blue-4"], [class*="from-blue-5"], [class*="from-blue-6"],
-    [class*="from-red-4"], [class*="from-red-5"], [class*="from-red-6"],
-    [class*="from-emerald-4"], [class*="from-emerald-5"], [class*="from-emerald-6"],
-    [class*="from-amber-4"], [class*="from-amber-5"], [class*="from-amber-6"] {
+    [class*="from-violet-500"], [class*="from-violet-600"], [class*="from-violet-700"],
+    [class*="from-indigo-500"], [class*="from-indigo-600"], [class*="from-indigo-700"],
+    [class*="from-blue-500"], [class*="from-blue-600"], [class*="from-blue-700"],
+    [class*="from-red-500"], [class*="from-red-600"], [class*="from-red-700"],
+    [class*="from-emerald-500"], [class*="from-emerald-600"], [class*="from-emerald-700"],
+    [class*="from-amber-500"], [class*="from-amber-600"], [class*="from-amber-700"] {
         color: #ffffff !important;
     }
 
@@ -254,12 +254,12 @@ html:not(.dark) {
         .bg-amber-600, .bg-amber-500, .bg-amber-700,
         .bg-sky-600, .bg-sky-500, .bg-sky-700,
         .bg-teal-600, .bg-purple-600, .bg-purple-700,
-        [class*="from-violet-5"], [class*="from-violet-6"],
-        [class*="from-indigo-5"], [class*="from-indigo-6"],
-        [class*="from-blue-4"], [class*="from-blue-5"], [class*="from-blue-6"],
-        [class*="from-red-4"], [class*="from-red-5"], [class*="from-red-6"],
-        [class*="from-emerald-4"], [class*="from-emerald-5"], [class*="from-emerald-6"],
-        [class*="from-amber-4"], [class*="from-amber-5"], [class*="from-amber-6"]
+        [class*="from-violet-500"], [class*="from-violet-600"], [class*="from-violet-700"],
+        [class*="from-indigo-500"], [class*="from-indigo-600"], [class*="from-indigo-700"],
+        [class*="from-blue-500"], [class*="from-blue-600"], [class*="from-blue-700"],
+        [class*="from-red-500"], [class*="from-red-600"], [class*="from-red-700"],
+        [class*="from-emerald-500"], [class*="from-emerald-600"], [class*="from-emerald-700"],
+        [class*="from-amber-500"], [class*="from-amber-600"], [class*="from-amber-700"]
     ) :is(span, strong, p, svg, [class*="text-"], div) {
         color: #ffffff !important;
     }

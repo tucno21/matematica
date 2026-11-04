@@ -120,6 +120,23 @@ function computeBounds(
   return { minX, maxX, minY, maxY }
 }
 
+// Conversión precisa e inmune al aspect ratio / letterbox del SVG
+function getSvgCoordinates(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const ctm = svg.getScreenCTM()
+  if (ctm) {
+    const pt = svg.createSVGPoint()
+    pt.x = clientX
+    pt.y = clientY
+    const transformed = pt.matrixTransform(ctm.inverse())
+    return { x: transformed.x, y: transformed.y }
+  }
+  const rect = svg.getBoundingClientRect()
+  return {
+    x: ((clientX - rect.left) / rect.width) * svg.viewBox.baseVal.width,
+    y: ((clientY - rect.top) / rect.height) * svg.viewBox.baseVal.height
+  }
+}
+
 // Función para mezclar aleatoriamente las opciones (Fisher-Yates)
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array]
@@ -412,19 +429,16 @@ export default function FuncionLinealAfinView() {
     if (phase !== 'plane' || allPointsPlaced) return
     if (!svgRef.current) return
 
-    const rect = svgRef.current.getBoundingClientRect()
-    const svgClickX = ((e.clientX - rect.left) / rect.width) * SVG_W
-    const svgClickY = ((e.clientY - rect.top) / rect.height) * SVG_H
-
-    const { rawX, rawY, x, y } = fromSvgCoords(svgClickX, svgClickY)
+    const coords = getSvgCoordinates(svgRef.current, e.clientX, e.clientY)
+    const { rawX, rawY, x, y } = fromSvgCoords(coords.x, coords.y)
 
     // Coordenada objetivo actual
     const targetPoint = points[activePointIdx]
     if (!targetPoint) return
 
-    // Tolerancia magnética de 0.65 unidades alrededor de la intersección entera
+    // Tolerancia magnética de 0.7 unidades alrededor de la intersección entera
     const isTargetHit =
-      Math.abs(rawX - targetPoint.x) <= 0.65 && Math.abs(rawY - targetPoint.y) <= 0.65
+      Math.abs(rawX - targetPoint.x) <= 0.7 && Math.abs(rawY - targetPoint.y) <= 0.7
 
     if (isTargetHit) {
       // Punto correcto colocado
@@ -457,10 +471,8 @@ export default function FuncionLinealAfinView() {
   // Movimiento de cursor sobre el SVG para mostrar coordenadas
   const handleSvgPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!svgRef.current) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const svgMoveX = ((e.clientX - rect.left) / rect.width) * SVG_W
-    const svgMoveY = ((e.clientY - rect.top) / rect.height) * SVG_H
-    const { x, y } = fromSvgCoords(svgMoveX, svgMoveY)
+    const coords = getSvgCoordinates(svgRef.current, e.clientX, e.clientY)
+    const { x, y } = fromSvgCoords(coords.x, coords.y)
     if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
       setHoverCoord({ x, y })
     } else {

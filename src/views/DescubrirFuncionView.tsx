@@ -6,11 +6,12 @@ import {
   RotateCcw,
   Sparkles,
   Check,
-  ChevronRight,
   Layers,
-  LineChart,
   ArrowRight,
-  Target
+  Target,
+  Zap,
+  Box,
+  Play
 } from 'lucide-react'
 import ModalHelp from '../components/ModalHelp'
 import { useThemeStore } from '../store/useThemeStore'
@@ -74,19 +75,24 @@ const MISSIONS: Mission[] = [
     ],
     ruleOptionsFormula: [
       {
-        text: 'y = 2x - 1',
+        text: '2x - 1 = y',
         isCorrect: true,
-        feedback: '¡Excelente! Ésta es la ecuación matemática de una función afín.'
+        feedback: '¡Excelente! Multiplicamos la entrada x por 2 y restamos 1 para obtener la salida y: 2x - 1 = y.'
       },
       {
-        text: 'y = 2x',
+        text: '2y - 1 = x',
         isCorrect: false,
-        feedback: 'y = 2x pasaría por (0,0), pero esta máquina da 1 para entrada 1.'
+        feedback: '¡Cuidado con las variables! La máquina transforma la entrada x para dar la salida y (2x - 1 = y), no al revés.'
       },
       {
-        text: 'y = x + 2',
+        text: '2x + 1 = y',
         isCorrect: false,
-        feedback: 'Si x=3, 3+2=5, pero si x=4, 4+2=6 (y la máquina da 7).'
+        feedback: 'El ajuste obtenido en el paso anterior fue restar 1 (-1), no sumar 1.'
+      },
+      {
+        text: 'x + 2 = y',
+        isCorrect: false,
+        feedback: 'Si x=4, 4+2=6, pero la salida real en la tabla es 7.'
       }
     ],
     challengeX: 5,
@@ -126,19 +132,24 @@ const MISSIONS: Mission[] = [
     ],
     ruleOptionsFormula: [
       {
-        text: 'y = 2x',
+        text: '2x = y',
         isCorrect: true,
-        feedback: '¡Brillante! Es una Función Lineal pura (pasa por (0,0) y b = 0).'
+        feedback: '¡Brillante! Cada salida y es el doble exacto de la entrada x: 2x = y.'
       },
       {
-        text: 'y = 2x + 1',
+        text: '2y = x',
         isCorrect: false,
-        feedback: 'No tiene término independiente sumado porque cuando x=0, y=0.'
+        feedback: '¡Atención! La salida y se calcula multiplicando la entrada x por 2 (2x = y), no al revés.'
       },
       {
-        text: 'y = x²',
+        text: '2x + 1 = y',
         isCorrect: false,
-        feedback: 'Para x=3 daría 9, pero la máquina da 6.'
+        feedback: 'No tiene ajuste sumado; cuando entra x=0 sale 0, por lo que b = 0.'
+      },
+      {
+        text: 'x² = y',
+        isCorrect: false,
+        feedback: 'Para x=3 daría 9, pero la máquina arroja 6.'
       }
     ],
     challengeX: 4,
@@ -178,19 +189,24 @@ const MISSIONS: Mission[] = [
     ],
     ruleOptionsFormula: [
       {
-        text: 'y = x + 3',
+        text: 'x + 3 = y',
         isCorrect: true,
-        feedback: '¡Excelente! Función afín con pendiente m=1 e intercepto b=3.'
+        feedback: '¡Excelente! A cada entrada x se le suma 3 para calcular la salida y: x + 3 = y.'
       },
       {
-        text: 'y = 3x',
+        text: 'y + 3 = x',
         isCorrect: false,
-        feedback: 'Si x=2, 3·2 = 6, pero si x=1, 3·1 = 3 (la máquina da 4).'
+        feedback: 'Recuerda: la salida y se obtiene sumando 3 a la entrada x (x + 3 = y).'
       },
       {
-        text: 'y = 2x + 1',
+        text: '3x = y',
         isCorrect: false,
-        feedback: 'No concuerda con las salidas observadas.'
+        feedback: 'Para x=0 daría 0, pero la máquina produce 3.'
+      },
+      {
+        text: 'x - 3 = y',
+        isCorrect: false,
+        feedback: 'El ajuste obtenido en el paso anterior fue sumar 3 (+3), no restar 3.'
       }
     ],
     challengeX: 4,
@@ -230,6 +246,33 @@ const fromSvgCoords = (svgX: number, svgY: number) => {
   }
 }
 
+// Conversión precisa e inmune al aspect ratio / letterbox del SVG
+function getSvgCoordinates(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const ctm = svg.getScreenCTM()
+  if (ctm) {
+    const pt = svg.createSVGPoint()
+    pt.x = clientX
+    pt.y = clientY
+    const transformed = pt.matrixTransform(ctm.inverse())
+    return { x: transformed.x, y: transformed.y }
+  }
+  const rect = svg.getBoundingClientRect()
+  return {
+    x: ((clientX - rect.left) / rect.width) * svg.viewBox.baseVal.width,
+    y: ((clientY - rect.top) / rect.height) * svg.viewBox.baseVal.height
+  }
+}
+
+// Función para mezclar aleatoriamente las opciones (Fisher-Yates)
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 export default function DescubrirFuncionView() {
   const navigate = useNavigate()
   const isDark = useThemeStore(s => s.theme === 'dark')
@@ -246,23 +289,95 @@ export default function DescubrirFuncionView() {
 
   // Estado de la máquina y tabla
   const [steps, setSteps] = useState<MachineStepData[]>(currentMission.initialSteps)
-  const [activeMachineInput, setActiveMachineInput] = useState<number | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
   const [revealedTableCount, setRevealedTableCount] = useState<number>(0)
+
+  // Estado de animación dinámica de la Fábrica de Funciones
+  type MachineAnimStage = 'idle' | 'entering' | 'processing' | 'ejecting'
+  const [machineStage, setMachineStage] = useState<MachineAnimStage>('idle')
+  const [currentAnimX, setCurrentAnimX] = useState<number | null>(null)
+  const [currentAnimY, setCurrentAnimY] = useState<number | null>(null)
+  const [animStatusText, setAnimStatusText] = useState<string>('Toca una entrada para comenzar la fabricación')
 
   // Estado del plano cartesiano interactivo
   const [targetPointIndex, setTargetPointIndex] = useState<number>(0)
   const [planeFeedback, setPlaneFeedback] = useState<string | null>(null)
+  const [hoverCoord, setHoverCoord] = useState<{ x: number; y: number } | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
-  // Estado de deducción de regla
-  const [wordsAnswerIdx, setWordsAnswerIdx] = useState<number | null>(null)
-  const [formulaAnswerIdx, setFormulaAnswerIdx] = useState<number | null>(null)
+  // Estado pedagógico de deducción de regla paso a paso
+  const [selectedSlope, setSelectedSlope] = useState<number | null>(null)
+  const [slopeFeedback, setSlopeFeedback] = useState<'correct' | 'incorrect' | null>(null)
+  const [selectedIntercept, setSelectedIntercept] = useState<number | null>(null)
+  const [interceptFeedback, setInterceptFeedback] = useState<'correct' | 'incorrect' | null>(null)
+  const [selectedFormulaIdx, setSelectedFormulaIdx] = useState<number | null>(null)
+  const [formulaFeedback, setFormulaFeedback] = useState<{ isCorrect: boolean; text: string } | null>(null)
+  const [shuffledFormulaOptions, setShuffledFormulaOptions] = useState(() =>
+    shuffleArray(MISSIONS[0].ruleOptionsFormula)
+  )
+  const [showSubtleClues, setShowSubtleClues] = useState<boolean>(false)
   const [isRuleConfirmed, setIsRuleConfirmed] = useState(false)
 
   // Reto de predicción
-  const [challengeUserGuess, setChallengeUserGuess] = useState<number>(0)
+  const [challengeUserGuess, setChallengeUserGuess] = useState<number | ''>('')
   const [challengeResolved, setChallengeResolved] = useState(false)
+
+  // Opciones barajadas para la razón de cambio (m) y ajuste (b)
+  const slopeOptions = useMemo(() => {
+    const m = currentMission.slopeM
+    const items = [
+      { val: m, label: `Salto de +${m}` },
+      { val: m === 1 ? 2 : m - 1, label: `Salto de +${m === 1 ? 2 : m - 1}` },
+      { val: m + 1, label: `Salto de +${m + 1}` },
+      { val: m + 2, label: `Salto de +${m + 2}` }
+    ]
+    const seed = (missionIdx * 3 + 1) % items.length
+    return [...items.slice(seed), ...items.slice(0, seed)]
+  }, [missionIdx, currentMission.slopeM])
+
+  const interceptOptions = useMemo(() => {
+    const b = currentMission.interceptB
+    const formatLabel = (v: number) => {
+      if (v === 0) return 'Sin ajuste (0)'
+      if (v > 0) return `Sumar ${v} (+${v})`
+      return `Restar ${Math.abs(v)} (${v})`
+    }
+    const candidates = [
+      b,
+      b === 0 ? 1 : b > 0 ? b - 2 : b + 1,
+      b === 0 ? -1 : b > 0 ? -b : b + 2,
+      b === 0 ? 2 : b > 0 ? b + 1 : -b
+    ]
+    const uniqueVals = Array.from(new Set(candidates))
+    const items = uniqueVals.map(v => ({ val: v, label: formatLabel(v) }))
+    const seed = (missionIdx * 2 + 1) % items.length
+    return [...items.slice(seed), ...items.slice(0, seed)]
+  }, [missionIdx, currentMission.interceptB])
+
+  const handleSelectSlope = (val: number) => {
+    setSelectedSlope(val)
+    if (val === currentMission.slopeM) {
+      setSlopeFeedback('correct')
+    } else {
+      setSlopeFeedback('incorrect')
+    }
+  }
+
+  const handleSelectIntercept = (val: number) => {
+    setSelectedIntercept(val)
+    if (val === currentMission.interceptB) {
+      setInterceptFeedback('correct')
+    } else {
+      setInterceptFeedback('incorrect')
+    }
+  }
+
+  const handleSelectFormula = (idx: number) => {
+    setSelectedFormulaIdx(idx)
+    const opt = shuffledFormulaOptions[idx]
+    if (opt) {
+      setFormulaFeedback({ isCorrect: opt.isCorrect, text: opt.feedback })
+    }
+  }
 
   // Modal de ayuda
   const [showHelp, setShowHelp] = useState(false)
@@ -272,70 +387,91 @@ export default function DescubrirFuncionView() {
     setMissionIdx(idx)
     const m = MISSIONS[idx]
     setSteps(m.initialSteps.map(s => ({ ...s, isPlaced: false })))
-    setActiveMachineInput(null)
-    setIsProcessing(false)
+    setMachineStage('idle')
+    setCurrentAnimX(null)
+    setCurrentAnimY(null)
+    setAnimStatusText('Toca una entrada para comenzar la fabricación')
     setRevealedTableCount(0)
     setTargetPointIndex(0)
     setPlaneFeedback(null)
-    setWordsAnswerIdx(null)
-    setFormulaAnswerIdx(null)
+    setHoverCoord(null)
+    setSelectedSlope(null)
+    setSlopeFeedback(null)
+    setSelectedIntercept(null)
+    setInterceptFeedback(null)
+    setSelectedFormulaIdx(null)
+    setFormulaFeedback(null)
+    setShuffledFormulaOptions(shuffleArray(m.ruleOptionsFormula))
+    setShowSubtleClues(false)
     setIsRuleConfirmed(false)
-    setChallengeUserGuess(0)
+    setChallengeUserGuess('')
     setChallengeResolved(false)
     setActiveTab('machine')
   }
 
   // Activar la animación de la máquina y revelar en la tabla
   const handleRunMachine = (inputX: number) => {
-    if (isProcessing) return
-    setActiveMachineInput(inputX)
-    setIsProcessing(true)
+    if (machineStage !== 'idle') return
+    const step = steps.find(s => s.x === inputX)
+    if (!step) return
 
+    setCurrentAnimX(inputX)
+    setCurrentAnimY(step.expectedY)
+    setMachineStage('entering')
+    setAnimStatusText(`Introduciendo x = ${inputX} en la tolva...`)
+
+    // Paso 1: Cápsula entra en la máquina (450ms)
     setTimeout(() => {
-      setIsProcessing(false)
-      const stepIdx = steps.findIndex(s => s.x === inputX)
-      if (stepIdx !== -1) {
-        setRevealedTableCount(prev => Math.max(prev, stepIdx + 1))
-      }
+      setMachineStage('processing')
+      setAnimStatusText(`✨ ¡Proceso mágico! Fabricando f(${inputX})... ⚙️`)
+
+      // Paso 2: Fabricación mágica / engranajes girando (650ms)
+      setTimeout(() => {
+        setMachineStage('ejecting')
+        setAnimStatusText(`🎉 ¡Éxito! La máquina produjo la salida y = ${step.expectedY}`)
+
+        // Revelar en la tabla
+        const stepIdx = steps.findIndex(s => s.x === inputX)
+        if (stepIdx !== -1) {
+          setRevealedTableCount(prev => Math.max(prev, stepIdx + 1))
+        }
+
+        // Paso 3: Retornar a reposo tras el salto (850ms)
+        setTimeout(() => {
+          setMachineStage('idle')
+        }, 850)
+      }, 650)
     }, 450)
   }
 
-  // Pasar al paso 2: Adivinar la regla
-  const handleGoToRules = () => {
-    setRevealedTableCount(steps.length)
-    setActiveTab('rules')
+  // Procesar la siguiente entrada pendiente
+  const handleRunNextMachine = () => {
+    if (machineStage !== 'idle') return
+    const nextStep = steps.find((_, idx) => idx >= revealedTableCount)
+    if (nextStep) {
+      handleRunMachine(nextStep.x)
+    }
   }
 
-  // Clic táctil en el plano cartesiano interactivo
-  const handlePlaneClick = (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<SVGSVGElement>) => {
+  // Clic táctil / pointer down en el plano cartesiano interactivo
+  const handlePlaneClick = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!svgRef.current) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const clientX = e.clientX
-    const clientY = e.clientY
-
-    const scaleX = SVG_SIZE / rect.width
-    const scaleY = SVG_SIZE / rect.height
-    const svgX = (clientX - rect.left) * scaleX
-    const svgY = (clientY - rect.top) * scaleY
-
-    const clicked = fromSvgCoords(svgX, svgY)
-
-    // Snap a la intersección entera más cercana
-    const px = toSvgX(clicked.x)
-    const py = toSvgY(clicked.y)
-    const dist = Math.hypot(svgX - px, svgY - py)
-
-    if (dist > 34) return // Toque fuera del radio de tolerancia
+    const svgCoords = getSvgCoordinates(svgRef.current, e.clientX, e.clientY)
+    const { rawX, rawY, x, y } = fromSvgCoords(svgCoords.x, svgCoords.y)
 
     // Verificar si coincide con el punto objetivo que falta ubicar
     const currentTarget = targetPointIndex < steps.length ? steps[targetPointIndex] : null
 
     if (!currentTarget) {
-      setPlaneFeedback(`Tocaste (${clicked.x}; ${clicked.y}). ¡Los 4 puntos ya están ubicados!`)
+      setPlaneFeedback(`Tocaste (${x}; ${y}). ¡Los 4 puntos ya están ubicados!`)
       return
     }
 
-    if (clicked.x === currentTarget.x && clicked.y === currentTarget.expectedY) {
+    // Tolerancia generosa para pantalla táctil (±0.75 unidades de cuadrícula alrededor del punto entero)
+    const isTargetHit =
+      Math.abs(rawX - currentTarget.x) <= 0.75 && Math.abs(rawY - currentTarget.expectedY) <= 0.75
+
+    if (isTargetHit) {
       // Punto correcto
       setSteps(prev =>
         prev.map((s, idx) => (idx === targetPointIndex ? { ...s, isPlaced: true } : s))
@@ -345,7 +481,7 @@ export default function DescubrirFuncionView() {
 
       if (nextIdx < steps.length) {
         setPlaneFeedback(
-          `¡Bien! Ahora ubica: (${steps[nextIdx].x}; ${steps[nextIdx].expectedY})`
+          `¡Genial! Punto (${currentTarget.x}; ${currentTarget.expectedY}) ubicado. Ahora busca (${steps[nextIdx].x}; ${steps[nextIdx].expectedY}).`
         )
       } else {
         setPlaneFeedback('¡Excelente! Ubicaste los 4 puntos. ¡Pasan por una línea recta!')
@@ -353,9 +489,24 @@ export default function DescubrirFuncionView() {
     } else {
       // Retroalimentación pedagógica orientadora
       setPlaneFeedback(
-        `Tocaste (${clicked.x}; ${clicked.y}). Para (${currentTarget.x}; ${currentTarget.expectedY}): avanza a x = ${currentTarget.x} y sube a y = ${currentTarget.expectedY}.`
+        `Marcaste cerca de (${x}; ${y}). Para (${currentTarget.x}; ${currentTarget.expectedY}): ubica x = ${currentTarget.x} en la base y sube a y = ${currentTarget.expectedY}.`
       )
     }
+  }
+
+  const handlePlanePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return
+    const svgCoords = getSvgCoordinates(svgRef.current, e.clientX, e.clientY)
+    const { x, y } = fromSvgCoords(svgCoords.x, svgCoords.y)
+    if (x >= MIN_X && x <= MAX_X && y >= MIN_Y && y <= MAX_Y) {
+      setHoverCoord({ x, y })
+    } else {
+      setHoverCoord(null)
+    }
+  }
+
+  const handlePlanePointerLeave = () => {
+    setHoverCoord(null)
   }
 
   // Ubicar todos los puntos automáticamente con guía
@@ -365,21 +516,11 @@ export default function DescubrirFuncionView() {
     setPlaneFeedback('Puntos ubicados en el plano. Observa la alineación recta.')
   }
 
-  // Validar deducción de regla
-  const handleConfirmRule = () => {
-    if (wordsAnswerIdx === null || formulaAnswerIdx === null) return
-    const wOk = currentMission.ruleOptionsInWords[wordsAnswerIdx].isCorrect
-    const fOk = currentMission.ruleOptionsFormula[formulaAnswerIdx].isCorrect
-
-    if (wOk && fOk) {
-      setIsRuleConfirmed(true)
-    }
-  }
-
   // Resolver reto final
   const handleCheckChallenge = () => {
-    if (challengeUserGuess === currentMission.expectedChallengeY) {
+    if (challengeUserGuess !== '' && Number(challengeUserGuess) === currentMission.expectedChallengeY) {
       setChallengeResolved(true)
+      setIsRuleConfirmed(true)
     }
   }
 
@@ -388,9 +529,10 @@ export default function DescubrirFuncionView() {
     return steps.filter(s => s.isPlaced)
   }, [steps])
 
-  // Coordenadas extremas de la recta para dibujarla cuando la regla esté confirmada
+  // Coordenadas extremas de la recta para dibujarla cuando se ubiquen los puntos o la regla esté confirmada
   const linePoints = useMemo(() => {
-    if (!isRuleConfirmed) return null
+    const allPlaced = steps.every(s => s.isPlaced)
+    if (!isRuleConfirmed && !allPlaced) return null
     const x1 = -2
     const y1 = currentMission.slopeM * x1 + currentMission.interceptB
     const x2 = 10
@@ -401,7 +543,7 @@ export default function DescubrirFuncionView() {
       x2: toSvgX(x2),
       y2: toSvgY(y2)
     }
-  }, [isRuleConfirmed, currentMission])
+  }, [isRuleConfirmed, steps, currentMission])
 
   // Punto objetivo actual
   const currentTargetPoint = targetPointIndex < steps.length ? steps[targetPointIndex] : null
@@ -588,93 +730,438 @@ export default function DescubrirFuncionView() {
             <div className={`flex-1 flex flex-col justify-between rounded-xl border p-2 sm:p-3 shadow-md overflow-hidden transition-colors ${
               isDark ? 'bg-[#0a1020] border-white/10' : 'bg-white border-slate-300 shadow-sm'
             }`}>
-              <div>
-                {/* Cabecera de la ficha */}
-                <div className={`flex items-center justify-between mb-1 pb-1 border-b ${
+              <div className="flex-1 flex flex-col justify-between overflow-y-auto">
+                {/* Cabecera compacta */}
+                <div className={`flex items-center justify-between mb-1 pb-1 border-b shrink-0 ${
                   isDark ? 'border-white/10' : 'border-slate-200'
                 }`}>
                   <div className={`flex items-center gap-1.5 text-xs sm:text-sm font-bold ${
                     isDark ? 'text-amber-300' : 'text-amber-700'
                   }`}>
-                    <Layers className="h-4 w-4" />
-                    <span>La Fábrica de Funciones y la Tabla de Entrada y Salida</span>
+                    <Layers className="h-4 w-4 text-amber-400" />
+                    <span>Fábrica de Funciones: Proceso de Transformación</span>
                   </div>
-                  <span className={`text-[10px] ${isDark ? 'text-white/60' : 'text-slate-500 font-medium'}`}>
-                    Toca cada máquina para procesar su número
+
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                    machineStage === 'processing'
+                      ? isDark
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                        : 'bg-amber-100 text-amber-900 border-amber-400 font-bold animate-pulse'
+                      : machineStage === 'ejecting'
+                      ? isDark
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-emerald-100 text-emerald-900 border-emerald-400 font-bold'
+                      : isDark
+                      ? 'bg-white/5 text-white/60 border-white/10'
+                      : 'bg-slate-100 text-slate-700 border-slate-300 font-medium'
+                  }`}>
+                    {animStatusText}
                   </span>
                 </div>
 
-                {/* LAS 4 MÁQUINAS COMPACTAS */}
-                <div className="grid grid-cols-4 gap-1.5 mb-2">
-                  {steps.map((st, i) => {
-                    const isCurrent = activeMachineInput === st.x
-                    const isRevealed = revealedTableCount > i
-                    return (
-                      <button
-                        key={st.x}
-                        onClick={() => handleRunMachine(st.x)}
-                        disabled={isProcessing}
-                        className={`p-1 rounded-lg border flex flex-col items-center justify-between transition-all cursor-pointer ${
-                          isCurrent
-                            ? isDark
-                              ? 'bg-amber-950/40 border-amber-400 shadow-sm'
-                              : 'bg-amber-50 border-2 border-amber-500 shadow-sm'
-                            : isDark
-                            ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                            : 'bg-slate-50 border-slate-300 hover:bg-slate-100 shadow-xs'
-                        }`}
-                      >
-                        {/* Embudo de entrada x */}
-                        <div className="flex flex-col items-center">
-                          <span className={`text-[10px] sm:text-xs font-bold font-mono ${
-                            isDark ? 'text-cyan-300' : 'text-cyan-700'
-                          }`}>
-                            {st.x}
-                          </span>
-                          <div className={`w-3.5 h-1 rounded-b-sm ${isDark ? 'bg-cyan-500' : 'bg-cyan-600'}`} />
-                        </div>
+                {/* ── FÁBRICA HORIZONTAL: ENTRADA (IZQUIERDA) ──→ FÁBRICA (CENTRO) ──→ SALIDA (DERECHA) ── */}
+                <div className="shrink-0 my-1 relative select-none w-full">
+                  {/* Fila fija horizontal de 3 columnas: NUNCA hace wrap ni se desborda */}
+                  <div className="flex flex-row items-stretch justify-between gap-1.5 sm:gap-2.5 w-full">
 
-                        {/* Cuerpo de la máquina metálica */}
-                        <div className={`my-1 w-full rounded p-1 flex items-center justify-center gap-1 border ${
-                          isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-200 border-slate-300'
-                        }`}>
-                          <span
-                            className={`text-[9px] ${
-                              isDark ? 'text-slate-300' : 'text-slate-700'
-                            } ${isProcessing && isCurrent ? 'animate-spin' : ''}`}
+                    {/* ── 1. ENTRADA (x) A LA IZQUIERDA ── */}
+                    <div className={`w-[29%] sm:w-[28%] shrink-0 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border relative overflow-hidden transition-all ${
+                      isDark
+                        ? 'bg-gradient-to-br from-cyan-950/40 via-slate-900 to-slate-950 border-cyan-500/40 shadow-sm'
+                        : 'bg-gradient-to-br from-cyan-50 via-white to-slate-100 border-cyan-400 shadow-sm'
+                    }`}>
+                      {/* Cabecera Entrada */}
+                      <div className="w-full flex items-center justify-between mb-1 pb-1 border-b border-cyan-500/20">
+                        <div className="flex items-center gap-1">
+                          <Zap className={`h-3 w-3 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                          <span className={`text-[10px] sm:text-xs font-black tracking-wide uppercase ${
+                            isDark ? 'text-cyan-300' : 'text-cyan-900'
+                          }`}>
+                            Entrada (x)
+                          </span>
+                        </div>
+                        <span className={`text-[9px] font-mono ${isDark ? 'text-cyan-300/70' : 'text-cyan-800/80 font-bold'}`}>
+                          1. Elige
+                        </span>
+                      </div>
+
+                      {/* Botones de entrada x en cuadrícula compacta */}
+                      <div className="w-full grid grid-cols-2 gap-1 sm:gap-1.5 my-0.5">
+                        {steps.map((st, i) => {
+                          const isDone = revealedTableCount > i
+                          const isRunning = currentAnimX === st.x && machineStage !== 'idle'
+                          return (
+                            <button
+                              key={`btn-in-${st.x}`}
+                              onClick={() => handleRunMachine(st.x)}
+                              disabled={machineStage !== 'idle' || isDone}
+                              className={`h-7 sm:h-8 rounded-lg font-mono font-black text-xs flex items-center justify-center gap-1 border transition-all ${
+                                isRunning
+                                  ? 'bg-amber-400 text-slate-950 border-white scale-105 shadow-[0_0_12px_rgba(251,191,36,0.9)] ring-2 ring-amber-300'
+                                  : isDone
+                                  ? isDark
+                                    ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300 opacity-60 cursor-default'
+                                    : 'bg-emerald-100 border-emerald-300 text-emerald-800 opacity-60 cursor-default'
+                                  : isDark
+                                  ? 'bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border-cyan-500/40 hover:scale-105 active:scale-95 shadow-sm cursor-pointer'
+                                  : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-900 border-cyan-300 hover:scale-105 active:scale-95 shadow-sm cursor-pointer'
+                              }`}
+                            >
+                              <span>x={st.x}</span>
+                              {isDone ? (
+                                <Check className={`h-2.5 w-2.5 ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`} />
+                              ) : isRunning ? (
+                                <span className="animate-ping text-[10px]">⚡</span>
+                              ) : null}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Botón Fabricar Siguiente / Riel hacia la máquina */}
+                      <div className="w-full mt-1 flex items-center justify-between gap-1">
+                        {revealedTableCount < steps.length ? (
+                          <button
+                            onClick={handleRunNextMachine}
+                            disabled={machineStage !== 'idle'}
+                            className="w-full h-5.5 sm:h-6 px-1 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-950 text-[9px] sm:text-[10px] font-black flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-40"
                           >
-                            ⚙
-                          </span>
-                          <span className={`text-[8px] font-mono hidden sm:inline ${
-                            isDark ? 'text-white/50' : 'text-slate-600 font-bold'
+                            <Play className="h-2.5 w-2.5 fill-current" />
+                            <span>Fabricar sig.</span>
+                          </button>
+                        ) : (
+                          <div className={`w-full text-center text-[9px] font-bold ${
+                            isDark ? 'text-emerald-400' : 'text-emerald-800'
                           }`}>
-                            M{i + 1}
+                            ✓ Entradas listas
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Flecha indicadora hacia el centro */}
+                      <div className="hidden sm:flex absolute right-0.5 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none text-cyan-400">
+                        <ArrowRight className="h-3.5 w-3.5 animate-pulse" />
+                      </div>
+                    </div>
+
+                    {/* ── 2. LA FÁBRICA COMPACTA (CENTRO - TAMAÑO Y COLOR FIJOS, ANIMACIONES INTERNAS) ── */}
+                    <div className="flex-1 min-w-0 flex flex-col items-center justify-center relative px-0.5 sm:px-1">
+                      {/* Chimeneas y Tubos Superiores con Humo/Chispas al procesar */}
+                      <div className="flex items-center gap-4 -mb-1 z-10">
+                        <div className="flex flex-col items-center">
+                          {machineStage === 'processing' && (
+                            <span className="text-[10px] animate-bounce" style={{ color: '#f59e0b' }}>✨</span>
+                          )}
+                          <div className={`w-3 h-2 rounded-t-sm border border-b-0 ${
+                            isDark ? 'bg-slate-700 border-slate-500' : 'bg-slate-300 border-slate-400'
+                          }`} />
+                        </div>
+                        <div className="flex flex-col items-center">
+                          {machineStage === 'processing' && (
+                            <span className="text-[10px] animate-pulse" style={{ color: '#a855f7' }}>💨</span>
+                          )}
+                          <div className={`w-3.5 h-3 rounded-t-sm border border-b-0 ${
+                            isDark ? 'bg-slate-700 border-slate-500' : 'bg-slate-300 border-slate-400'
+                          }`} />
+                        </div>
+                      </div>
+
+                      {/* Chasis Central de la Máquina: NUNCA CRECE NI CAMBIA DE COLOR EXTERNO */}
+                      <div className={`relative w-full rounded-xl border-2 p-1.5 sm:p-2 flex flex-col items-center shadow-md select-none ${
+                        isDark
+                          ? 'border-white/15 bg-gradient-to-b from-slate-900 via-slate-850 to-slate-900'
+                          : 'border-slate-300 bg-white shadow-sm'
+                      }`}>
+                        {/* Tolva de entrada izquierda (tubo metálico fijo) */}
+                        <div className={`absolute -left-2 top-1/2 -translate-y-1/2 w-2.5 h-6 rounded-l border border-r-0 flex items-center justify-center text-[8px] font-bold ${
+                          isDark ? 'bg-slate-800 border-white/20 text-cyan-300' : 'bg-slate-200 border-slate-300 text-slate-700'
+                        }`}>
+                          ›
+                        </div>
+
+                        {/* Tolva de salida derecha (tubo metálico fijo) */}
+                        <div className={`absolute -right-2 top-1/2 -translate-y-1/2 w-2.5 h-6 rounded-r border border-l-0 flex items-center justify-center text-[8px] font-bold ${
+                          isDark ? 'bg-slate-800 border-white/20 text-emerald-300' : 'bg-slate-200 border-slate-300 text-slate-700'
+                        }`}>
+                          ›
+                        </div>
+
+                        {/* Barra Superior con LEDs y Nombre (animación solo en las luces) */}
+                        <div className="w-full flex items-center justify-between px-1 mb-1">
+                          <div className="flex gap-1 items-center">
+                            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                              machineStage === 'processing' ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'
+                            }`} />
+                            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                              machineStage === 'processing' ? 'bg-cyan-400 animate-bounce' : 'bg-amber-500'
+                            }`} />
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Sparkles className={`h-2.5 w-2.5 ${machineStage === 'processing' ? 'text-amber-400 animate-spin' : isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                            <span className={`text-[8px] sm:text-[9px] font-mono font-black tracking-widest uppercase ${
+                              isDark ? 'text-white/80' : 'text-slate-800'
+                            }`}>
+                              FÁBRICA f(x)
+                            </span>
+                          </div>
+
+                          <div className="flex gap-1 items-center">
+                            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                              machineStage === 'processing' ? 'bg-purple-400 animate-pulse' : 'bg-cyan-500'
+                            }`} />
+                          </div>
+                        </div>
+
+                        {/* Ventana de Transformación: Mantiene su fondo de tema, solo animan sus elementos internos */}
+                        <div className={`w-full h-14 sm:h-16 rounded-lg border flex items-center justify-between px-1.5 sm:px-3 relative overflow-hidden ${
+                          isDark
+                            ? 'bg-black/60 border-white/10'
+                            : 'bg-slate-50 border-slate-200 shadow-inner'
+                        }`}>
+                          {/* Engranaje Izquierdo: Rota en sentido horario solo al fabricar */}
+                          <span
+                            className="text-lg sm:text-2xl select-none"
+                            style={{
+                              display: 'inline-block',
+                              animation: machineStage === 'processing' ? 'spin 1.2s linear infinite' : 'none'
+                            }}
+                          >
+                            ⚙️
+                          </span>
+
+                          {/* Núcleo Central: Proceso Mágico de la Función */}
+                          <div className="flex flex-col items-center justify-center relative z-10 text-center px-0.5">
+                            {machineStage === 'entering' ? (
+                              <div className="flex flex-col items-center animate-pulse">
+                                <span className={`text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-wider ${
+                                  isDark ? 'text-cyan-300' : 'text-cyan-800'
+                                }`}>
+                                  Entrando x
+                                </span>
+                                <div className={`px-2 py-0.5 mt-0.5 rounded-full font-mono font-black text-[10px] flex items-center gap-1 border shadow-xs ${
+                                  isDark ? 'bg-cyan-950/80 border-cyan-400 text-cyan-200' : 'bg-cyan-100 border-cyan-400 text-cyan-950'
+                                }`}>
+                                  <span>x = {currentAnimX}</span>
+                                  <span>→</span>
+                                </div>
+                              </div>
+                            ) : machineStage === 'processing' ? (
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-1 animate-pulse">
+                                  <span className="text-[10px] text-amber-500">✨</span>
+                                  <span className={`text-[9px] sm:text-[10px] font-black tracking-wider ${
+                                    isDark ? 'text-amber-300' : 'text-amber-800'
+                                  }`}>
+                                    FABRICANDO
+                                  </span>
+                                  <span className="text-[10px] text-amber-500">✨</span>
+                                </div>
+                                <span className={`text-[9px] font-mono font-bold mt-0.5 ${
+                                  isDark ? 'text-purple-300' : 'text-purple-800'
+                                }`}>
+                                  f({currentAnimX}) → y
+                                </span>
+                              </div>
+                            ) : machineStage === 'ejecting' ? (
+                              <div className="flex flex-col items-center animate-bounce">
+                                <span className={`text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-wider ${
+                                  isDark ? 'text-emerald-300' : 'text-emerald-800'
+                                }`}>
+                                  ¡Listo!
+                                </span>
+                                <div className={`px-2 py-0.5 mt-0.5 rounded-full font-mono font-black text-[10px] flex items-center gap-1 border shadow-xs ${
+                                  isDark ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200' : 'bg-emerald-100 border-emerald-400 text-emerald-950'
+                                }`}>
+                                  <span>y = {currentAnimY}</span>
+                                  <span>→</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center">
+                                <span className={`text-[9px] sm:text-[10px] font-black ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
+                                  f(x) = ?
+                                </span>
+                                <span className={`text-[8px] ${isDark ? 'text-white/40' : 'text-slate-500 font-medium'}`}>
+                                  {revealedTableCount >= steps.length ? '¡Fábrica completa!' : 'Esperando entrada...'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Engranaje Derecho: Rota en sentido antihorario (engranaje mecánico inverso) */}
+                          <span
+                            className="text-lg sm:text-2xl select-none"
+                            style={{
+                              display: 'inline-block',
+                              animation: machineStage === 'processing' ? 'spin 1.2s linear infinite reverse' : 'none'
+                            }}
+                          >
+                            ⚙️
                           </span>
                         </div>
 
-                        {/* Boca de salida y */}
-                        <div className="flex flex-col items-center">
-                          <div className={`w-2.5 h-0.5 rounded-t-sm ${isDark ? 'bg-emerald-500' : 'bg-emerald-600'}`} />
-                          <span className={`text-[11px] sm:text-xs font-mono font-black ${
-                            isDark ? 'text-emerald-300' : 'text-emerald-700'
-                          }`}>
-                            {isRevealed ? st.expectedY : '?'}
+                        {/* Base / Pieza de Sujeción de la Máquina */}
+                        <div className={`w-20 h-1.5 rounded-b-md border-t-0 border ${
+                          isDark ? 'bg-slate-800 border-white/10' : 'bg-slate-300 border-slate-400'
+                        }`} />
+                      </div>
+                    </div>
+
+                    {/* ── 3. SALIDA (y) A LA DERECHA (GARANTIZADO AL LADO DERECHO Y CON ALTO CONTRASTE) ── */}
+                    <div className={`w-[29%] sm:w-[28%] shrink-0 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border relative overflow-hidden transition-all ${
+                      isDark
+                        ? 'bg-emerald-950/30 border-emerald-500/40 shadow-sm'
+                        : 'bg-emerald-50/70 border-emerald-400 shadow-sm'
+                    }`}>
+                      {/* Cabecera Salida */}
+                      <div className="w-full flex items-center justify-between mb-1 pb-1 border-b border-emerald-500/20">
+                        <div className="flex items-center gap-1">
+                          <Box className="h-3 w-3" style={{ color: isDark ? '#34d399' : '#047857' }} />
+                          <span
+                            className="text-[10px] sm:text-xs font-black tracking-wide uppercase"
+                            style={{ color: isDark ? '#6ee7b7' : '#064e3b' }}
+                          >
+                            Salida (y)
                           </span>
                         </div>
-                      </button>
-                    )
-                  })}
+                        <span
+                          className="text-[9px] font-mono font-bold"
+                          style={{ color: isDark ? '#6ee7b7' : '#064e3b' }}
+                        >
+                          {revealedTableCount}/{steps.length}
+                        </span>
+                      </div>
+
+                      {/* Área de Recepción / Caja de Salida con Rebote a la derecha */}
+                      <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 min-h-[50px]">
+                        {machineStage === 'ejecting' ? (
+                          <div className="flex flex-col items-center animate-bounce">
+                            <div
+                              className="px-2 sm:px-2.5 py-1 rounded-xl border-2 shadow-lg flex items-center gap-1 font-mono font-black text-xs sm:text-sm"
+                              style={{
+                                backgroundColor: isDark ? '#022c22' : '#047857',
+                                borderColor: isDark ? '#34d399' : '#065f46',
+                                color: '#ffffff'
+                              }}
+                            >
+                              <Box className="h-3.5 w-3.5 shrink-0 text-white" />
+                              <span className="text-white">y =</span>
+                              <span className="text-sm font-black text-white drop-shadow">
+                                {currentAnimY}
+                              </span>
+                              <span>✨</span>
+                            </div>
+                            <span
+                              className="text-[9px] font-bold mt-0.5 animate-pulse"
+                              style={{ color: isDark ? '#6ee7b7' : '#064e3b' }}
+                            >
+                              ¡Salida producida!
+                            </span>
+                          </div>
+                        ) : revealedTableCount > 0 ? (
+                          <div className="flex flex-col items-center w-full">
+                            <div
+                              className="w-full py-1.5 px-2 rounded-lg border font-mono font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                              style={{
+                                backgroundColor: isDark ? 'rgba(6,78,59,0.5)' : '#d1fae5',
+                                borderColor: isDark ? '#059669' : '#34d399',
+                                color: isDark ? '#a7f3d0' : '#064e3b'
+                              }}
+                            >
+                              <Box className="h-3.5 w-3.5 shrink-0" style={{ color: isDark ? '#34d399' : '#047857' }} />
+                              <span style={{ color: isDark ? '#a7f3d0' : '#064e3b' }}>y =</span>
+                              <span
+                                className="text-sm sm:text-base font-black"
+                                style={{ color: isDark ? '#6ee7b7' : '#022c22' }}
+                              >
+                                {steps[revealedTableCount - 1]?.expectedY}
+                              </span>
+                            </div>
+                            {/* Chips de salidas ya producidas con alto contraste */}
+                            <div className="flex items-center gap-1 mt-1 flex-wrap justify-center">
+                              {steps.slice(0, revealedTableCount).map(s => (
+                                <span
+                                  key={`out-chip-${s.x}`}
+                                  className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded border"
+                                  style={{
+                                    backgroundColor: isDark ? 'rgba(16,185,129,0.2)' : '#a7f3d0',
+                                    color: isDark ? '#6ee7b7' : '#022c22',
+                                    borderColor: isDark ? 'rgba(16,185,129,0.4)' : '#34d399'
+                                  }}
+                                >
+                                  {s.expectedY}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center text-center">
+                            <Box className="h-5 w-5 mb-0.5" style={{ color: isDark ? 'rgba(52,211,153,0.5)' : '#059669' }} />
+                            <span
+                              className="text-[8px] font-medium"
+                              style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#475569' }}
+                            >
+                              Esperando salida...
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Indicador de Estado Inferior */}
+                      <div className="w-full mt-1 text-center">
+                        {revealedTableCount >= steps.length ? (
+                          <div
+                            className="w-full py-0.5 rounded text-[9px] font-black border"
+                            style={{
+                              backgroundColor: isDark ? 'rgba(16,185,129,0.2)' : '#d1fae5',
+                              color: isDark ? '#6ee7b7' : '#064e3b',
+                              borderColor: isDark ? 'rgba(16,185,129,0.4)' : '#34d399'
+                            }}
+                          >
+                            🎉 ¡Salidas listas!
+                          </div>
+                        ) : (
+                          <div
+                            className="text-[9px] font-mono font-bold"
+                            style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#475569' }}
+                          >
+                            Pasa a la tabla ↓
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
 
-                {/* EL DOBLE CUADRO DE ENTRADA Y SALIDA */}
-                <div className={`rounded-lg p-1.5 sm:p-2 border ${
+                {/* ── 3. TABLA DE ENTRADA Y SALIDA ── */}
+                <div className={`rounded-lg p-1.5 sm:p-2 border mt-1 shrink-0 ${
                   isDark ? 'bg-black/30 border-white/10' : 'bg-slate-50 border-slate-300 shadow-xs'
                 }`}>
-                  <span className={`text-[10px] sm:text-xs font-bold block mb-1 ${
-                    isDark ? 'text-white/70' : 'text-slate-700'
-                  }`}>
-                    Completa la tabla con los números de entrada y salida:
-                  </span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[10px] sm:text-xs font-bold ${
+                      isDark ? 'text-white/80' : 'text-slate-800'
+                    }`}>
+                      Tabla de valores de la función:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {revealedTableCount < steps.length && (
+                        <button
+                          onClick={() => setRevealedTableCount(steps.length)}
+                          className={`text-[9px] underline transition-colors cursor-pointer ${
+                            isDark ? 'text-white/60 hover:text-white' : 'text-slate-500 hover:text-slate-900 font-medium'
+                          }`}
+                        >
+                          Revelar todas
+                        </button>
+                      )}
+                      <span className="text-[9px] font-mono opacity-60">
+                        {revealedTableCount}/{steps.length} fabricados
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="w-full text-center text-xs font-mono border-collapse">
                       <tbody>
@@ -682,7 +1169,7 @@ export default function DescubrirFuncionView() {
                           <td className={`p-1 text-left text-[10px] sm:text-xs font-sans font-bold rounded-l ${
                             isDark ? 'text-cyan-300 bg-white/5' : 'text-cyan-800 bg-slate-200/80'
                           }`}>
-                            Número de entrada
+                            Entrada (x)
                           </td>
                           {steps.map(s => (
                             <td key={`x-${s.x}`} className={`p-1 font-bold ${
@@ -696,21 +1183,29 @@ export default function DescubrirFuncionView() {
                           <td className={`p-1 text-left text-[10px] sm:text-xs font-sans font-bold rounded-l ${
                             isDark ? 'text-emerald-300 bg-white/5' : 'text-emerald-800 bg-slate-200/80'
                           }`}>
-                            Número de salida
+                            Salida (y)
                           </td>
-                          {steps.map((s, idx) => (
-                            <td key={`y-${s.x}`} className={`p-1 font-black ${
-                              isDark ? 'text-emerald-300 bg-emerald-950/20' : 'text-emerald-900 bg-emerald-100/60'
-                            }`}>
-                              {revealedTableCount > idx ? s.expectedY : '—'}
-                            </td>
-                          ))}
+                          {steps.map((s, idx) => {
+                            const isRevealed = revealedTableCount > idx
+                            const isJustRevealed = currentAnimX === s.x && machineStage === 'ejecting'
+                            return (
+                              <td key={`y-${s.x}`} className={`p-1 font-black transition-all ${
+                                isJustRevealed
+                                  ? 'bg-emerald-400 text-slate-950 scale-105'
+                                  : isDark
+                                  ? 'text-emerald-300 bg-emerald-950/20'
+                                  : 'text-emerald-900 bg-emerald-100/60'
+                              }`}>
+                                {isRevealed ? s.expectedY : '—'}
+                              </td>
+                            )
+                          })}
                         </tr>
                         <tr>
                           <td className={`p-1 text-left text-[10px] sm:text-xs font-sans font-bold rounded-l ${
                             isDark ? 'text-white/50 bg-white/5' : 'text-slate-600 bg-slate-200/80'
                           }`}>
-                            Pares ordenados (x; y)
+                            Par ordenado (x; y)
                           </td>
                           {steps.map((s, idx) => (
                             <td key={`pt-${s.x}`} className={`p-1 text-[11px] sm:text-xs ${
@@ -737,201 +1232,412 @@ export default function DescubrirFuncionView() {
                   </div>
                 </div>
               </div>
-
-              {/* Botón de acción al pie de la tabla */}
-              <div className={`mt-2 pt-2 border-t flex items-center justify-between gap-2 ${
-                isDark ? 'border-white/10' : 'border-slate-200'
-              }`}>
-                <button
-                  onClick={() => setRevealedTableCount(steps.length)}
-                  className={`text-[10px] sm:text-xs underline transition-colors cursor-pointer ${
-                    isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900 font-medium'
-                  }`}
-                >
-                  Revelar todas las salidas
-                </button>
-
-                <button
-                  onClick={handleGoToRules}
-                  className="h-7 sm:h-8 px-3 sm:px-4 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow cursor-pointer"
-                >
-                  <span>Paso 2: Adivinar la Regla</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           )}
 
           {/* =========================================================================
-              PESTAÑA 2: ADIVINAR LA REGLA DE FORMACIÓN (EN PALABRAS Y FÓRMULA)
+              PESTAÑA 2: LABORATORIO PEDAGÓGICO PARA DEDUCIR LA REGLA
           ========================================================================= */}
           {activeTab === 'rules' && (
-            <div className={`flex-1 flex flex-col justify-between rounded-xl border p-2 sm:p-3 shadow-md overflow-hidden transition-colors ${
+            <div className={`flex-1 flex flex-col justify-between rounded-xl border p-2 sm:p-2.5 shadow-md overflow-hidden transition-colors ${
               isDark ? 'bg-[#0a1020] border-white/10' : 'bg-white border-slate-300 shadow-sm'
             }`}>
-              <div className={`flex items-center justify-between pb-1 border-b ${
+              {/* Cabecera */}
+              <div className={`flex items-center justify-between pb-1 border-b shrink-0 ${
                 isDark ? 'border-white/10' : 'border-slate-200'
               }`}>
-                <span className={`text-xs sm:text-sm font-bold ${
-                  isDark ? 'text-amber-300' : 'text-amber-700 font-bold'
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs sm:text-sm font-bold ${
+                    isDark ? 'text-amber-300' : 'text-amber-800'
+                  }`}>
+                    💡 Paso 2: Deduce la Regla de la Función
+                  </span>
+                </div>
+                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${
+                  isDark ? 'bg-white/5 border-white/15 text-white/70' : 'bg-slate-100 border-slate-300 text-slate-700'
                 }`}>
-                  Adivina la Regla de Formación (Función)
+                  Etapa {challengeResolved ? '4/4' : selectedFormulaIdx !== null && shuffledFormulaOptions[selectedFormulaIdx]?.isCorrect ? '4/4' : selectedIntercept === currentMission.interceptB ? '3/4' : selectedSlope === currentMission.slopeM ? '2/4' : '1/4'}
                 </span>
-                <button
-                  onClick={() => setActiveTab('plane')}
-                  className={`h-6 px-2 rounded text-[10px] sm:text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                    isDark
-                      ? 'bg-white/10 hover:bg-white/15 text-white/80'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold'
-                  }`}
-                >
-                  <span>Ver Plano Cartesiano</span>
-                  <LineChart className="h-3 w-3" />
-                </button>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto space-y-2 py-1.5 pr-1">
-                {/* Pregunta 1: En palabras */}
-                <div className="space-y-1">
-                  <p className={`text-[11px] sm:text-xs font-bold ${
-                    isDark ? 'text-white/95' : 'text-slate-800'
-                  }`}>
-                    1. En palabras: ¿cómo obtienes la salida a partir de la entrada?
-                  </p>
-                  <div className="space-y-1">
-                    {currentMission.ruleOptionsInWords.map((opt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setWordsAnswerIdx(i)}
-                        className={`w-full text-left text-[10px] sm:text-[11px] p-2 rounded-md border transition-all cursor-pointer ${
-                          wordsAnswerIdx === i
-                            ? opt.isCorrect
-                              ? isDark
-                                ? 'bg-emerald-950/70 border-2 border-emerald-400 text-emerald-200 font-bold'
-                                : 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 font-black'
-                              : isDark
-                              ? 'bg-rose-950/70 border-2 border-rose-400 text-rose-200 font-bold'
-                              : 'bg-rose-100 border-2 border-rose-500 text-rose-950 font-black'
-                            : isDark
-                            ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/85'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800 font-medium'
-                        }`}
-                      >
-                        {opt.text}
-                      </button>
-                    ))}
+              {/* Área de trabajo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 py-1 pr-0.5">
+
+                {/* ── TABLA DE REFERENCIA CON PISTAS SUTILES ── */}
+                <div className={`p-1.5 rounded-lg border ${
+                  isDark ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-300 shadow-xs'
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[10px] sm:text-[11px] font-bold ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
+                      Valores de la Fábrica (Observación):
+                    </span>
+                    <button
+                      onClick={() => setShowSubtleClues(!showSubtleClues)}
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                        showSubtleClues
+                          ? isDark ? 'bg-cyan-950 border-cyan-400 text-cyan-300' : 'bg-cyan-100 border-cyan-500 text-cyan-900 font-black'
+                          : isDark ? 'bg-white/5 border-white/15 text-white/70 hover:text-white' : 'bg-white border-slate-300 text-slate-700 hover:text-slate-900'
+                      }`}
+                      title="Muestra u oculta la diferencia constante entre salidas consecutivas"
+                    >
+                      <span>{showSubtleClues ? '👁️ Ocultar pistas' : '🔍 Pistas sutiles (Δy)'}</span>
+                    </button>
                   </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-center text-xs font-mono border-collapse">
+                      <tbody>
+                        <tr className={`border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                          <td className={`p-1 text-left text-[10px] font-sans font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
+                            Entrada (x)
+                          </td>
+                          {steps.map(s => (
+                            <td key={`ref-x-${s.x}`} className={`p-1 font-bold ${isDark ? 'text-cyan-200' : 'text-cyan-900 font-black'}`}>
+                              {s.x}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className={`p-1 text-left text-[10px] font-sans font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
+                            Salida (y)
+                          </td>
+                          {steps.map(s => (
+                            <td key={`ref-y-${s.x}`} className={`p-1 font-black ${isDark ? 'text-emerald-300' : 'text-emerald-950'}`}>
+                              {s.expectedY}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pista sutil: Saltos Δy entre salidas */}
+                  {showSubtleClues && (
+                    <div className={`mt-1 pt-1 border-t flex items-center justify-between text-[9px] font-mono font-bold animate-in fade-in duration-200 ${
+                      isDark ? 'border-white/10 text-cyan-300' : 'border-slate-200 text-cyan-900'
+                    }`}>
+                      <span className="font-sans font-medium opacity-80">Razón de cambio (salto entre salidas):</span>
+                      <div className="flex items-center gap-2">
+                        {steps.slice(0, -1).map((s, idx) => (
+                          <span key={`diff-${s.x}`} className="px-1.5 py-0.2 rounded bg-cyan-500/15 border border-cyan-500/30">
+                            +{steps[idx + 1].expectedY - s.expectedY}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Pregunta 2: En fórmula */}
-                {wordsAnswerIdx !== null && (
-                  <div className={`space-y-1 pt-1.5 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                    <p className={`text-[11px] sm:text-xs font-bold ${
-                      isDark ? 'text-white/95' : 'text-slate-800'
-                    }`}>
-                      2. Si "x" es la entrada e "y" la salida, ¿qué ecuación las conecta?
-                    </p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {currentMission.ruleOptionsFormula.map((opt, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setFormulaAnswerIdx(i)}
-                          className={`text-center font-mono text-xs sm:text-sm p-2 rounded-md border transition-all cursor-pointer ${
-                            formulaAnswerIdx === i
-                              ? opt.isCorrect
-                                ? isDark
-                                  ? 'bg-emerald-950/70 border-2 border-emerald-400 text-emerald-200 font-bold'
-                                  : 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 font-black'
-                                : isDark
-                                ? 'bg-rose-950/70 border-2 border-rose-400 text-rose-200 font-bold'
-                                : 'bg-rose-100 border-2 border-rose-500 text-rose-950 font-black'
-                              : isDark
-                              ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/85'
-                              : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800 font-medium'
-                          }`}
-                        >
-                          {opt.text}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Botón de Confirmación */}
-                {!isRuleConfirmed && wordsAnswerIdx !== null && formulaAnswerIdx !== null && (
-                  <button
-                    onClick={handleConfirmRule}
-                    className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-sm cursor-pointer"
-                  >
-                    Comprobar Regla de Formación
-                  </button>
-                )}
-
-                {/* Reto de Comprobación Final */}
-                {isRuleConfirmed && (
-                  <div className={`p-2 rounded-lg border space-y-1 ${
-                    isDark
-                      ? 'bg-black/40 border-emerald-500/40 text-emerald-300'
-                      : 'bg-emerald-50 border-2 border-emerald-400 text-emerald-950'
+                {/* ── PASO 1: LA RAZÓN DE CAMBIO (MULTIPLICADOR m) ── */}
+                {selectedSlope === currentMission.slopeM ? (
+                  <div className={`p-1.5 rounded-lg border flex items-center justify-between transition-all ${
+                    isDark ? 'bg-emerald-950/25 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-950'
                   }`}>
-                    <span className={`font-bold text-[10px] sm:text-xs block ${
-                      isDark ? 'text-emerald-300' : 'text-emerald-900'
-                    }`}>
-                      Reto de Predicción: ¿Qué salida produciría si entra x = {currentMission.challengeX}?
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] sm:text-xs font-semibold ${
-                        isDark ? 'text-white/70' : 'text-slate-700'
-                      }`}>Calcula y:</span>
-                      <input
-                        type="number"
-                        value={challengeUserGuess}
-                        onChange={e => setChallengeUserGuess(parseInt(e.target.value) || 0)}
-                        className={`w-16 rounded p-1 font-mono text-center text-xs font-bold border ${
-                          isDark
-                            ? 'bg-slate-900 border-white/20 text-white'
-                            : 'bg-white border-slate-300 text-slate-900 shadow-xs'
-                        }`}
-                      />
-                      <button
-                        onClick={handleCheckChallenge}
-                        className="h-6 px-2.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10px] sm:text-xs cursor-pointer shadow-xs"
-                      >
-                        Verificar
-                      </button>
+                    <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold">
+                      <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <span>
+                        <strong>Paso 1:</strong> Razón de cambio = <strong className="font-mono">+{currentMission.slopeM}</strong> → Se multiplica la entrada por <strong className="font-mono">{currentMission.slopeM}</strong> ({currentMission.slopeM === 1 ? 'x' : `${currentMission.slopeM}x`}).
+                      </span>
                     </div>
-                    {challengeResolved && (
-                      <div className={`text-[10px] sm:text-xs font-bold flex items-center gap-1 ${
-                        isDark ? 'text-emerald-300' : 'text-emerald-700'
-                      }`}>
-                        <Check className="h-3 w-3" />
-                        ¡Excelente! {currentMission.slopeM} · {currentMission.challengeX} {currentMission.interceptB < 0 ? `- ${Math.abs(currentMission.interceptB)}` : currentMission.interceptB > 0 ? `+ ${currentMission.interceptB}` : ''} ={' '}
-                        {currentMission.expectedChallengeY}. ¡Has dominado la regla!
+                    <button
+                      onClick={() => { setSelectedSlope(null); setSlopeFeedback(null); }}
+                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer shrink-0 ml-2 ${
+                        isDark ? 'bg-white/5 border-white/10 hover:bg-white/15 text-white/70' : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <div className={`p-2 rounded-lg border transition-all ${
+                    isDark ? 'bg-black/20 border-white/10' : 'bg-white border-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-[10px] sm:text-[11px] font-bold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                        1. ¿De cuánto en cuánto aumentan las salidas consecutivas?
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 my-1">
+                      {slopeOptions.map(opt => {
+                        const isSelected = selectedSlope === opt.val
+                        const isCorrect = opt.val === currentMission.slopeM
+                        return (
+                          <button
+                            key={`slope-${opt.val}`}
+                            onClick={() => handleSelectSlope(opt.val)}
+                            className={`py-1.5 px-2 rounded-md font-mono text-xs font-bold border transition-all cursor-pointer ${
+                              isSelected
+                                ? isCorrect
+                                  ? isDark ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 ring-1 ring-emerald-400' : 'bg-emerald-100 border-emerald-500 text-emerald-950 font-black'
+                                  : isDark ? 'bg-rose-950/70 border-rose-400 text-rose-200' : 'bg-rose-100 border-rose-500 text-rose-950 font-black'
+                                : isDark
+                                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/80'
+                                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {slopeFeedback === 'incorrect' && (
+                      <div className={`text-[10px] font-bold mt-0.5 ${isDark ? 'text-rose-300' : 'text-rose-700'}`}>
+                        Ese salto no coincide. Compara dos salidas consecutivas de la tabla (por ejemplo: {steps[1]?.expectedY} - {steps[0]?.expectedY}).
                       </div>
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Pie del panel con botón para avanzar al Plano Cartesiano */}
-              <div className={`pt-1.5 border-t flex items-center justify-between ${
-                isDark ? 'border-white/10' : 'border-slate-200'
-              }`}>
-                <button
-                  onClick={() => setActiveTab('machine')}
-                  className={`text-[10px] sm:text-xs transition-colors cursor-pointer ${
-                    isDark ? 'text-white/60 hover:text-white' : 'text-slate-500 hover:text-slate-900 font-medium'
-                  }`}
-                >
-                  ← Volver a Fábrica
-                </button>
-                <button
-                  onClick={() => setActiveTab('plane')}
-                  className="h-7 px-3 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  <span>Paso 3: Trazar en el Plano</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
+                {/* ── PASO 2: EL AJUSTE O TÉRMINO INDEPENDIENTE (b) ── */}
+                {selectedSlope === currentMission.slopeM && (
+                  selectedIntercept === currentMission.interceptB ? (
+                    <div className={`p-1.5 rounded-lg border flex items-center justify-between transition-all ${
+                      isDark ? 'bg-emerald-950/25 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                    }`}>
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold">
+                        <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        <span>
+                          <strong>Paso 2:</strong> Ajuste inicial = <strong className="font-mono">{currentMission.interceptB === 0 ? 'Sin ajuste (0)' : currentMission.interceptB > 0 ? `+${currentMission.interceptB}` : currentMission.interceptB}</strong>.
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedIntercept(null); setInterceptFeedback(null); }}
+                        className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer shrink-0 ml-2 ${
+                          isDark ? 'bg-white/5 border-white/10 hover:bg-white/15 text-white/70' : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={`p-2 rounded-lg border transition-all animate-in fade-in duration-200 ${
+                      isDark ? 'bg-black/20 border-white/10' : 'bg-white border-slate-300'
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[10px] sm:text-[11px] font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
+                          2. Si multiplicamos la entrada por {currentMission.slopeM}, ¿qué ajuste le falta para dar la salida real?
+                        </span>
+                      </div>
+
+                      <div className={`text-[10px] my-1 p-1.5 rounded border ${
+                        isDark ? 'bg-white/5 border-white/10 text-white/80' : 'bg-slate-50 border-slate-200 text-slate-700'
+                      }`}>
+                        Para la entrada <strong>x = {steps[0].x}</strong>: multiplicando por {currentMission.slopeM} daría{' '}
+                        <strong className="font-mono">{currentMission.slopeM * steps[0].x}</strong>, pero la salida real en la tabla es{' '}
+                        <strong className={`font-mono ${isDark ? 'text-emerald-300' : 'text-emerald-800 font-black'}`}>
+                          {steps[0].expectedY}
+                        </strong>.
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 my-1">
+                        {interceptOptions.map(opt => {
+                          const isSelected = selectedIntercept === opt.val
+                          const isCorrect = opt.val === currentMission.interceptB
+                          return (
+                            <button
+                              key={`intercept-${opt.val}`}
+                              onClick={() => handleSelectIntercept(opt.val)}
+                              className={`py-1.5 px-2 rounded-md font-mono text-xs font-bold border transition-all cursor-pointer ${
+                                isSelected
+                                  ? isCorrect
+                                    ? isDark ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 ring-1 ring-emerald-400' : 'bg-emerald-100 border-emerald-500 text-emerald-950 font-black'
+                                    : isDark ? 'bg-rose-950/70 border-rose-400 text-rose-200' : 'bg-rose-100 border-rose-500 text-rose-950 font-black'
+                                  : isDark
+                                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/80'
+                                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {interceptFeedback === 'incorrect' && (
+                        <div className={`text-[10px] font-bold mt-0.5 ${isDark ? 'text-rose-300' : 'text-rose-700'}`}>
+                          Comprueba: {currentMission.slopeM} · ({steps[0].x}) = {currentMission.slopeM * steps[0].x}. ¿Cuánto le falta o le sobra para llegar a {steps[0].expectedY}?
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {/* ── PASO 3: PATRÓN ARITMÉTICO FILA POR FILA Y DEDUCCIÓN DE FÓRMULA ── */}
+                {selectedIntercept === currentMission.interceptB && (
+                  <div className={`p-2 rounded-lg border space-y-2 animate-in fade-in duration-300 ${
+                    isDark ? 'bg-black/30 border-white/10' : 'bg-white border-slate-300 shadow-xs'
+                  }`}>
+                    {/* Encabezado del patrón */}
+                    <div className="flex items-center justify-between border-b pb-1">
+                      <span className={`text-[11px] sm:text-xs font-black flex items-center gap-1.5 ${
+                        isDark ? 'text-amber-300' : 'text-amber-800'
+                      }`}>
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <span>3. Patrón Aritmético:</span>
+                        <span className={`text-[10px] sm:text-[11px] font-normal font-sans ${
+                          isDark ? 'text-white/70' : 'text-slate-600'
+                        }`}>
+                          (analiza los siguientes datos)
+                        </span>
+                      </span>
+                      <span className={`text-[9px] font-mono ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+                        {currentMission.isLineal ? 'Función Lineal' : 'Función Afín'}
+                      </span>
+                    </div>
+
+                    {/* Tarjeta única con el patrón aritmético en una sola columna */}
+                    <div className={`py-2 px-4 rounded-lg border flex flex-col items-center justify-center gap-1 font-mono text-xs sm:text-sm my-1 ${
+                      isDark ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200 shadow-inner'
+                    }`}>
+                      {steps.map(s => (
+                        <div key={`pattern-row-${s.x}`} className="flex items-center gap-1.5 leading-relaxed">
+                          <span className={isDark ? 'text-white/80 font-bold' : 'text-slate-700 font-bold'}>
+                            {currentMission.slopeM}
+                          </span>
+                          <span
+                            className="font-black"
+                            style={{ color: isDark ? '#38bdf8' : '#0284c7' }}
+                          >
+                            ({s.x})
+                          </span>
+                          {currentMission.interceptB !== 0 && (
+                            <span className={isDark ? 'text-white/80 font-bold' : 'text-slate-700 font-bold'}>
+                              {currentMission.interceptB < 0 ? `- ${Math.abs(currentMission.interceptB)}` : `+ ${currentMission.interceptB}`}
+                            </span>
+                          )}
+                          <span className={isDark ? 'text-white/80 font-bold' : 'text-slate-700 font-bold'}>=</span>
+                          <span
+                            className="font-black text-sm sm:text-base"
+                            style={{ color: isDark ? '#34d399' : '#047857' }}
+                          >
+                            {s.expectedY}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Paso 4: Deducción Interactiva de la Fórmula */}
+                    <div className="pt-1 space-y-1.5">
+                      <span className={`text-[10px] sm:text-[11px] font-bold block ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        4. Traduce la regla a fórmula matemática: ¿cuál es la ecuación de la función?
+                      </span>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {shuffledFormulaOptions.map((opt, idx) => {
+                          const isSelected = selectedFormulaIdx === idx
+                          const isCorrect = opt.isCorrect
+                          return (
+                            <button
+                              key={`formula-opt-${opt.text}`}
+                              onClick={() => handleSelectFormula(idx)}
+                              className={`py-1.5 px-2 rounded-md font-mono text-xs font-bold border transition-all cursor-pointer text-center ${
+                                isSelected
+                                  ? isCorrect
+                                    ? isDark ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 ring-2 ring-emerald-400' : 'bg-emerald-100 border-emerald-500 text-emerald-950 font-black ring-2 ring-emerald-500'
+                                    : isDark ? 'bg-rose-950/70 border-rose-400 text-rose-200' : 'bg-rose-100 border-rose-500 text-rose-950 font-black'
+                                  : isDark
+                                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/90'
+                                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                              }`}
+                            >
+                              {opt.text}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {formulaFeedback && (
+                        <div className={`p-1.5 rounded border text-[10px] sm:text-[11px] font-medium flex items-start gap-1.5 animate-in fade-in duration-200 ${
+                          formulaFeedback.isCorrect
+                            ? isDark ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+                            : isDark ? 'bg-rose-950/50 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-900 font-semibold'
+                        }`}>
+                          {formulaFeedback.isCorrect ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                          ) : (
+                            <span className="text-rose-500 shrink-0 mt-0.5">⚠️</span>
+                          )}
+                          <span>{formulaFeedback.text}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Paso 5: Reto de Predicción */}
+                    {selectedFormulaIdx !== null && shuffledFormulaOptions[selectedFormulaIdx]?.isCorrect && (
+                      <div className={`p-2 rounded-lg border space-y-1.5 animate-in fade-in duration-300 ${
+                        isDark ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-emerald-50/70 border-emerald-300'
+                      }`}>
+                        <div className="flex items-center justify-between pb-1 border-b border-emerald-500/20">
+                          <span className={`font-black text-[10px] sm:text-xs flex items-center gap-1 ${
+                            isDark ? 'text-amber-300' : 'text-amber-900'
+                          }`}>
+                            <span>🎯 5. Reto de Predicción: Pon a prueba tu fórmula</span>
+                          </span>
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-black border ${
+                            isDark ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300' : 'bg-emerald-200 border-emerald-500 text-emerald-950'
+                          }`}>
+                            {currentMission.ruleFormula}
+                          </span>
+                        </div>
+
+                        <p className={`text-[10px] sm:text-[11px] ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
+                          Si ingresamos la entrada <strong className="font-mono text-cyan-500 font-black">x = {currentMission.challengeX}</strong>, ¿cuál será el valor de la salida <strong className="font-mono text-emerald-600 font-black">y</strong>?
+                        </p>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] sm:text-xs font-bold ${
+                            isDark ? 'text-white/70' : 'text-slate-700'
+                          }`}>
+                            Salida y =
+                          </span>
+                          <input
+                            type="number"
+                            value={challengeUserGuess}
+                            onChange={e => setChallengeUserGuess(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                            placeholder="?"
+                            className={`w-16 rounded p-1 font-mono text-center text-xs font-bold border ${
+                              isDark
+                                ? 'bg-slate-900 border-white/20 text-white'
+                                : 'bg-white border-slate-300 text-slate-900 shadow-xs'
+                            }`}
+                          />
+                          <button
+                            onClick={handleCheckChallenge}
+                            className="h-6 px-3 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] sm:text-xs cursor-pointer shadow-xs transition-all active:scale-95"
+                          >
+                            Comprobar
+                          </button>
+                        </div>
+
+                        {challengeResolved && (
+                          <div className={`p-1.5 rounded border text-[10px] sm:text-[11px] font-bold flex items-center justify-between animate-in fade-in duration-300 ${
+                            isDark ? 'bg-emerald-950/60 border-emerald-400 text-emerald-300' : 'bg-emerald-100 border-emerald-500 text-emerald-950 font-black'
+                          }`}>
+                            <div className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              <span>
+                                ¡Predicción exacta! {currentMission.slopeM} · ({currentMission.challengeX}){' '}
+                                {currentMission.interceptB < 0 ? `- ${Math.abs(currentMission.interceptB)}` : currentMission.interceptB > 0 ? `+ ${currentMission.interceptB}` : ''}{' '}
+                                = {currentMission.expectedChallengeY}. ¡Fórmula completamente dominada!
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setActiveTab('plane')}
+                              className="h-5 px-2 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[9px] cursor-pointer shrink-0 ml-1"
+                            >
+                              Ir al Plano →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
             </div>
           )}
@@ -1019,8 +1725,8 @@ export default function DescubrirFuncionView() {
                 </div>
 
                 {/* Acciones al pie del panel lateral */}
-                <div className="mt-1.5 space-y-1">
-                  {placedPoints.length >= steps.length && (
+                {placedPoints.length >= steps.length && (
+                  <div className="mt-1.5">
                     <button
                       onClick={() => loadMission((missionIdx + 1) % MISSIONS.length)}
                       className="w-full h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow cursor-pointer"
@@ -1028,32 +1734,42 @@ export default function DescubrirFuncionView() {
                       <span>Misión Siguiente</span>
                       <ArrowRight className="h-3 w-3" />
                     </button>
-                  )}
-                  <button
-                    onClick={() => setActiveTab('rules')}
-                    className={`w-full h-6 rounded-md text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer ${
-                      isDark
-                        ? 'bg-white/10 hover:bg-white/15 text-white/70 hover:text-white'
-                        : 'bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 border border-slate-300 font-medium'
-                    }`}
-                  >
-                    <span>← Paso 2: Adivinar Regla</span>
-                  </button>
-                </div>
+                  </div>
+                )}
               </aside>
 
               {/* PLANO CARTESIANO: AL LADO DERECHO OCUPANDO TODO EL ESPACIO POSIBLE */}
-              <div className={`flex-1 min-w-0 h-full flex items-center justify-center rounded-lg border p-1 relative overflow-hidden transition-colors ${
-                isDark ? 'bg-[#070c18] border-white/5' : 'bg-slate-50 border-slate-200 shadow-inner'
+              <div className={`flex-1 min-w-0 h-full flex flex-col items-center justify-between rounded-lg border p-1 relative overflow-hidden transition-colors ${
+                isDark ? 'bg-[#080e1e] border-white/10' : 'bg-slate-50 border-slate-200 shadow-inner'
               }`}>
-                <svg
-                  ref={svgRef}
-                  viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
-                  onClick={handlePlaneClick}
-                  className="w-full h-full max-h-full max-w-full select-none cursor-crosshair"
-                  preserveAspectRatio="xMidYMid meet"
-                  style={{ touchAction: 'none' }}
-                >
+                {/* Header compacto con indicador dinámico de coordenadas del puntero */}
+                <div className="w-full h-6 shrink-0 flex items-center justify-between px-2 text-[10px]">
+                  <span className={`font-bold ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
+                    Plano Cartesiano <span className="font-mono text-[9px] font-normal opacity-70">[-2 a 10]</span>
+                  </span>
+                  <div
+                    className={`flex items-center gap-1 font-mono text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded transition-opacity duration-150 ${
+                      hoverCoord ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <span>Puntero:</span>
+                    <span className="font-bold text-white">
+                      ({hoverCoord?.x ?? 0}; {hoverCoord?.y ?? 0})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative w-full flex-1 min-h-0 flex items-center justify-center">
+                  <svg
+                    ref={svgRef}
+                    viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
+                    onPointerDown={handlePlaneClick}
+                    onPointerMove={handlePlanePointerMove}
+                    onPointerLeave={handlePlanePointerLeave}
+                    className="w-full h-full max-h-full max-w-full select-none cursor-crosshair drop-shadow-md rounded-lg"
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ touchAction: 'none' }}
+                  >
                   <defs>
                     <marker
                       id="arrow"
@@ -1064,16 +1780,29 @@ export default function DescubrirFuncionView() {
                       markerHeight="4"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill={isDark ? "#94a3b8" : "#334155"} />
+                      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill={isDark ? "#38bdf8" : "#0284c7"} />
                     </marker>
+                    <pattern id="descubrirGridSub" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path
+                        d="M 10 0 L 0 0 0 10"
+                        fill="none"
+                        stroke={isDark ? "#1e293b" : "#f1f5f9"}
+                        strokeWidth="0.6"
+                      />
+                    </pattern>
+                    <clipPath id="descubrirPlotArea">
+                      <rect x={PAD_LEFT} y={PAD_TOP} width={PLOT_W} height={PLOT_H} />
+                    </clipPath>
                   </defs>
 
                   {/* Fondo del plano */}
-                  <rect x="0" y="0" width={SVG_SIZE} height={SVG_SIZE} fill={isDark ? "#070c18" : "#ffffff"} rx="6" />
+                  <rect x="0" y="0" width={SVG_SIZE} height={SVG_SIZE} fill={isDark ? "#080e1e" : "#ffffff"} rx="6" />
+                  <rect x="0" y="0" width={SVG_SIZE} height={SVG_SIZE} fill="url(#descubrirGridSub)" rx="6" />
 
-                  {/* Cuadrícula (de -2 a 10 en X e Y) */}
+                  {/* Cuadrícula Principal - Líneas Verticales (de -2 a 10 en X) */}
                   {Array.from({ length: MAX_X - MIN_X + 1 }, (_, i) => i + MIN_X).map(gx => {
                     const px = toSvgX(gx)
+                    if (gx === 0) return null // Eje principal dibujado con mayor grosor abajo
                     return (
                       <line
                         key={`gx-${gx}`}
@@ -1081,15 +1810,18 @@ export default function DescubrirFuncionView() {
                         y1={PAD_TOP}
                         x2={px}
                         y2={SVG_SIZE - PAD_BOTTOM}
-                        stroke={isDark ? "#94a3b8" : "#64748b"}
-                        strokeWidth={gx === 0 ? 0 : 0.6}
-                        opacity={isDark ? 0.18 : 0.22}
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        strokeWidth={1.2}
+                        strokeDasharray="3,3"
+                        opacity={isDark ? 0.65 : 0.8}
                       />
                     )
                   })}
 
+                  {/* Cuadrícula Principal - Líneas Horizontales (de -2 a 10 en Y) */}
                   {Array.from({ length: MAX_Y - MIN_Y + 1 }, (_, i) => i + MIN_Y).map(gy => {
                     const py = toSvgY(gy)
+                    if (gy === 0) return null // Eje principal dibujado con mayor grosor abajo
                     return (
                       <line
                         key={`gy-${gy}`}
@@ -1097,9 +1829,10 @@ export default function DescubrirFuncionView() {
                         y1={py}
                         x2={SVG_SIZE - PAD_RIGHT}
                         y2={py}
-                        stroke={isDark ? "#94a3b8" : "#64748b"}
-                        strokeWidth={gy === 0 ? 0 : 0.6}
-                        opacity={isDark ? 0.18 : 0.22}
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        strokeWidth={1.2}
+                        strokeDasharray="3,3"
+                        opacity={isDark ? 0.65 : 0.8}
                       />
                     )
                   })}
@@ -1110,8 +1843,8 @@ export default function DescubrirFuncionView() {
                     y1={toSvgY(0)}
                     x2={SVG_SIZE - PAD_RIGHT + 10}
                     y2={toSvgY(0)}
-                    stroke={isDark ? "#94a3b8" : "#334155"}
-                    strokeWidth={isDark ? 1.8 : 2}
+                    stroke={isDark ? "#38bdf8" : "#0284c7"}
+                    strokeWidth={2.5}
                     markerEnd="url(#arrow)"
                   />
 
@@ -1121,61 +1854,31 @@ export default function DescubrirFuncionView() {
                     y1={SVG_SIZE - PAD_BOTTOM + 8}
                     x2={toSvgX(0)}
                     y2={PAD_TOP - 10}
-                    stroke={isDark ? "#94a3b8" : "#334155"}
-                    strokeWidth={isDark ? 1.8 : 2}
+                    stroke={isDark ? "#38bdf8" : "#0284c7"}
+                    strokeWidth={2.5}
                     markerEnd="url(#arrow)"
                   />
 
-                  {/* Guía visual interactiva de la coordenada actual a colocar */}
-                  {currentTargetPoint && (
-                    <g opacity={isDark ? 0.35 : 0.45}>
-                      <line
-                        x1={toSvgX(currentTargetPoint.x)}
-                        y1={PAD_TOP}
-                        x2={toSvgX(currentTargetPoint.x)}
-                        y2={SVG_SIZE - PAD_BOTTOM}
-                        stroke={isDark ? "#f59e0b" : "#d97706"}
-                        strokeWidth={1.5}
-                        strokeDasharray="3 3"
-                      />
-                      <line
-                        x1={PAD_LEFT}
-                        y1={toSvgY(currentTargetPoint.expectedY)}
-                        x2={SVG_SIZE - PAD_RIGHT}
-                        y2={toSvgY(currentTargetPoint.expectedY)}
-                        stroke={isDark ? "#f59e0b" : "#d97706"}
-                        strokeWidth={1.5}
-                        strokeDasharray="3 3"
-                      />
-                      <circle
-                        cx={toSvgX(currentTargetPoint.x)}
-                        cy={toSvgY(currentTargetPoint.expectedY)}
-                        r={14}
-                        fill={isDark ? "rgba(245, 158, 11, 0.15)" : "rgba(217, 119, 6, 0.18)"}
-                        stroke={isDark ? "#f59e0b" : "#d97706"}
-                        strokeWidth={1}
-                        strokeDasharray="2 2"
-                      />
-                    </g>
-                  )}
-
                   {/* Etiquetas y Ticks del Eje X (-2 a 10) */}
                   {[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(vx => (
-                    <g key={`tx-${vx}`} className="text-[9px] font-mono select-none" fill={isDark ? "#94a3b8" : "#334155"}>
+                    <g key={`tx-${vx}`} className="select-none">
                       <line
                         x1={toSvgX(vx)}
                         y1={toSvgY(0) - 3}
                         x2={toSvgX(vx)}
                         y2={toSvgY(0) + 3}
-                        stroke={isDark ? "#94a3b8" : "#475569"}
-                        strokeWidth={1}
+                        stroke={isDark ? "#38bdf8" : "#0284c7"}
+                        strokeWidth={vx === 0 ? 0 : 1.2}
                       />
                       <text
                         x={toSvgX(vx)}
-                        y={toSvgY(0) + 12}
+                        y={toSvgY(0) + 14}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fontWeight={isDark ? "normal" : "bold"}
+                        fontSize="11"
+                        fontFamily="JetBrains Mono, monospace"
+                        fontWeight="bold"
+                        fill={vx === 0 ? (isDark ? "#38bdf8" : "#0284c7") : (isDark ? "#f8fafc" : "#0f172a")}
                       >
                         {vx}
                       </text>
@@ -1184,21 +1887,24 @@ export default function DescubrirFuncionView() {
 
                   {/* Etiquetas y Ticks del Eje Y (-2 a 10) */}
                   {[-2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(vy => (
-                    <g key={`ty-${vy}`} className="text-[9px] font-mono select-none" fill={isDark ? "#94a3b8" : "#334155"}>
+                    <g key={`ty-${vy}`} className="select-none">
                       <line
                         x1={toSvgX(0) - 3}
                         y1={toSvgY(vy)}
                         x2={toSvgX(0) + 3}
                         y2={toSvgY(vy)}
-                        stroke={isDark ? "#94a3b8" : "#475569"}
-                        strokeWidth={1}
+                        stroke={isDark ? "#38bdf8" : "#0284c7"}
+                        strokeWidth={1.2}
                       />
                       <text
                         x={toSvgX(0) - 8}
                         y={toSvgY(vy)}
                         textAnchor="end"
                         dominantBaseline="middle"
-                        fontWeight={isDark ? "normal" : "bold"}
+                        fontSize="11"
+                        fontFamily="JetBrains Mono, monospace"
+                        fontWeight="bold"
+                        fill={isDark ? "#f8fafc" : "#0f172a"}
                       >
                         {vy}
                       </text>
@@ -1206,25 +1912,54 @@ export default function DescubrirFuncionView() {
                   ))}
 
                   {/* Rótulos x e y */}
-                  <text x={SVG_SIZE - PAD_RIGHT + 6} y={toSvgY(0) + 14} fill={isDark ? "#cbd5e1" : "#0f172a"} fontSize="12" fontStyle="italic" fontWeight="bold">
-                    x
+                  <text
+                    x={SVG_SIZE - PAD_RIGHT + 12}
+                    y={toSvgY(0) + 4}
+                    fill={isDark ? "#38bdf8" : "#0284c7"}
+                    fontSize="13"
+                    fontWeight="bold"
+                    fontFamily="Nunito, sans-serif"
+                  >
+                    X
                   </text>
-                  <text x={toSvgX(0) - 12} y={PAD_TOP - 4} fill={isDark ? "#cbd5e1" : "#0f172a"} fontSize="12" fontStyle="italic" fontWeight="bold">
-                    y
+                  <text
+                    x={toSvgX(0)}
+                    y={PAD_TOP - 12}
+                    fill={isDark ? "#38bdf8" : "#0284c7"}
+                    fontSize="13"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    fontFamily="Nunito, sans-serif"
+                  >
+                    Y
                   </text>
 
-                  {/* Recta continua si la regla fue descubierta */}
+                  {/* Recta continua si se ubicaron todos los puntos o se descubrió la regla */}
                   {linePoints && (
-                    <line
-                      x1={linePoints.x1}
-                      y1={linePoints.y1}
-                      x2={linePoints.x2}
-                      y2={linePoints.y2}
-                      stroke={isDark ? "#38bdf8" : "#0284c7"}
-                      strokeWidth={3.5}
-                      strokeLinecap="round"
-                      opacity={0.95}
-                    />
+                    <g clipPath="url(#descubrirPlotArea)">
+                      {/* Brillo de fondo */}
+                      <line
+                        x1={linePoints.x1}
+                        y1={linePoints.y1}
+                        x2={linePoints.x2}
+                        y2={linePoints.y2}
+                        stroke="#06b6d4"
+                        strokeWidth={8}
+                        strokeLinecap="round"
+                        opacity={0.3}
+                      />
+                      {/* Recta continua nítida */}
+                      <line
+                        x1={linePoints.x1}
+                        y1={linePoints.y1}
+                        x2={linePoints.x2}
+                        y2={linePoints.y2}
+                        stroke={isDark ? "#38bdf8" : "#0284c7"}
+                        strokeWidth={3.5}
+                        strokeLinecap="round"
+                        opacity={0.95}
+                      />
+                    </g>
                   )}
 
                   {/* Puntos ubicados por el estudiante */}
@@ -1237,21 +1972,18 @@ export default function DescubrirFuncionView() {
                         <circle
                           cx={sx}
                           cy={sy}
-                          r={7}
-                          fill="none"
-                          stroke={isDark ? "#f59e0b" : "#d97706"}
-                          strokeWidth={1.8}
+                          r={6}
+                          fill="#38bdf8"
+                          stroke="#ffffff"
+                          strokeWidth={2}
                         />
-                        <circle cx={sx} cy={sy} r={5} fill={isDark ? "#f59e0b" : "#d97706"} stroke="#ffffff" strokeWidth={1.5} />
                         <text
                           x={sx + 8}
                           y={sy - 6}
-                          fill={isDark ? "#fde68a" : "#78350f"}
+                          fill={isDark ? "#e2e8f0" : "#0f172a"}
                           fontSize="10"
-                          fontFamily="monospace"
+                          fontFamily="JetBrains Mono, monospace"
                           fontWeight="bold"
-                          stroke={isDark ? "#000000" : "#ffffff"}
-                          strokeWidth={isDark ? 0.5 : 0.8}
                         >
                           ({st.x}; {st.expectedY})
                         </text>
@@ -1285,6 +2017,7 @@ export default function DescubrirFuncionView() {
                     </g>
                   )}
                 </svg>
+                </div>
               </div>
             </div>
           )}
