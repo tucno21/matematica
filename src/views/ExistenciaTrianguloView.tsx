@@ -150,14 +150,14 @@ function getCircleCircleIntersections(
   ]
 }
 
-// Detección de imán para el cierre perfecto de dos barras que comparten una base
+// Detección de imán para el cierre perfecto de dos barras que comparten una base (solo a muy corta distancia)
 function tryTriangleClosingSnap(
   draggedSegId: 'a' | 'b' | 'c',
   draggedEnd: 'p1' | 'p2',
   candidateP: { x: number; y: number },
   currentSegments: SegmentData[],
   pxPerUnit: number,
-  snapRadius = 32
+  snapRadius = 14
 ): {
   didSnap: boolean
   draggedP: { x: number; y: number }
@@ -178,15 +178,15 @@ function tryTriangleClosingSnap(
   for (const sBase of others) {
     const sThird = others.find(s => s.id !== sBase.id)!
 
-    const connToP1 = getDistance(pivotDrag, sBase.p1) <= 12
-    const connToP2 = getDistance(pivotDrag, sBase.p2) <= 12
+    const connToP1 = getDistance(pivotDrag, sBase.p1) <= 8
+    const connToP2 = getDistance(pivotDrag, sBase.p2) <= 8
     if (!connToP1 && !connToP2) continue
 
     const baseOtherEnd = connToP1 ? sBase.p2 : sBase.p1
 
     // Verificar si sThird está conectado a baseOtherEnd
-    const thirdConnToP1 = getDistance(baseOtherEnd, sThird.p1) <= 12
-    const thirdConnToP2 = getDistance(baseOtherEnd, sThird.p2) <= 12
+    const thirdConnToP1 = getDistance(baseOtherEnd, sThird.p1) <= 8
+    const thirdConnToP2 = getDistance(baseOtherEnd, sThird.p2) <= 8
     if (!thirdConnToP1 && !thirdConnToP2) continue
 
     const thirdPivot = thirdConnToP1 ? sThird.p1 : sThird.p2
@@ -194,16 +194,19 @@ function tryTriangleClosingSnap(
     const thirdFreePt = sThird[thirdFreeEnd]
     const rThird = sThird.units * pxPerUnit
 
+    // Requisito 1: Ambos extremos DEBEN estar ya muy cerca entre sí (círculos casi tocándose)
+    const distBetweenTips = getDistance(candidateP, thirdFreePt)
+    if (distBetweenTips > snapRadius) continue
+
     const intersections = getCircleCircleIntersections(pivotDrag, rDrag, thirdPivot, rThird)
     if (!intersections) continue
 
     const d0 = getDistance(candidateP, intersections[0])
     const d1 = getDistance(candidateP, intersections[1])
     const bestI = d0 <= d1 ? intersections[0] : intersections[1]
-    const bestDist = Math.min(d0, d1)
-    const distToThird = getDistance(candidateP, thirdFreePt)
 
-    if (bestDist <= snapRadius || distToThird <= snapRadius) {
+    // Requisito 2: Ambos extremos deben estar muy cerca del punto exacto de encuentro
+    if (getDistance(candidateP, bestI) <= snapRadius && getDistance(thirdFreePt, bestI) <= snapRadius) {
       return {
         didSnap: true,
         draggedP: bestI,
@@ -507,9 +510,9 @@ export default function ExistenciaTrianguloView() {
   const panStartRef = useRef({ x: 0, y: 0, initialPanX: 0, initialPanY: 0 })
   const pinchStartRef = useRef({ dist: 0, zoom: 1, midX: 0, midY: 0 })
 
-  // Comprobar imán con otros extremos disponibles
+  // Comprobar imán con otros extremos disponibles (solo a corta distancia <= 14px)
   const checkEndpointSnap = useCallback(
-    (point: { x: number; y: number }, segId: 'a' | 'b' | 'c', snapRadius = 26) => {
+    (point: { x: number; y: number }, segId: 'a' | 'b' | 'c', snapRadius = 14) => {
       let snappedPoint = { ...point }
       let didSnap = false
       let minDist = snapRadius
@@ -756,14 +759,14 @@ export default function ExistenciaTrianguloView() {
           y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
         }
 
-        // 1. Probar imán de cierre de triángulo con los otros dos segmentos unidos
+        // 1. Probar imán de cierre de triángulo con los otros dos segmentos unidos (solo si están muy cerca)
         const triSnap = tryTriangleClosingSnap(
           drag.segmentId,
           'p1',
           candidateP1,
           segments,
           pxPerUnit,
-          32
+          14
         )
 
         if (triSnap.didSnap && triSnap.otherSegId && triSnap.otherEnd && triSnap.otherP) {
@@ -818,7 +821,7 @@ export default function ExistenciaTrianguloView() {
           candidateP2,
           segments,
           pxPerUnit,
-          32
+          14
         )
 
         if (triSnap.didSnap && triSnap.otherSegId && triSnap.otherEnd && triSnap.otherP) {
