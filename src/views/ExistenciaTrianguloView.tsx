@@ -676,12 +676,6 @@ export default function ExistenciaTrianguloView() {
         const offsetDy = snap1.point.y - candP1.y
         candP1 = { ...snap1.point }
         candP2 = { x: candP2.x + offsetDx, y: candP2.y + offsetDy }
-
-        // Si p1 se imantó, verificar si p2 también puede imantarse exactamente a otro extremo
-        const snap2After = checkEndpointSnap(candP2, drag.segmentId)
-        if (snap2After.didSnap && getDistance(candP2, snap2After.point) <= 14) {
-          candP2 = { ...snap2After.point }
-        }
       } else {
         // Si p1 no se imantó, probar si p2 se imanta
         const snap2 = checkEndpointSnap(candP2, drag.segmentId)
@@ -690,11 +684,6 @@ export default function ExistenciaTrianguloView() {
           const offsetDy = snap2.point.y - candP2.y
           candP2 = { ...snap2.point }
           candP1 = { x: candP1.x + offsetDx, y: candP1.y + offsetDy }
-
-          const snap1After = checkEndpointSnap(candP1, drag.segmentId)
-          if (snap1After.didSnap && getDistance(candP1, snap1After.point) <= 14) {
-            candP1 = { ...snap1After.point }
-          }
         }
       }
 
@@ -805,16 +794,13 @@ export default function ExistenciaTrianguloView() {
           return
         }
 
-        // 2. Si no es cierre de triángulo, probar si se imanta a un extremo libre
+        // 2. Si no es cierre de triángulo, orientar el giro exactamente hacia el extremo cercano sin alterar la longitud
         const snap = checkEndpointSnap(candidateP1, drag.segmentId)
         if (snap.didSnap) {
           angleRad = Math.atan2(snap.point.y - pivot.y, snap.point.x - pivot.x)
           candidateP1 = {
             x: Math.round(pivot.x + targetLen * Math.cos(angleRad)),
             y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
-          }
-          if (getDistance(candidateP1, snap.point) <= 12) {
-            candidateP1 = { ...snap.point }
           }
         }
 
@@ -866,9 +852,6 @@ export default function ExistenciaTrianguloView() {
           candidateP2 = {
             x: Math.round(pivot.x + targetLen * Math.cos(angleRad)),
             y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
-          }
-          if (getDistance(candidateP2, snap.point) <= 12) {
-            candidateP2 = { ...snap.point }
           }
         }
 
