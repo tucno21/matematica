@@ -118,6 +118,105 @@ function getDistance(p1: { x: number; y: number }, p2: { x: number; y: number })
   return Math.sqrt(dx * dx + dy * dy)
 }
 
+// Cálculo geométrico exacto de la intersección de dos circunferencias para cierre magnético
+function getCircleCircleIntersections(
+  p1: { x: number; y: number },
+  r1: number,
+  p2: { x: number; y: number },
+  r2: number
+): [{ x: number; y: number }, { x: number; y: number }] | null {
+  const dx = p2.x - p1.x
+  const dy = p2.y - p1.y
+  const d = Math.hypot(dx, dy)
+
+  // Tolerancia de 3px para asegurar toque en casos tangenciales límite
+  if (d > r1 + r2 + 3 || d < Math.abs(r1 - r2) - 3 || d < 1e-4) {
+    return null
+  }
+
+  const clampedD = Math.max(Math.abs(r1 - r2), Math.min(r1 + r2, d))
+  const a = (r1 * r1 - r2 * r2 + clampedD * clampedD) / (2 * clampedD)
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a))
+
+  const x2 = p1.x + (a * dx) / clampedD
+  const y2 = p1.y + (a * dy) / clampedD
+
+  const rx = -dy * (h / clampedD)
+  const ry = dx * (h / clampedD)
+
+  return [
+    { x: Math.round(x2 + rx), y: Math.round(y2 + ry) },
+    { x: Math.round(x2 - rx), y: Math.round(y2 - ry) },
+  ]
+}
+
+// Detección de imán para el cierre perfecto de dos barras que comparten una base
+function tryTriangleClosingSnap(
+  draggedSegId: 'a' | 'b' | 'c',
+  draggedEnd: 'p1' | 'p2',
+  candidateP: { x: number; y: number },
+  currentSegments: SegmentData[],
+  pxPerUnit: number,
+  snapRadius = 32
+): {
+  didSnap: boolean
+  draggedP: { x: number; y: number }
+  otherSegId?: 'a' | 'b' | 'c'
+  otherEnd?: 'p1' | 'p2'
+  otherP?: { x: number; y: number }
+} {
+  const sDrag = currentSegments.find(s => s.id === draggedSegId)
+  if (!sDrag) return { didSnap: false, draggedP: candidateP }
+
+  const others = currentSegments.filter(s => s.id !== draggedSegId)
+  if (others.length < 2) return { didSnap: false, draggedP: candidateP }
+
+  const pivotDrag = draggedEnd === 'p1' ? sDrag.p2 : sDrag.p1
+  const rDrag = sDrag.units * pxPerUnit
+
+  // Probar cuál de los otros dos segmentos actúa como base conectada al pivotDrag
+  for (const sBase of others) {
+    const sThird = others.find(s => s.id !== sBase.id)!
+
+    const connToP1 = getDistance(pivotDrag, sBase.p1) <= 12
+    const connToP2 = getDistance(pivotDrag, sBase.p2) <= 12
+    if (!connToP1 && !connToP2) continue
+
+    const baseOtherEnd = connToP1 ? sBase.p2 : sBase.p1
+
+    // Verificar si sThird está conectado a baseOtherEnd
+    const thirdConnToP1 = getDistance(baseOtherEnd, sThird.p1) <= 12
+    const thirdConnToP2 = getDistance(baseOtherEnd, sThird.p2) <= 12
+    if (!thirdConnToP1 && !thirdConnToP2) continue
+
+    const thirdPivot = thirdConnToP1 ? sThird.p1 : sThird.p2
+    const thirdFreeEnd: 'p1' | 'p2' = thirdConnToP1 ? 'p2' : 'p1'
+    const thirdFreePt = sThird[thirdFreeEnd]
+    const rThird = sThird.units * pxPerUnit
+
+    const intersections = getCircleCircleIntersections(pivotDrag, rDrag, thirdPivot, rThird)
+    if (!intersections) continue
+
+    const d0 = getDistance(candidateP, intersections[0])
+    const d1 = getDistance(candidateP, intersections[1])
+    const bestI = d0 <= d1 ? intersections[0] : intersections[1]
+    const bestDist = Math.min(d0, d1)
+    const distToThird = getDistance(candidateP, thirdFreePt)
+
+    if (bestDist <= snapRadius || distToThird <= snapRadius) {
+      return {
+        didSnap: true,
+        draggedP: bestI,
+        otherSegId: sThird.id,
+        otherEnd: thirdFreeEnd,
+        otherP: bestI,
+      }
+    }
+  }
+
+  return { didSnap: false, draggedP: candidateP }
+}
+
 export default function ExistenciaTrianguloView() {
   const nav = useNavigate()
   const isDark = useThemeStore((s) => s.theme === 'dark')
@@ -306,7 +405,7 @@ export default function ExistenciaTrianguloView() {
     const ptsB = [sB.p1, sB.p2]
     const ptsC = [sC.p1, sC.p2]
 
-    const TOLERANCE = 18 // Píxeles de tolerancia de cierre
+    const TOLERANCE = 6 // Tolerancia estricta: los extremos deben coincidir físicamente
 
     // Buscar si existe un emparejamiento cíclico entre A, B y C
     let closed = false
@@ -410,25 +509,25 @@ export default function ExistenciaTrianguloView() {
 
   // Comprobar imán con otros extremos disponibles
   const checkEndpointSnap = useCallback(
-    (point: { x: number; y: number }, segId: 'a' | 'b' | 'c') => {
-      const SNAP_RADIUS = 22 // Radio magnético en píxeles de mundo
+    (point: { x: number; y: number }, segId: 'a' | 'b' | 'c', snapRadius = 26) => {
       let snappedPoint = { ...point }
       let didSnap = false
+      let minDist = snapRadius
 
       for (const s of segments) {
         if (s.id === segId) continue
 
-        // Probar p1 del otro segmento
-        if (getDistance(point, s.p1) <= SNAP_RADIUS) {
+        const d1 = getDistance(point, s.p1)
+        if (d1 <= minDist) {
           snappedPoint = { ...s.p1 }
           didSnap = true
-          break
+          minDist = d1
         }
-        // Probar p2 del otro segmento
-        if (getDistance(point, s.p2) <= SNAP_RADIUS) {
+        const d2 = getDistance(point, s.p2)
+        if (d2 <= minDist) {
           snappedPoint = { ...s.p2 }
           didSnap = true
-          break
+          minDist = d2
         }
       }
 
@@ -556,16 +655,27 @@ export default function ExistenciaTrianguloView() {
       if (snap1.didSnap) {
         const offsetDx = snap1.point.x - candP1.x
         const offsetDy = snap1.point.y - candP1.y
-        candP1 = snap1.point
+        candP1 = { ...snap1.point }
         candP2 = { x: candP2.x + offsetDx, y: candP2.y + offsetDy }
+
+        // Si p1 se imantó, verificar si p2 también puede imantarse exactamente a otro extremo
+        const snap2After = checkEndpointSnap(candP2, drag.segmentId)
+        if (snap2After.didSnap && getDistance(candP2, snap2After.point) <= 14) {
+          candP2 = { ...snap2After.point }
+        }
       } else {
         // Si p1 no se imantó, probar si p2 se imanta
         const snap2 = checkEndpointSnap(candP2, drag.segmentId)
         if (snap2.didSnap) {
           const offsetDx = snap2.point.x - candP2.x
           const offsetDy = snap2.point.y - candP2.y
-          candP2 = snap2.point
+          candP2 = { ...snap2.point }
           candP1 = { x: candP1.x + offsetDx, y: candP1.y + offsetDy }
+
+          const snap1After = checkEndpointSnap(candP1, drag.segmentId)
+          if (snap1After.didSnap && getDistance(candP1, snap1After.point) <= 14) {
+            candP1 = { ...snap1After.point }
+          }
         }
       }
 
@@ -646,14 +756,46 @@ export default function ExistenciaTrianguloView() {
           y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
         }
 
-        // Probar si cerca del cursor hay un extremo de otro segmento para imantar el giro
+        // 1. Probar imán de cierre de triángulo con los otros dos segmentos unidos
+        const triSnap = tryTriangleClosingSnap(
+          drag.segmentId,
+          'p1',
+          candidateP1,
+          segments,
+          pxPerUnit,
+          32
+        )
+
+        if (triSnap.didSnap && triSnap.otherSegId && triSnap.otherEnd && triSnap.otherP) {
+          candidateP1 = triSnap.draggedP
+          const otherId = triSnap.otherSegId
+          const otherEnd = triSnap.otherEnd
+          const otherPt = triSnap.otherP
+
+          setSegments(prev =>
+            prev.map(s => {
+              if (s.id === drag.segmentId) {
+                return { ...s, p1: candidateP1 }
+              }
+              if (s.id === otherId) {
+                return { ...s, [otherEnd]: otherPt }
+              }
+              return s
+            })
+          )
+          return
+        }
+
+        // 2. Si no es cierre de triángulo, probar si se imanta a un extremo libre
         const snap = checkEndpointSnap(candidateP1, drag.segmentId)
         if (snap.didSnap) {
-          // Alinear el giro exactamente hacia el punto imantado sin alterar la longitud
           angleRad = Math.atan2(snap.point.y - pivot.y, snap.point.x - pivot.x)
           candidateP1 = {
             x: Math.round(pivot.x + targetLen * Math.cos(angleRad)),
             y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
+          }
+          if (getDistance(candidateP1, snap.point) <= 12) {
+            candidateP1 = { ...snap.point }
           }
         }
 
@@ -670,12 +812,44 @@ export default function ExistenciaTrianguloView() {
           y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
         }
 
+        const triSnap = tryTriangleClosingSnap(
+          drag.segmentId,
+          'p2',
+          candidateP2,
+          segments,
+          pxPerUnit,
+          32
+        )
+
+        if (triSnap.didSnap && triSnap.otherSegId && triSnap.otherEnd && triSnap.otherP) {
+          candidateP2 = triSnap.draggedP
+          const otherId = triSnap.otherSegId
+          const otherEnd = triSnap.otherEnd
+          const otherPt = triSnap.otherP
+
+          setSegments(prev =>
+            prev.map(s => {
+              if (s.id === drag.segmentId) {
+                return { ...s, p2: candidateP2 }
+              }
+              if (s.id === otherId) {
+                return { ...s, [otherEnd]: otherPt }
+              }
+              return s
+            })
+          )
+          return
+        }
+
         const snap = checkEndpointSnap(candidateP2, drag.segmentId)
         if (snap.didSnap) {
           angleRad = Math.atan2(snap.point.y - pivot.y, snap.point.x - pivot.x)
           candidateP2 = {
             x: Math.round(pivot.x + targetLen * Math.cos(angleRad)),
             y: Math.round(pivot.y + targetLen * Math.sin(angleRad)),
+          }
+          if (getDistance(candidateP2, snap.point) <= 12) {
+            candidateP2 = { ...snap.point }
           }
         }
 
