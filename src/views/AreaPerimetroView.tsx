@@ -93,8 +93,17 @@ export default function AreaPerimetroView() {
   const [isPerimeterAnimating, setIsPerimeterAnimating] = useState<boolean>(false)
   const [perimeterProgress, setPerimeterProgress] = useState<number>(0) // 0 a 100
 
+  // Animación didáctica del Área en 3 fases:
+  // 1. 'horizontal': se trazan las líneas horizontales
+  // 2. 'vertical': se trazan las líneas verticales formando la cuadrícula
+  // 3. 'coloring': se colorea y numera cada baldosa una a una con calma
+  // 4. 'done': cuadrícula completamente coloreada y calculada
+  type AreaPhase = 'idle' | 'horizontal' | 'vertical' | 'coloring' | 'done'
+  const [areaPhase, setAreaPhase] = useState<AreaPhase>('idle')
   const [isAreaActive, setIsAreaActive] = useState<boolean>(false)
   const [isAreaAnimating, setIsAreaAnimating] = useState<boolean>(false)
+  const [horizLineProgress, setHorizLineProgress] = useState<number>(0) // 0 a 1
+  const [vertLineProgress, setVertLineProgress] = useState<number>(0)   // 0 a 1
   const [visibleTilesCount, setVisibleTilesCount] = useState<number>(0)
 
   const [isUnrolled, setIsUnrolled] = useState<boolean>(false)
@@ -103,7 +112,7 @@ export default function AreaPerimetroView() {
   const perimeterAnimRef = useRef<number | null>(null)
   const areaAnimRef = useRef<number | null>(null)
 
-  // Iniciar animación secuencial del Perímetro (recorre el borde de inicio a fin)
+  // Iniciar animación secuencial del Perímetro (recorrido pausado para poder seguirlo)
   const handleStartPerimeter = useCallback(() => {
     if (perimeterAnimRef.current) cancelAnimationFrame(perimeterAnimRef.current)
     setIsPerimeterActive(true)
@@ -111,7 +120,8 @@ export default function AreaPerimetroView() {
     setPerimeterProgress(0)
 
     const startTime = performance.now()
-    const duration = 2200 // 2.2 segundos para recorrer secuencialmente los 4 lados
+    // 5 segundos completos para recorrer con tranquilidad los 4 lados
+    const duration = 5000
 
     const step = (now: number) => {
       const elapsed = now - startTime
@@ -127,30 +137,69 @@ export default function AreaPerimetroView() {
     perimeterAnimRef.current = requestAnimationFrame(step)
   }, [])
 
-  // Iniciar animación dinámica de llenado de cuadrículas (Área)
+  // Iniciar animación pedagógica del Área en 3 fases continuas
   const handleStartArea = useCallback(() => {
     if (areaAnimRef.current) cancelAnimationFrame(areaAnimRef.current)
     setIsAreaActive(true)
     setIsAreaAnimating(true)
+    setAreaPhase('horizontal')
+    setHorizLineProgress(0)
+    setVertLineProgress(0)
     setVisibleTilesCount(0)
 
     const totalTiles = base * height
+    // Fase 1: Líneas horizontales (1.3s)
+    const HORIZ_DURATION = height > 1 ? 1300 : 200
+    // Fase 2: Líneas verticales (1.3s) -> con esto queda armada la cuadrícula
+    const VERT_DURATION = base > 1 ? 1300 : 200
+    // Fase 3: Coloreado cuadrado por cuadrado (ritmo pausado para contar uno a uno)
+    const TILE_DURATION = Math.max(160, Math.min(260, 4200 / totalTiles))
+    const COLORING_DURATION = totalTiles * TILE_DURATION
+    const totalDuration = HORIZ_DURATION + VERT_DURATION + COLORING_DURATION
+
     const startTime = performance.now()
-    const duration = Math.min(2200, Math.max(900, totalTiles * 50)) // proporcional a las baldosas
 
     const step = (now: number) => {
       const elapsed = now - startTime
-      const frac = Math.min(1, elapsed / duration)
-      const count = Math.min(totalTiles, Math.max(1, Math.floor(frac * (totalTiles + 1))))
-      setVisibleTilesCount(count)
-      if (frac < 1) {
+
+      if (elapsed < HORIZ_DURATION) {
+        // ── Fase 1: Trazado de líneas horizontales ──
+        setAreaPhase('horizontal')
+        setHorizLineProgress(Math.min(1, elapsed / HORIZ_DURATION))
+        setVertLineProgress(0)
+        setVisibleTilesCount(0)
+        areaAnimRef.current = requestAnimationFrame(step)
+      } else if (elapsed < HORIZ_DURATION + VERT_DURATION) {
+        // ── Fase 2: Trazado de líneas verticales (forma las cuadrículas) ──
+        setAreaPhase('vertical')
+        setHorizLineProgress(1)
+        const vertElapsed = elapsed - HORIZ_DURATION
+        setVertLineProgress(Math.min(1, vertElapsed / VERT_DURATION))
+        setVisibleTilesCount(0)
+        areaAnimRef.current = requestAnimationFrame(step)
+      } else if (elapsed < totalDuration) {
+        // ── Fase 3: Coloreado cuadrado por cuadrado con su número ──
+        setAreaPhase('coloring')
+        setHorizLineProgress(1)
+        setVertLineProgress(1)
+        const colorElapsed = elapsed - (HORIZ_DURATION + VERT_DURATION)
+        const currentCount = Math.min(
+          totalTiles,
+          Math.max(1, Math.floor(colorElapsed / TILE_DURATION) + 1)
+        )
+        setVisibleTilesCount(currentCount)
         areaAnimRef.current = requestAnimationFrame(step)
       } else {
+        // ── Finalizado: Toda la cuadrícula coloreada y numerada ──
+        setAreaPhase('done')
+        setHorizLineProgress(1)
+        setVertLineProgress(1)
         setVisibleTilesCount(totalTiles)
         setIsAreaAnimating(false)
         areaAnimRef.current = null
       }
     }
+
     areaAnimRef.current = requestAnimationFrame(step)
   }, [base, height])
 
@@ -165,6 +214,9 @@ export default function AreaPerimetroView() {
     setPerimeterProgress(0)
     setIsAreaActive(false)
     setIsAreaAnimating(false)
+    setAreaPhase('idle')
+    setHorizLineProgress(0)
+    setVertLineProgress(0)
     setVisibleTilesCount(0)
     setIsUnrolled(false)
   }, [])
@@ -179,6 +231,9 @@ export default function AreaPerimetroView() {
     setPerimeterProgress(0)
     setIsAreaActive(false)
     setIsAreaAnimating(false)
+    setAreaPhase('idle')
+    setHorizLineProgress(0)
+    setVertLineProgress(0)
     setVisibleTilesCount(0)
     setIsUnrolled(false)
   }, [])
@@ -191,6 +246,9 @@ export default function AreaPerimetroView() {
     setPerimeterProgress(0)
     setIsAreaActive(false)
     setIsAreaAnimating(false)
+    setAreaPhase('idle')
+    setHorizLineProgress(0)
+    setVertLineProgress(0)
     setVisibleTilesCount(0)
     setIsUnrolled(false)
   }, [])
@@ -1017,7 +1075,13 @@ export default function AreaPerimetroView() {
                       </span>
                     ) : isAreaActive ? (
                       <span className="font-mono font-black text-blue-500 text-sm animate-pulse">
-                        {isAreaAnimating ? `${visibleTilesCount} u²` : `${area1} u²`}
+                        {areaPhase === 'horizontal'
+                          ? '1. Trazando líneas horizontales...'
+                          : areaPhase === 'vertical'
+                          ? '2. Trazando líneas verticales (cuadrícula)...'
+                          : areaPhase === 'coloring'
+                          ? `3. Baldosas: ${visibleTilesCount} de ${area1} u²`
+                          : `${area1} u²`}
                       </span>
                     ) : (
                       <span className={`font-mono font-bold text-xs px-1 rounded ${isDark ? 'text-white/40 bg-white/5' : 'text-slate-400 bg-slate-200'}`}>
@@ -1036,7 +1100,9 @@ export default function AreaPerimetroView() {
                       </span>
                     ) : isPerimeterActive ? (
                       <span className="font-mono font-black text-amber-500 text-sm animate-pulse">
-                        {isPerimeterAnimating ? `${((perimeterProgress / 100) * perim1).toFixed(0)} u` : `${perim1} u`}
+                        {isPerimeterAnimating
+                          ? `Recorriendo contorno: ${((perimeterProgress / 100) * perim1).toFixed(0)} de ${perim1} u`
+                          : `${perim1} u`}
                       </span>
                     ) : (
                       <span className={`font-mono font-bold text-xs px-1 rounded ${isDark ? 'text-white/40 bg-white/5' : 'text-slate-400 bg-slate-200'}`}>
@@ -1160,43 +1226,111 @@ export default function AreaPerimetroView() {
                       rx={3}
                     />
 
-                    {/* 2. DIBUJO DINÁMICO DE LAS CUADRÍCULAS (Solo cuando se hace clic en Área) */}
+                    {/* 2. DIBUJO DINÁMICO DE LAS CUADRÍCULAS EN 3 FASES */}
                     {isAreaActive && (
                       <g>
-                        {Array.from({ length: visibleTilesCount }, (_, i) => {
-                          const r = Math.floor(i / base)
-                          const col = i % base
-                          const cellX = startX + col * cellSize
-                          const cellY = startY + r * cellSize
-                          const tileIdx = i + 1
+                        {/* Fase 1: Líneas horizontales trazadas de izquierda a derecha */}
+                        {height > 1 && horizLineProgress > 0 && (
+                          <g>
+                            {Array.from({ length: height - 1 }, (_, i) => i + 1).map(r => {
+                              const lineY = startY + r * cellSize
+                              const lineEnd = startX + horizLineProgress * rectW
+                              return (
+                                <g key={`hline-${r}`}>
+                                  <line
+                                    x1={startX}
+                                    y1={lineY}
+                                    x2={lineEnd}
+                                    y2={lineY}
+                                    stroke={isDark ? '#38bdf8' : '#0284c7'}
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  {areaPhase === 'horizontal' && horizLineProgress < 1 && (
+                                    <circle
+                                      cx={lineEnd}
+                                      cy={lineY}
+                                      r="3.5"
+                                      fill="#38bdf8"
+                                    />
+                                  )}
+                                </g>
+                              )
+                            })}
+                          </g>
+                        )}
 
-                          return (
-                            <g key={`tile-${r}-${col}`}>
-                              <rect
-                                x={cellX}
-                                y={cellY}
-                                width={cellSize}
-                                height={cellSize}
-                                fill={c.areaColor}
-                                stroke={c.areaTileBorder}
-                                strokeWidth="1"
-                              />
-                              {cellSize >= 24 && (
-                                <text
-                                  x={cellX + cellSize / 2}
-                                  y={cellY + cellSize / 2 + 4}
-                                  textAnchor="middle"
-                                  fill="#ffffff"
-                                  fontSize={cellSize >= 38 ? '13' : '10'}
-                                  fontWeight="bold"
-                                  fontFamily="JetBrains Mono, monospace"
-                                >
-                                  {tileIdx}
-                                </text>
-                              )}
-                            </g>
-                          )
-                        })}
+                        {/* Fase 2: Líneas verticales trazadas de arriba a abajo (formando cuadrícula) */}
+                        {base > 1 && vertLineProgress > 0 && (
+                          <g>
+                            {Array.from({ length: base - 1 }, (_, i) => i + 1).map(col => {
+                              const lineX = startX + col * cellSize
+                              const lineEnd = startY + vertLineProgress * rectH
+                              return (
+                                <g key={`vline-${col}`}>
+                                  <line
+                                    x1={lineX}
+                                    y1={startY}
+                                    x2={lineX}
+                                    y2={lineEnd}
+                                    stroke={isDark ? '#38bdf8' : '#0284c7'}
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  {areaPhase === 'vertical' && vertLineProgress < 1 && (
+                                    <circle
+                                      cx={lineX}
+                                      cy={lineEnd}
+                                      r="3.5"
+                                      fill="#38bdf8"
+                                    />
+                                  )}
+                                </g>
+                              )
+                            })}
+                          </g>
+                        )}
+
+                        {/* Fase 3: Coloreado cuadrado por cuadrado con su número */}
+                        {visibleTilesCount > 0 && (
+                          <g>
+                            {Array.from({ length: visibleTilesCount }, (_, i) => {
+                              const r = Math.floor(i / base)
+                              const col = i % base
+                              const cellX = startX + col * cellSize
+                              const cellY = startY + r * cellSize
+                              const tileIdx = i + 1
+                              const isLatest = i === visibleTilesCount - 1 && areaPhase === 'coloring'
+
+                              return (
+                                <g key={`tile-${r}-${col}`}>
+                                  <rect
+                                    x={cellX}
+                                    y={cellY}
+                                    width={cellSize}
+                                    height={cellSize}
+                                    fill={c.areaColor}
+                                    stroke={isLatest ? '#fbbf24' : c.areaTileBorder}
+                                    strokeWidth={isLatest ? '2' : '1'}
+                                  />
+                                  {cellSize >= 20 && (
+                                    <text
+                                      x={cellX + cellSize / 2}
+                                      y={cellY + cellSize / 2 + (cellSize >= 32 ? 4 : 3)}
+                                      textAnchor="middle"
+                                      fill="#ffffff"
+                                      fontSize={cellSize >= 38 ? '13' : cellSize >= 28 ? '11' : '9'}
+                                      fontWeight="bold"
+                                      fontFamily="JetBrains Mono, monospace"
+                                    >
+                                      {tileIdx}
+                                    </text>
+                                  )}
+                                </g>
+                              )
+                            })}
+                          </g>
+                        )}
                       </g>
                     )}
 
@@ -1750,7 +1884,9 @@ export default function AreaPerimetroView() {
                       isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-800 border border-blue-200'
                     }`}
                   >
-                    {isAreaAnimating ? `${visibleTilesCount} u²` : `${area1} u²`}
+                    {areaPhase === 'horizontal' || areaPhase === 'vertical'
+                      ? 'Formando cuadrícula...'
+                      : `${visibleTilesCount} u²`}
                   </span>
                 ) : (
                   <span
