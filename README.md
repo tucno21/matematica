@@ -365,6 +365,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/angulos` | `AngulosView` | Explorador de ángulos con 6 modos (pantalla completa) |
 | `/medir-angulos` | `MedirAngulosView` | Medición con transportador y goniómetro interactivo (pantalla completa) |
 | `/existencia-triangulo` | `ExistenciaTrianguloView` | Teorema de existencia de triángulos y desigualdad triangular (pantalla completa) |
+| `/volumen-prisma` | `VolumenPrismaView` | Volumen de prismas con cubos unidad, capas y deslizador lateral dinámico |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

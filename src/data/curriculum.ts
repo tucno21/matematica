@@ -184,6 +184,7 @@ export const topics: Topic[] = [
     { id: 'fraccion-conjunto', competency: 'cantidad', path: '/fraccion-conjunto', title: 'Fracción de un Conjunto', description: 'Parte de un grupo de objetos', available: true },
 
     // ── Forma, movimiento y localización ─────────────────────────────────────
+    { id: 'volumen-prisma', competency: 'forma', path: '/volumen-prisma', title: 'Volumen del Prisma', description: 'Descubre el volumen de prismas rectangulares y cuadrangulares apilando cubos unidad por capas', available: true },
     { id: 'medir-angulos', competency: 'forma', path: '/medir-angulos', title: 'Medición con Transportador', description: 'Mide ángulos con transportador interactivo y goniómetro', available: true },
     { id: 'angulos', competency: 'forma', path: '/angulos', title: 'Ángulos', description: 'Mide y gira ángulos', available: true },
     { id: 'existencia-triangulo', competency: 'forma', path: '/existencia-triangulo', title: 'Existencia de un Triángulo', description: 'Teorema de la desigualdad triangular con segmentos interactivos', available: true },

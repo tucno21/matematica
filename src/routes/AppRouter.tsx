@@ -33,6 +33,7 @@ import DescubrirFuncionView from '../views/DescubrirFuncionView'
 import FuncionLinealAfinView from '../views/FuncionLinealAfinView'
 import GraficaLinealView from '../views/GraficaLinealView'
 import GraficaCuadraticaView from '../views/GraficaCuadraticaView'
+import VolumenPrismaView from '../views/VolumenPrismaView'
 
 const router = createBrowserRouter([
     {
@@ -170,6 +171,10 @@ const router = createBrowserRouter([
     {
         path: '/grafica-cuadratica',
         element: <GraficaCuadraticaView />
+    },
+    {
+        path: '/volumen-prisma',
+        element: <VolumenPrismaView />
     }
 ])
 
