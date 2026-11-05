@@ -50,6 +50,8 @@ src/
     ├── AngulosView.tsx        # Explorador de ángulos: 6 modos interactivos (pantalla completa)
     ├── MedirAngulosView.tsx   # Medición con transportador y goniómetro interactivo (pantalla completa)
     ├── ExistenciaTrianguloView.tsx # Teorema de existencia de triángulos y desigualdad triangular (pantalla completa)
+    ├── VolumenPrismaView.tsx      # Volumen de prismas: cubos unidad, capas y deslizador lateral
+    ├── AreaPerimetroView.tsx      # Área y Perímetro: baldosas unitarias, cerca desenrollada y cuadrícula libre
     ├── IntroEnterosView.tsx   # Termómetro interactivo
     ├── RectaNumericaView.tsx   # Juego de recta numérica con dados
     ├── SumaEnterosView.tsx    # Suma con fichas de cancelación
@@ -366,6 +368,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/medir-angulos` | `MedirAngulosView` | Medición con transportador y goniómetro interactivo (pantalla completa) |
 | `/existencia-triangulo` | `ExistenciaTrianguloView` | Teorema de existencia de triángulos y desigualdad triangular (pantalla completa) |
 | `/volumen-prisma` | `VolumenPrismaView` | Volumen de prismas con cubos unidad, capas y deslizador lateral dinámico |
+| `/area-perimetro` | `AreaPerimetroView` | Área y Perímetro: baldosas, cerca desenrollable, geoplano libre y retos (pantalla completa) |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

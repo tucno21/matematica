@@ -34,6 +34,7 @@ import FuncionLinealAfinView from '../views/FuncionLinealAfinView'
 import GraficaLinealView from '../views/GraficaLinealView'
 import GraficaCuadraticaView from '../views/GraficaCuadraticaView'
 import VolumenPrismaView from '../views/VolumenPrismaView'
+import AreaPerimetroView from '../views/AreaPerimetroView'
 
 const router = createBrowserRouter([
     {
@@ -175,6 +176,10 @@ const router = createBrowserRouter([
     {
         path: '/volumen-prisma',
         element: <VolumenPrismaView />
+    },
+    {
+        path: '/area-perimetro',
+        element: <AreaPerimetroView />
     }
 ])
 
