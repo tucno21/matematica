@@ -1189,15 +1189,17 @@ export default function AreaTrianguloView() {
                 // reservamos el ancho del panel derecho de forma fija si hay espacio (>= 620px)
                 const cardReservedW = 320
                 const availableWidth = mode === 'descubrimiento' && canvasDims.width >= 620
-                  ? canvasDims.width - cardReservedW - 40
-                  : canvasDims.width - 80
+                  ? canvasDims.width - cardReservedW - 36
+                  : canvasDims.width - 50
 
-                // Escala de celdas estable
-                const maxRangeX = Math.max(activeBase, activeApexX, 8) - Math.min(0, activeApexX) + 2
-                const maxRangeY = activeHeight + 3
+                // Escala de celdas optimizada y mucho más grande para tablets y laptops
+                const spanUnitsX = Math.max(activeBase, activeApexX, 6) - Math.min(0, activeApexX) + 1.4
+                const spanUnitsY = activeHeight + 1.2
+                const fitX = availableWidth / spanUnitsX
+                const fitY = (canvasDims.height - 76) / spanUnitsY
                 const cellSize = Math.max(
-                  22,
-                  Math.min(42, Math.floor(Math.min(availableWidth / maxRangeX, (canvasDims.height - 110) / maxRangeY)))
+                  24,
+                  Math.min(58, Math.floor(Math.min(fitX, fitY)))
                 )
 
                 const minX = Math.min(0, activeApexX)
@@ -1212,7 +1214,42 @@ export default function AreaTrianguloView() {
                 const originX = mode === 'descubrimiento' && canvasDims.width >= 620
                   ? centeredOriginX + (shiftedOriginX - centeredOriginX) * shiftProgress
                   : centeredOriginX
-                const originY = canvasDims.height / 2 + (activeHeight * cellSize) / 2 - 10
+                const originY = Math.min(
+                  canvasDims.height - 48,
+                  Math.round(canvasDims.height / 2 + (activeHeight * cellSize) / 2 + 8)
+                )
+
+                // Cuadrícula unitaria completa (1u × 1u = cellSize × cellSize) alineada con el triángulo
+                const minCol = Math.floor(-originX / cellSize) - 1
+                const maxCol = Math.ceil((canvasDims.width - originX) / cellSize) + 1
+                const minRow = Math.floor((originY - canvasDims.height) / cellSize) - 1
+                const maxRow = Math.ceil(originY / cellSize) + 1
+
+                const gridCols: number[] = []
+                for (let col = minCol; col <= maxCol; col++) {
+                  gridCols.push(col)
+                }
+
+                const gridRows: number[] = []
+                for (let r = minRow; r <= maxRow; r++) {
+                  gridRows.push(r)
+                }
+
+                const shouldFillTriangle =
+                  mode === 'cavalieri' ||
+                  mode === 'tipos' ||
+                  mode === 'retos' ||
+                  isSuperficieActive ||
+                  triangleFillOpacity > 0
+
+                const activeFillOpacity =
+                  mode === 'retos' && isCurrentChallengeSolved
+                    ? 0.55
+                    : isSuperficieActive
+                    ? 0.65
+                    : triangleFillOpacity > 0
+                    ? triangleFillOpacity
+                    : 0.42
 
                 // Coordenadas de vértices en píxeles
                 const pAx = originX
@@ -1267,16 +1304,6 @@ export default function AreaTrianguloView() {
 
                 return (
                   <g>
-                    {/* Cuadrícula de fondo suave */}
-                    <g opacity={isDark ? '0.2' : '0.4'}>
-                      {Array.from({ length: 30 }, (_, i) => i * 30).map(x => (
-                        <line key={`bg-vx-${x}`} x1={x} y1="0" x2={x} y2={canvasDims.height} stroke={c.gridLine} strokeWidth="1" />
-                      ))}
-                      {Array.from({ length: 20 }, (_, i) => i * 30).map(y => (
-                        <line key={`bg-hy-${y}`} x1="0" y1={y} x2={canvasDims.width} y2={y} stroke={c.gridLine} strokeWidth="1" />
-                      ))}
-                    </g>
-
                     {/* Sombra del triángulo */}
                     <polygon
                       points={`${pAx + 5},${pAy + 5} ${pBx + 5},${pBy + 5} ${pCx + 5},${pCy + 5}`}
@@ -1392,24 +1419,60 @@ export default function AreaTrianguloView() {
 
                     {/* ══════════════════════════════════════════════════════════
                         2. RELLENO DEL TRIÁNGULO
-                        - Al inicio: fill="none" (transparente, no tapa cuadrícula)
-                        - En botón Superficie: relleno azul
-                        - En Paso 3 de Continuar: primero se pinta de forma suave el triángulo
+                        - Translúcido en Cavalieri, Tipos y Retos
+                        - En Descubrimiento: activo en Superficie o tras Continuar
                         - Al resolver retos: verde brillante
                     ══════════════════════════════════════════════════════════ */}
-                    {(isSuperficieActive || triangleFillOpacity > 0 || (mode === 'retos' && isCurrentChallengeSolved)) && (
+                    {shouldFillTriangle && (
                       <polygon
                         points={`${pAx},${pAy} ${pBx},${pBy} ${pCx},${pCy}`}
                         fill={mode === 'retos' && isCurrentChallengeSolved ? '#10b981' : c.triangleFill}
-                        fillOpacity={
-                          isSuperficieActive
-                            ? 0.85
-                            : mode === 'retos' && isCurrentChallengeSolved
-                            ? 0.85
-                            : triangleFillOpacity
-                        }
+                        fillOpacity={activeFillOpacity}
                       />
                     )}
+
+                    {/* ══════════════════════════════════════════════════════════
+                        3. CUADRÍCULA UNITARIA (1u × 1u) DELGADA Y VISIBLE
+                        (Alineada con el triángulo y pasando por encima de la superficie)
+                    ══════════════════════════════════════════════════════════ */}
+                    <g>
+                      {/* Líneas horizontales de cuadrícula unitaria */}
+                      {gridRows.map(r => {
+                        const y = originY - r * cellSize
+                        if (y < 4 || y > canvasDims.height - 4) return null
+                        const isBaseLine = r === 0
+                        return (
+                          <line
+                            key={`unit-h-${r}`}
+                            x1={0}
+                            y1={y}
+                            x2={canvasDims.width}
+                            y2={y}
+                            stroke={isBaseLine ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#2e4268' : '#cbd5e1')}
+                            strokeWidth={isBaseLine ? 1.5 : 1}
+                            strokeOpacity={isDark ? 0.75 : 0.85}
+                          />
+                        )
+                      })}
+
+                      {/* Líneas verticales de cuadrícula unitaria */}
+                      {gridCols.map(col => {
+                        const x = originX + col * cellSize
+                        if (x < 4 || x > canvasDims.width - 4) return null
+                        return (
+                          <line
+                            key={`unit-v-${col}`}
+                            x1={x}
+                            y1={0}
+                            x2={x}
+                            y2={canvasDims.height}
+                            stroke={isDark ? '#2e4268' : '#cbd5e1'}
+                            strokeWidth={1}
+                            strokeOpacity={isDark ? 0.75 : 0.85}
+                          />
+                        )
+                      })}
+                    </g>
 
                     {/* Borde exterior del Triángulo Principal */}
                     <polygon
@@ -1535,22 +1598,24 @@ export default function AreaTrianguloView() {
                     {mode === 'cavalieri' && (
                       <g>
                         <line
-                          x1={originX - 3 * cellSize}
+                          x1={0}
                           y1={pCy}
-                          x2={originX + 11 * cellSize}
+                          x2={canvasDims.width}
                           y2={pCy}
                           stroke="#f59e0b"
-                          strokeWidth="1.5"
+                          strokeWidth="1.8"
                           strokeDasharray="6 4"
                         />
                         <text
-                          x={originX + 11 * cellSize + 8}
-                          y={pCy + 4}
+                          x={canvasDims.width - 15}
+                          y={pCy - 8}
+                          textAnchor="end"
                           fill="#f59e0b"
-                          fontSize="10"
+                          fontSize="11"
                           fontWeight="bold"
+                          fontFamily="JetBrains Mono, monospace"
                         >
-                          h = 4 u constante
+                          h = {activeHeight} u constante
                         </text>
                       </g>
                     )}
