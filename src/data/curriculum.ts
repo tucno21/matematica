@@ -198,6 +198,7 @@ export const topics: Topic[] = [
     { id: 'puente-ecuacion', competency: 'regularidad', path: '/puente-ecuacion', title: 'El Puente del Igual', description: 'Transposición de términos y cambio de signos', available: true },
     { id: 'descubrir-funcion', competency: 'regularidad', path: '/descubrir-funcion', title: 'Máquina de Funciones', description: 'Descubre la regla de la máquina, completa la tabla y grafica en el plano', available: true },
     { id: 'funcion-lineal-afin', competency: 'regularidad', path: '/funcion-lineal-afin', title: 'Función Lineal y Afín', description: 'Tabla de valores, plano cartesiano, regla y = mx + b y simulador dinámico', available: true },
+    { id: 'grafica-lineal', competency: 'regularidad', path: '/grafica-lineal', title: 'Gráfica Lineal', description: 'Explora la función y = 5x + 7 y modifica la pendiente y el intercepto con deslizadores', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
