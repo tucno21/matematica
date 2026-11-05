@@ -35,6 +35,7 @@ import GraficaLinealView from '../views/GraficaLinealView'
 import GraficaCuadraticaView from '../views/GraficaCuadraticaView'
 import VolumenPrismaView from '../views/VolumenPrismaView'
 import AreaPerimetroView from '../views/AreaPerimetroView'
+import AreaTrianguloView from '../views/AreaTrianguloView'
 
 const router = createBrowserRouter([
     {
@@ -180,6 +181,10 @@ const router = createBrowserRouter([
     {
         path: '/area-perimetro',
         element: <AreaPerimetroView />
+    },
+    {
+        path: '/area-triangulo',
+        element: <AreaTrianguloView />
     }
 ])
 
