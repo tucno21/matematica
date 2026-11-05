@@ -32,6 +32,7 @@ import ExistenciaTrianguloView from '../views/ExistenciaTrianguloView'
 import DescubrirFuncionView from '../views/DescubrirFuncionView'
 import FuncionLinealAfinView from '../views/FuncionLinealAfinView'
 import GraficaLinealView from '../views/GraficaLinealView'
+import GraficaCuadraticaView from '../views/GraficaCuadraticaView'
 
 const router = createBrowserRouter([
     {
@@ -165,6 +166,10 @@ const router = createBrowserRouter([
     {
         path: '/grafica-lineal',
         element: <GraficaLinealView />
+    },
+    {
+        path: '/grafica-cuadratica',
+        element: <GraficaCuadraticaView />
     }
 ])
 

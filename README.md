@@ -383,6 +383,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/descubrir-funcion` | `DescubrirFuncionView` | Máquina de funciones: descubre la regla, tabla y plano |
 | `/funcion-lineal-afin` | `FuncionLinealAfinView` | Función lineal y afín: tabla contextual, plano cartesiano y deslizadores y = mx + b |
 | `/grafica-lineal` | `GraficaLinealView` | Gráfica lineal: plano cartesiano con y = 5x + 7 y deslizadores dinámicos de pendiente e intercepto Y |
+| `/grafica-cuadratica` | `GraficaCuadraticaView` | Gráfica cuadrática: parábola interactiva y = ax² + bx + c con vértice, raíces y deslizadores |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
 | `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |

@@ -15,44 +15,6 @@ import {
 import { useThemeStore } from '../store/useThemeStore'
 import ModalHelp from '../components/ModalHelp'
 
-interface PlaneBounds {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-}
-
-// Límites dinámicos adaptados según m, b, zoom y relación de aspecto de la pantalla
-function computeBounds(m: number, b: number, zoomLevel: number, width: number, height: number): PlaneBounds {
-  const aspect = Math.max(0.6, Math.min(3.5, width / Math.max(height, 1)))
-  // Si la pantalla es ancha, el eje X se expande proporcionalmente para abarcar todo el ancho sin bordes vacíos
-  const baseSpan = 6 * zoomLevel
-  const spanX = Math.round(baseSpan * Math.max(1, aspect / 1.15))
-  const minX = -spanX
-  const maxX = spanX
-
-  // Valores representativos de Y cerca del origen y corte
-  const yAtMinX = m * Math.max(minX, -3) + b
-  const yAtMaxX = m * Math.min(maxX, 3) + b
-  const yAtZero = b
-
-  const lowestKeyY = Math.min(yAtMinX, yAtMaxX, yAtZero, 0)
-  const highestKeyY = Math.max(yAtMinX, yAtMaxX, yAtZero, 0)
-
-  let minY = Math.floor(Math.min(-4 * zoomLevel, lowestKeyY - 2 * zoomLevel))
-  let maxY = Math.ceil(Math.max(10 * zoomLevel, highestKeyY + 2 * zoomLevel))
-
-  // Asegurar altura mínima armónica
-  const minSpanY = Math.round(16 * zoomLevel)
-  if (maxY - minY < minSpanY) {
-    const diff = minSpanY - (maxY - minY)
-    minY -= Math.floor(diff / 2)
-    maxY += Math.ceil(diff / 2)
-  }
-
-  return { minX, maxX, minY, maxY }
-}
-
 // Conversión precisa e inmune al resize/aspect-ratio del SVG
 function getSvgCoordinates(svg: SVGSVGElement, clientX: number, clientY: number) {
   const ctm = svg.getScreenCTM()
@@ -78,12 +40,17 @@ export default function GraficaLinealView() {
   const [slopeM, setSlopeM] = useState<number>(5)
   const [interceptB, setInterceptB] = useState<number>(7)
 
-  // Opciones visuales y pedagógicas
-  const [showSlopeTriangle, setShowSlopeTriangle] = useState<boolean>(true)
+  // Opciones visuales y pedagógicas (desactivadas por defecto)
+  const [showSlopeTriangle, setShowSlopeTriangle] = useState<boolean>(false)
   const [showBaseLine, setShowBaseLine] = useState<boolean>(false)
-  const [showIntegerPoints, setShowIntegerPoints] = useState<boolean>(true)
+  const [showIntegerPoints, setShowIntegerPoints] = useState<boolean>(false)
   const [zoomLevel, setZoomLevel] = useState<number>(1)
   const [showHelp, setShowHelp] = useState<boolean>(false)
+
+  // Desplazamiento y arrastre del plano (pan-and-drag)
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState<boolean>(false)
+  const dragStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null)
 
   // Cursor interactivo y dimensiones dinámicas del plano
   const [hoverCoord, setHoverCoord] = useState<{ x: number; y: number } | null>(null)
@@ -115,29 +82,36 @@ export default function GraficaLinealView() {
   const PLOT_W = Math.max(100, SVG_W - PAD_LEFT - PAD_RIGHT)
   const PLOT_H = Math.max(100, SVG_H - PAD_TOP - PAD_BOTTOM)
 
-  // Cálculo de límites y coordenadas adaptados al ancho y alto real
-  const bounds = useMemo(
-    () => computeBounds(slopeM, interceptB, zoomLevel, dims.width, dims.height),
-    [slopeM, interceptB, zoomLevel, dims.width, dims.height]
-  )
-  const { minX, maxX, minY, maxY } = bounds
+  // ── ESCALA ORTONORMAL ISOTRÓPICA (1 unidad X = 1 unidad Y = unitPx) ──
+  // Base: en vertical se muestran aproximadamente 22 unidades a zoom 1x
+  const baseSpanY = 22 / zoomLevel
+  const unitPx = PLOT_H / baseSpanY
+
+  // Origen (0, 0) centrado con ligero offset hacia abajo para ver cómodamente y = 5x + 7
+  const initialCenterOffsetY = 2.5 * unitPx
+  const originSvgX = PAD_LEFT + PLOT_W / 2 + panOffset.x
+  const originSvgY = PAD_TOP + PLOT_H / 2 + panOffset.y + initialCenterOffsetY
+
+  // Límites matemáticos visibles exactamente en pantalla (100% independientes de m y b)
+  const minX = Math.floor((PAD_LEFT - originSvgX) / unitPx)
+  const maxX = Math.ceil((PAD_LEFT + PLOT_W - originSvgX) / unitPx)
+  const minY = Math.floor((originSvgY - (PAD_TOP + PLOT_H)) / unitPx)
+  const maxY = Math.ceil((originSvgY - PAD_TOP) / unitPx)
 
   const toSvgX = useCallback(
-    (x: number) => PAD_LEFT + ((x - minX) / (maxX - minX)) * PLOT_W,
-    [minX, maxX, PLOT_W]
+    (x: number) => originSvgX + x * unitPx,
+    [originSvgX, unitPx]
   )
 
   const toSvgY = useCallback(
-    (y: number) => PAD_TOP + ((maxY - y) / (maxY - minY)) * PLOT_H,
-    [minY, maxY, PLOT_H]
+    (y: number) => originSvgY - y * unitPx,
+    [originSvgY, unitPx]
   )
 
   const fromSvgCoords = useCallback(
     (svgX: number, svgY: number) => {
-      const normX = (svgX - PAD_LEFT) / PLOT_W
-      const normY = (svgY - PAD_TOP) / PLOT_H
-      const mathX = minX + normX * (maxX - minX)
-      const mathY = maxY - normY * (maxY - minY)
+      const mathX = (svgX - originSvgX) / unitPx
+      const mathY = (originSvgY - svgY) / unitPx
       return {
         x: Math.round(mathX * 10) / 10,
         y: Math.round(mathY * 10) / 10,
@@ -145,10 +119,42 @@ export default function GraficaLinealView() {
         intY: Math.round(mathY)
       }
     },
-    [minX, maxX, minY, maxY, PLOT_W, PLOT_H]
+    [originSvgX, originSvgY, unitPx]
   )
 
+  // Paso idéntico para ambos ejes para garantizar cuadrículas 100% cuadradas
+  const gridStep = useMemo(() => {
+    if (unitPx >= 28) return 1
+    if (unitPx >= 14) return 2
+    if (unitPx >= 7) return 5
+    return 10
+  }, [unitPx])
+
+  // Manejo de arrastre interactivo (drag-to-pan)
+  const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    setIsDragging(true)
+    dragStartRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      panX: panOffset.x,
+      panY: panOffset.y
+    }
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {}
+  }
+
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (isDragging && dragStartRef.current) {
+      const dx = e.clientX - dragStartRef.current.clientX
+      const dy = e.clientY - dragStartRef.current.clientY
+      setPanOffset({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy
+      })
+      return
+    }
     if (!svgRef.current) return
     const svgCoords = getSvgCoordinates(svgRef.current, e.clientX, e.clientY)
     const { intX, intY } = fromSvgCoords(svgCoords.x, svgCoords.y)
@@ -159,8 +165,18 @@ export default function GraficaLinealView() {
     }
   }
 
+  const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    setIsDragging(false)
+    dragStartRef.current = null
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {}
+  }
+
   const handlePointerLeave = () => {
-    setHoverCoord(null)
+    if (!isDragging) {
+      setHoverCoord(null)
+    }
   }
 
   // Puntos enteros notables sobre la recta para mostrar en la cuadrícula
@@ -175,14 +191,15 @@ export default function GraficaLinealView() {
     return pts
   }, [minX, maxX, minY, maxY, slopeM, interceptB])
 
-  // Restablecer a la función inicial y = 5x + 7
+  // Restablecer a la función inicial y = 5x + 7 y centrar plano
   const handleReset = () => {
     setSlopeM(5)
     setInterceptB(7)
     setZoomLevel(1)
-    setShowSlopeTriangle(true)
+    setPanOffset({ x: 0, y: 0 })
+    setShowSlopeTriangle(false)
     setShowBaseLine(false)
-    setShowIntegerPoints(true)
+    setShowIntegerPoints(false)
     setHoverCoord(null)
   }
 
@@ -558,7 +575,7 @@ export default function GraficaLinealView() {
               </span>
               <button
                 type="button"
-                onClick={() => setZoomLevel(prev => Math.min(2, Math.round((prev + 0.25) * 100) / 100))}
+                onClick={() => setZoomLevel(prev => Math.min(2.5, Math.round((prev + 0.25) * 100) / 100))}
                 className={`h-5 w-5 rounded flex items-center justify-center cursor-pointer transition-colors ${
                   isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-white hover:bg-slate-200 text-slate-700'
                 }`}
@@ -568,17 +585,20 @@ export default function GraficaLinealView() {
               </button>
               <button
                 type="button"
-                onClick={() => setZoomLevel(1)}
+                onClick={() => {
+                  setZoomLevel(1)
+                  setPanOffset({ x: 0, y: 0 })
+                }}
                 className={`h-5 px-1.5 rounded flex items-center justify-center text-[9px] font-bold cursor-pointer transition-colors ${
                   isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-white hover:bg-slate-200 text-slate-700'
                 }`}
-                title="Restablecer zoom normal"
+                title="Restablecer vista centrada y zoom normal"
               >
                 1x
               </button>
               <button
                 type="button"
-                onClick={() => setZoomLevel(prev => Math.max(0.6, Math.round((prev - 0.2) * 100) / 100))}
+                onClick={() => setZoomLevel(prev => Math.max(0.5, Math.round((prev - 0.2) * 100) / 100))}
                 className={`h-5 w-5 rounded flex items-center justify-center cursor-pointer transition-colors ${
                   isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-white hover:bg-slate-200 text-slate-700'
                 }`}
@@ -594,9 +614,14 @@ export default function GraficaLinealView() {
             <svg
               ref={svgRef}
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-              className="w-full h-full cursor-crosshair transition-colors block"
+              className={`w-full h-full transition-colors block select-none ${
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
               style={{ touchAction: 'none' }}
+              onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               onPointerLeave={handlePointerLeave}
             >
               <defs>
@@ -646,13 +671,17 @@ export default function GraficaLinealView() {
                 rx="6"
               />
 
-              {/* ── CUADRÍCULA SECUNDARIA Y PRINCIPAL ── */}
-              {/* Líneas verticales (X) */}
+              {/* ── CUADRÍCULA VERTICAL (X) - Celdas 100% cuadradas ── */}
               {(() => {
                 const lines = []
-                const stepX = (maxX - minX) > 16 ? 2 : 1
-                for (let x = Math.ceil(minX); x <= Math.floor(maxX); x += stepX) {
+                const startX = Math.floor(minX / gridStep) * gridStep
+                const endX = Math.ceil(maxX / gridStep) * gridStep
+                const axisYPos = toSvgY(0)
+                const labelYPos = Math.max(PAD_TOP + 14, Math.min(PAD_TOP + PLOT_H - 6, axisYPos + 14))
+
+                for (let x = startX; x <= endX; x += gridStep) {
                   const sx = toSvgX(x)
+                  if (sx < PAD_LEFT - 1 || sx > PAD_LEFT + PLOT_W + 1) continue
                   const isMain = x === 0
                   lines.push(
                     <g key={`grid-x-${x}`}>
@@ -664,23 +693,25 @@ export default function GraficaLinealView() {
                           y2={PAD_TOP + PLOT_H}
                           stroke={c.gridLine}
                           strokeWidth="1"
-                          strokeDasharray={x % 2 === 0 ? undefined : '2,2'}
+                          strokeDasharray={x % (gridStep * 2) === 0 ? undefined : '2,2'}
                           opacity={isDark ? 0.35 : 0.45}
                         />
                       )}
                       {/* Ticks y etiquetas del eje X */}
-                      <line
-                        x1={sx}
-                        y1={toSvgY(0) - 3}
-                        x2={sx}
-                        y2={toSvgY(0) + 3}
-                        stroke={c.axisLine}
-                        strokeWidth="1.5"
-                      />
+                      {axisYPos >= PAD_TOP && axisYPos <= PAD_TOP + PLOT_H && (
+                        <line
+                          x1={sx}
+                          y1={axisYPos - 3}
+                          x2={sx}
+                          y2={axisYPos + 3}
+                          stroke={c.axisLine}
+                          strokeWidth="1.5"
+                        />
+                      )}
                       {x !== 0 && (
                         <text
                           x={sx}
-                          y={toSvgY(0) + 14}
+                          y={labelYPos}
                           textAnchor="middle"
                           fontSize="9"
                           fill={c.axisNumColor}
@@ -696,13 +727,17 @@ export default function GraficaLinealView() {
                 return lines
               })()}
 
-              {/* Líneas horizontales (Y) */}
+              {/* ── CUADRÍCULA HORIZONTAL (Y) - Celdas 100% cuadradas ── */}
               {(() => {
                 const lines = []
-                const spanY = maxY - minY
-                const stepY = spanY > 28 ? 5 : spanY > 16 ? 2 : 1
-                for (let y = Math.ceil(minY); y <= Math.floor(maxY); y += stepY) {
+                const startY = Math.floor(minY / gridStep) * gridStep
+                const endY = Math.ceil(maxY / gridStep) * gridStep
+                const axisXPos = toSvgX(0)
+                const labelXPos = Math.max(PAD_LEFT + 14, Math.min(PAD_LEFT + PLOT_W - 6, axisXPos - 6))
+
+                for (let y = startY; y <= endY; y += gridStep) {
                   const sy = toSvgY(y)
+                  if (sy < PAD_TOP - 1 || sy > PAD_TOP + PLOT_H + 1) continue
                   const isMain = y === 0
                   lines.push(
                     <g key={`grid-y-${y}`}>
@@ -714,22 +749,24 @@ export default function GraficaLinealView() {
                           y2={sy}
                           stroke={c.gridLine}
                           strokeWidth="1"
-                          strokeDasharray={y % 2 === 0 ? undefined : '2,2'}
+                          strokeDasharray={y % (gridStep * 2) === 0 ? undefined : '2,2'}
                           opacity={isDark ? 0.35 : 0.45}
                         />
                       )}
                       {/* Ticks y etiquetas del eje Y */}
-                      <line
-                        x1={toSvgX(0) - 3}
-                        y1={sy}
-                        x2={toSvgX(0) + 3}
-                        y2={sy}
-                        stroke={c.axisLine}
-                        strokeWidth="1.5"
-                      />
+                      {axisXPos >= PAD_LEFT && axisXPos <= PAD_LEFT + PLOT_W && (
+                        <line
+                          x1={axisXPos - 3}
+                          y1={sy}
+                          x2={axisXPos + 3}
+                          y2={sy}
+                          stroke={c.axisLine}
+                          strokeWidth="1.5"
+                        />
+                      )}
                       {y !== 0 && (
                         <text
-                          x={toSvgX(0) - 6}
+                          x={labelXPos}
                           y={sy + 3}
                           textAnchor="end"
                           fontSize="9"
@@ -747,61 +784,74 @@ export default function GraficaLinealView() {
               })()}
 
               {/* ── EJES CARTESIANOS PRINCIPALES (X e Y) ── */}
-              {/* Eje X */}
-              <line
-                x1={PAD_LEFT}
-                y1={toSvgY(0)}
-                x2={PAD_LEFT + PLOT_W}
-                y2={toSvgY(0)}
-                stroke={c.axisLine}
-                strokeWidth="2"
-                markerEnd="url(#arrowX)"
-              />
-              <text
-                x={PAD_LEFT + PLOT_W + 12}
-                y={toSvgY(0) + 4}
-                fontSize="12"
-                fontWeight="black"
-                fill={c.axisLine}
-                textAnchor="middle"
-                fontFamily="Nunito, sans-serif"
-              >
-                X
-              </text>
+              {/* Eje X (si está dentro del área visible) */}
+              {toSvgY(0) >= PAD_TOP && toSvgY(0) <= PAD_TOP + PLOT_H && (
+                <g>
+                  <line
+                    x1={PAD_LEFT}
+                    y1={toSvgY(0)}
+                    x2={PAD_LEFT + PLOT_W}
+                    y2={toSvgY(0)}
+                    stroke={c.axisLine}
+                    strokeWidth="2"
+                    markerEnd="url(#arrowX)"
+                  />
+                  <text
+                    x={PAD_LEFT + PLOT_W + 12}
+                    y={toSvgY(0) + 4}
+                    fontSize="12"
+                    fontWeight="black"
+                    fill={c.axisLine}
+                    textAnchor="middle"
+                    fontFamily="Nunito, sans-serif"
+                  >
+                    X
+                  </text>
+                </g>
+              )}
 
-              {/* Eje Y */}
-              <line
-                x1={toSvgX(0)}
-                y1={PAD_TOP + PLOT_H}
-                x2={toSvgX(0)}
-                y2={PAD_TOP}
-                stroke={c.axisLine}
-                strokeWidth="2"
-                markerEnd="url(#arrowY)"
-              />
-              <text
-                x={toSvgX(0)}
-                y={PAD_TOP - 8}
-                fontSize="12"
-                fontWeight="black"
-                fill={c.axisLine}
-                textAnchor="middle"
-                fontFamily="Nunito, sans-serif"
-              >
-                Y
-              </text>
+              {/* Eje Y (si está dentro del área visible) */}
+              {toSvgX(0) >= PAD_LEFT && toSvgX(0) <= PAD_LEFT + PLOT_W && (
+                <g>
+                  <line
+                    x1={toSvgX(0)}
+                    y1={PAD_TOP + PLOT_H}
+                    x2={toSvgX(0)}
+                    y2={PAD_TOP}
+                    stroke={c.axisLine}
+                    strokeWidth="2"
+                    markerEnd="url(#arrowY)"
+                  />
+                  <text
+                    x={toSvgX(0)}
+                    y={PAD_TOP - 8}
+                    fontSize="12"
+                    fontWeight="black"
+                    fill={c.axisLine}
+                    textAnchor="middle"
+                    fontFamily="Nunito, sans-serif"
+                  >
+                    Y
+                  </text>
+                </g>
+              )}
 
               {/* Origen (0,0) */}
-              <text
-                x={toSvgX(0) - 8}
-                y={toSvgY(0) + 12}
-                fontSize="9"
-                fill={c.axisLine}
-                fontWeight="bold"
-                fontFamily="JetBrains Mono, monospace"
-              >
-                0
-              </text>
+              {toSvgX(0) >= PAD_LEFT &&
+                toSvgX(0) <= PAD_LEFT + PLOT_W &&
+                toSvgY(0) >= PAD_TOP &&
+                toSvgY(0) <= PAD_TOP + PLOT_H && (
+                  <text
+                    x={toSvgX(0) - 8}
+                    y={toSvgY(0) + 12}
+                    fontSize="9"
+                    fill={c.axisLine}
+                    fontWeight="bold"
+                    fontFamily="JetBrains Mono, monospace"
+                  >
+                    0
+                  </text>
+                )}
 
               {/* ── RECTA BASE DE COMPARACIÓN: y = mx (pasa por el origen) ── */}
               {showBaseLine && interceptB !== 0 && (
@@ -908,10 +958,10 @@ export default function GraficaLinealView() {
               <g clipPath="url(#graphPlotArea)">
                 {/* Glow / Resplandor de fondo */}
                 <line
-                  x1={toSvgX(minX - 3)}
-                  y1={toSvgY(slopeM * (minX - 3) + interceptB)}
-                  x2={toSvgX(maxX + 3)}
-                  y2={toSvgY(slopeM * (maxX + 3) + interceptB)}
+                  x1={toSvgX(minX - 6)}
+                  y1={toSvgY(slopeM * (minX - 6) + interceptB)}
+                  x2={toSvgX(maxX + 6)}
+                  y2={toSvgY(slopeM * (maxX + 6) + interceptB)}
                   stroke="#a855f7"
                   strokeWidth="8"
                   strokeLinecap="round"
@@ -920,10 +970,10 @@ export default function GraficaLinealView() {
 
                 {/* Línea nítida principal */}
                 <line
-                  x1={toSvgX(minX - 3)}
-                  y1={toSvgY(slopeM * (minX - 3) + interceptB)}
-                  x2={toSvgX(maxX + 3)}
-                  y2={toSvgY(slopeM * (maxX + 3) + interceptB)}
+                  x1={toSvgX(minX - 6)}
+                  y1={toSvgY(slopeM * (minX - 6) + interceptB)}
+                  x2={toSvgX(maxX + 6)}
+                  y2={toSvgY(slopeM * (maxX + 6) + interceptB)}
                   stroke="#c084fc"
                   strokeWidth="3.5"
                   strokeLinecap="round"
