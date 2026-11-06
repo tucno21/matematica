@@ -364,13 +364,13 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 |------|-----------|-------------|
 | `/` | `HomeView` | Página principal con las competencias |
 | `/competencia/:competencyId` | `CompetenciaView` | Temas de una competencia con buscador |
-| `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
 | `/angulos` | `AngulosView` | Explorador de ángulos con 6 modos (pantalla completa) |
 | `/medir-angulos` | `MedirAngulosView` | Medición con transportador y goniómetro interactivo (pantalla completa) |
+| `/geoplano` | `GeoplanoView` | Geoplano con ligas y retos (pantalla completa) |
 | `/existencia-triangulo` | `ExistenciaTrianguloView` | Teorema de existencia de triángulos y desigualdad triangular (pantalla completa) |
-| `/volumen-prisma` | `VolumenPrismaView` | Volumen de prismas con cubos unidad, capas y deslizador lateral dinámico |
 | `/area-perimetro` | `AreaPerimetroView` | Área y Perímetro: baldosas, cerca desenrollable, geoplano libre y retos (pantalla completa) |
 | `/area-triangulo` | `AreaTrianguloView` | Área del Triángulo: rectángulo duplicado (b×h÷2), principio de Cavalieri y retos (pantalla completa) |
+| `/volumen-prisma` | `VolumenPrismaView` | Volumen de prismas con cubos unidad, capas y deslizador lateral dinámico |
 | `/intro-enteros` | `IntroEnterosView` | Termómetro interactivo de enteros |
 | `/recta-numerica` | `RectaNumericaView` | Juego de recta numérica con dados |
 | `/suma-enteros` | `SumaEnterosView` | Suma de enteros con fichas |

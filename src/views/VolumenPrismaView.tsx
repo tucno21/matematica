@@ -33,23 +33,130 @@ const UNIFORM_PALETTE = {
   badge: 'bg-blue-500'
 }
 
+interface Point2D {
+  x: number
+  y: number
+}
+
 interface CubeData {
   x: number
   y: number
   z: number
   layer: number
   index: number
+  polygon?: Point2D[] // Polígono 2D de la base en la cuadrícula
+  isCut?: boolean      // true si está cortado por la hipotenusa
+  volume?: number      // Volumen exacto en u³ (ej: 1, 0.5, etc.)
 }
+
+/**
+ * Recorta la celda unitaria [cellX, cellX+1] x [cellY, cellY+1] contra
+ * el triángulo de la base A*x + L*y <= L*A usando Sutherland-Hodgman.
+ */
+function getClippedCellPolygon(
+  cellX: number,
+  cellY: number,
+  L: number,
+  A: number
+): Point2D[] | null {
+  const F = (x: number, y: number) => A * x + L * y - L * A
+
+  // Si la esquina inferior izquierda está fuera o en el borde
+  if (F(cellX, cellY) >= -1e-6) {
+    return null
+  }
+
+  // Si la esquina superior derecha está dentro, es un cuadrado unitario completo
+  if (F(cellX + 1, cellY + 1) <= 1e-6) {
+    return [
+      { x: cellX, y: cellY },
+      { x: cellX + 1, y: cellY },
+      { x: cellX + 1, y: cellY + 1 },
+      { x: cellX, y: cellY + 1 }
+    ]
+  }
+
+  // La hipotenusa corta la celda: recortar cuadrado contra el semiplano F(x, y) <= 0
+  const square: Point2D[] = [
+    { x: cellX, y: cellY },
+    { x: cellX + 1, y: cellY },
+    { x: cellX + 1, y: cellY + 1 },
+    { x: cellX, y: cellY + 1 }
+  ]
+
+  const output: Point2D[] = []
+  for (let i = 0; i < square.length; i++) {
+    const cur = square[i]
+    const next = square[(i + 1) % square.length]
+    const fCur = F(cur.x, cur.y)
+    const fNext = F(next.x, next.y)
+
+    const curInside = fCur <= 1e-6
+    const nextInside = fNext <= 1e-6
+
+    if (curInside) {
+      if (nextInside) {
+        output.push(next)
+      } else {
+        const t = Math.max(0, Math.min(1, -fCur / (fNext - fCur)))
+        output.push({
+          x: Math.round((cur.x + t * (next.x - cur.x)) * 1000) / 1000,
+          y: Math.round((cur.y + t * (next.y - cur.y)) * 1000) / 1000
+        })
+      }
+    } else if (nextInside) {
+      const t = Math.max(0, Math.min(1, -fCur / (fNext - fCur)))
+      output.push({
+        x: Math.round((cur.x + t * (next.x - cur.x)) * 1000) / 1000,
+        y: Math.round((cur.y + t * (next.y - cur.y)) * 1000) / 1000
+      })
+      output.push(next)
+    }
+  }
+
+  // Filtrar duplicados numéricos consecutivos
+  const clean: Point2D[] = []
+  for (const p of output) {
+    if (clean.length === 0) {
+      clean.push(p)
+    } else {
+      const prev = clean[clean.length - 1]
+      if (Math.hypot(p.x - prev.x, p.y - prev.y) > 1e-4) {
+        clean.push(p)
+      }
+    }
+  }
+  if (clean.length > 2) {
+    const first = clean[0]
+    const last = clean[clean.length - 1]
+    if (Math.hypot(first.x - last.x, first.y - last.y) < 1e-4) {
+      clean.pop()
+    }
+  }
+
+  return clean.length >= 3 ? clean : null
+}
+
+function polygonArea(pts: Point2D[]): number {
+  let a = 0
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length
+    a += pts[i].x * pts[j].y - pts[j].x * pts[i].y
+  }
+  return Math.abs(a) / 2
+}
+
+type BaseType = 'rectangular' | 'cuadrada' | 'triangular' | 'en-l'
 
 export default function VolumenPrismaView() {
   const navigate = useNavigate()
   const isDark = useThemeStore(s => s.theme === 'dark')
 
   // ── Dimensiones del Prisma ──
-  const [baseType, setBaseType] = useState<'rectangular' | 'cuadrada'>('rectangular')
-  const [lengthX, setLengthX] = useState<number>(3) // Largo (X)
-  const [widthY, setWidthY] = useState<number>(2)   // Ancho (Y)
-  const [heightZ, setHeightZ] = useState<number>(4) // Altura máxima (Z)
+  const [baseType, setBaseType] = useState<BaseType>('rectangular')
+  const [lengthX, setLengthX] = useState<number>(3) // Largo / Base (X)
+  const [widthY, setWidthY] = useState<number>(2)   // Ancho / Altura base (Y)
+  const [heightZ, setHeightZ] = useState<number>(4) // Altura máxima del prisma (Z)
 
   // ── Modo de Llenado: 'layers' (por capas) o 'cubes' (cubo a cubo) ──
   const [fillMode, setFillMode] = useState<'layers' | 'cubes'>('layers')
@@ -91,75 +198,163 @@ export default function VolumenPrismaView() {
     return () => ro.disconnect()
   }, [])
 
-  // ── Sincronización de Base Cuadrada ──
-  const handleSetBaseType = (type: 'rectangular' | 'cuadrada') => {
+  // ── Sincronización y Configuración de Tipo de Base ──
+  const handleSetBaseType = (type: BaseType) => {
     setBaseType(type)
     if (type === 'cuadrada') {
       setWidthY(lengthX)
       if (fillMode === 'cubes') {
         setFilledCubes(0)
       }
+    } else if (type === 'en-l') {
+      if (lengthX < 2) setLengthX(2)
+      if (widthY < 2) setWidthY(2)
+      setFilledCubes(0)
+      setFilledLayers(0)
+    } else if (type === 'triangular') {
+      if (lengthX < 2) setLengthX(2)
+      if (widthY < 2) setWidthY(2)
+      setFilledCubes(0)
+      setFilledLayers(0)
     }
   }
 
   const handleLengthChange = (val: number) => {
-    const clamped = Math.max(1, Math.min(6, val))
+    const minVal = baseType === 'triangular' || baseType === 'en-l' ? 2 : 1
+    const clamped = Math.max(minVal, Math.min(6, val))
     setLengthX(clamped)
     if (baseType === 'cuadrada') {
       setWidthY(clamped)
     }
-    const newMaxCubes = clamped * (baseType === 'cuadrada' ? clamped : widthY) * heightZ
-    setFilledCubes(prev => Math.min(prev, newMaxCubes))
+    setFilledCubes(0)
   }
 
   const handleWidthChange = (val: number) => {
-    const clamped = Math.max(1, Math.min(6, val))
+    const minVal = baseType === 'triangular' || baseType === 'en-l' ? 2 : 1
+    const clamped = Math.max(minVal, Math.min(6, val))
     setWidthY(clamped)
     if (baseType === 'cuadrada') {
       setLengthX(clamped)
     }
-    const newMaxCubes = (baseType === 'cuadrada' ? clamped : lengthX) * clamped * heightZ
-    setFilledCubes(prev => Math.min(prev, newMaxCubes))
+    setFilledCubes(0)
   }
 
   const handleHeightChange = (val: number) => {
     const clamped = Math.max(1, Math.min(6, val))
     setHeightZ(clamped)
     setFilledLayers(prev => Math.min(prev, clamped))
-    const newMaxCubes = lengthX * widthY * clamped
-    setFilledCubes(prev => Math.min(prev, newMaxCubes))
+    setFilledCubes(0)
   }
 
   // ── Cálculos de Volumen ──
-  const baseArea = lengthX * widthY
-  const totalVolume = baseArea * heightZ
+  const baseArea = useMemo(() => {
+    if (baseType === 'cuadrada') return lengthX * lengthX
+    if (baseType === 'triangular') return (lengthX * widthY) / 2
+    if (baseType === 'en-l') return lengthX + widthY - 1
+    return lengthX * widthY
+  }, [baseType, lengthX, widthY])
 
-  // Cantidad efectiva de cubos visibles
-  const visibleCubesCount = useMemo(() => {
+  const totalVolume = useMemo(() => {
+    return baseArea * heightZ
+  }, [baseArea, heightZ])
+
+  // ── Generación de Lista Total de Cubos (Para todos los tipos de base) ──
+  const allCubes = useMemo(() => {
+    const list: CubeData[] = []
+    let idx = 1
+    for (let z = 0; z < heightZ; z++) {
+      for (let y = 0; y < widthY; y++) {
+        for (let x = 0; x < lengthX; x++) {
+          if (baseType === 'en-l') {
+            // Solo celdas en «L»
+            if (x !== 0 && y !== 0) continue
+            list.push({
+              x,
+              y,
+              z,
+              layer: z + 1,
+              index: idx++,
+              isCut: false,
+              volume: 1.0
+            })
+          } else if (baseType === 'triangular') {
+            // Celdas del triángulo: cubos enteros o cubos cortados por la hipotenusa
+            const poly = getClippedCellPolygon(x, y, lengthX, widthY)
+            if (!poly) continue
+            const area = Math.round(polygonArea(poly) * 100) / 100
+            const isCut = poly.length !== 4 || area < 0.99
+            list.push({
+              x,
+              y,
+              z,
+              layer: z + 1,
+              index: idx++,
+              polygon: poly,
+              isCut,
+              volume: area
+            })
+          } else {
+            // Rectangular o Cuadrada
+            list.push({
+              x,
+              y,
+              z,
+              layer: z + 1,
+              index: idx++,
+              isCut: false,
+              volume: 1.0
+            })
+          }
+        }
+      }
+    }
+    return list
+  }, [baseType, lengthX, widthY, heightZ])
+
+  // Cantidad total de piezas
+  const totalCubesCount = allCubes.length
+
+  // Cubos visibles según el modo de llenado
+  const visibleCubes = useMemo(() => {
+    if (fillMode === 'layers') {
+      return allCubes.filter(c => c.z < filledLayers)
+    }
+    return allCubes.slice(0, filledCubes)
+  }, [allCubes, fillMode, filledLayers, filledCubes])
+
+  // Volumen visible exacto (suma de volúmenes de cubos completos y cortados)
+  const visibleVolume = useMemo(() => {
     if (fillMode === 'layers') {
       return filledLayers * baseArea
     }
-    return Math.min(filledCubes, totalVolume)
-  }, [fillMode, filledLayers, baseArea, filledCubes, totalVolume])
+    const sum = visibleCubes.reduce((acc, c) => acc + (c.volume ?? 1), 0)
+    return Math.round(sum * 100) / 100
+  }, [fillMode, filledLayers, baseArea, visibleCubes])
+
+  const visibleCubesCount = visibleCubes.length
 
   // Porcentaje de llenado (0 a 100)
   const fillPercentage = useMemo(() => {
     if (fillMode === 'layers') {
       return heightZ > 0 ? (filledLayers / heightZ) * 100 : 0
     }
-    return totalVolume > 0 ? (visibleCubesCount / totalVolume) * 100 : 0
-  }, [fillMode, filledLayers, heightZ, visibleCubesCount, totalVolume])
+    return totalCubesCount > 0 ? (visibleCubesCount / totalCubesCount) * 100 : 0
+  }, [fillMode, heightZ, filledLayers, visibleCubesCount, totalCubesCount])
 
-  const isComplete = visibleCubesCount === totalVolume && totalVolume > 0
+  const isComplete =
+    fillMode === 'layers'
+      ? filledLayers >= heightZ && heightZ > 0
+      : visibleCubesCount >= totalCubesCount && totalCubesCount > 0
 
   // Cambiar entre modos de llenado
   const handleToggleFillMode = (mode: 'layers' | 'cubes') => {
     setFillMode(mode)
     if (mode === 'layers') {
-      const layersFromCubes = Math.min(heightZ, Math.round(filledCubes / baseArea))
-      setFilledLayers(layersFromCubes)
+      const layersFromVol = Math.min(heightZ, Math.round(visibleVolume / baseArea))
+      setFilledLayers(layersFromVol)
     } else {
-      setFilledCubes(filledLayers * baseArea)
+      const count = allCubes.filter(c => c.z < filledLayers).length
+      setFilledCubes(count)
     }
   }
 
@@ -175,11 +370,11 @@ export default function VolumenPrismaView() {
         const layer = Math.round(fraction * heightZ)
         setFilledLayers(layer)
       } else {
-        const cubes = Math.round(fraction * totalVolume)
+        const cubes = Math.round(fraction * totalCubesCount)
         setFilledCubes(cubes)
       }
     },
-    [fillMode, heightZ, totalVolume]
+    [fillMode, heightZ, totalCubesCount]
   )
 
   const handleSliderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -208,7 +403,7 @@ export default function VolumenPrismaView() {
     if (fillMode === 'layers') {
       setFilledLayers(heightZ)
     } else {
-      setFilledCubes(totalVolume)
+      setFilledCubes(totalCubesCount)
     }
   }
 
@@ -222,7 +417,7 @@ export default function VolumenPrismaView() {
     if (fillMode === 'layers') {
       setFilledLayers(prev => Math.min(heightZ, prev + 1))
     } else {
-      setFilledCubes(prev => Math.min(totalVolume, prev + 1))
+      setFilledCubes(prev => Math.min(totalCubesCount, prev + 1))
     }
   }
 
@@ -251,30 +446,6 @@ export default function VolumenPrismaView() {
     setViewAngleOffset(0)
     setHoveredCube(null)
   }
-
-  // ── Generación de Lista Total de Cubos ──
-  const allCubes = useMemo(() => {
-    const list: CubeData[] = []
-    let idx = 1
-    for (let z = 0; z < heightZ; z++) {
-      for (let y = 0; y < widthY; y++) {
-        for (let x = 0; x < lengthX; x++) {
-          list.push({
-            x,
-            y,
-            z,
-            layer: z + 1,
-            index: idx++
-          })
-        }
-      }
-    }
-    return list
-  }, [lengthX, widthY, heightZ])
-
-  const visibleCubes = useMemo(() => {
-    return allCubes.slice(0, visibleCubesCount)
-  }, [allCubes, visibleCubesCount])
 
   // Algoritmo del pintor para renderizado 3D sin solapamientos erróneos
   const sortedVisibleCubes = useMemo(() => {
@@ -334,6 +505,34 @@ export default function VolumenPrismaView() {
     }
   }, [project, lengthX, widthY, heightZ])
 
+  const triCorners = useMemo(() => {
+    return {
+      b0: project(0, 0, 0),
+      b1: project(lengthX, 0, 0),
+      b2: project(0, widthY, 0),
+      t0: project(0, 0, heightZ),
+      t1: project(lengthX, 0, heightZ),
+      t2: project(0, widthY, heightZ)
+    }
+  }, [project, lengthX, widthY, heightZ])
+
+  const lCorners = useMemo(() => {
+    return {
+      b0: project(0, 0, 0),
+      b1: project(lengthX, 0, 0),
+      b2: project(lengthX, 1, 0),
+      b3: project(1, 1, 0),
+      b4: project(1, widthY, 0),
+      b5: project(0, widthY, 0),
+      t0: project(0, 0, heightZ),
+      t1: project(lengthX, 0, heightZ),
+      t2: project(lengthX, 1, heightZ),
+      t3: project(1, 1, heightZ),
+      t4: project(1, widthY, heightZ),
+      t5: project(0, widthY, heightZ)
+    }
+  }, [project, lengthX, widthY, heightZ])
+
   // Colores dinámicos (Colores 100% sólidos, sin opacidades ni alphas para máxima compatibilidad GPU en tablets)
   const c = {
     bg: isDark ? 'bg-[#080c18]' : 'bg-slate-50',
@@ -377,7 +576,7 @@ export default function VolumenPrismaView() {
             <Box className="h-4 w-4 text-cyan-400 shrink-0" />
             <span>Volumen del Prisma</span>
             <span className="font-mono text-cyan-400 font-black hidden sm:inline">
-              ({lengthX} × {widthY} × {heightZ} u)
+              ({baseType === 'cuadrada' ? `${lengthX} × ${lengthX} × ${heightZ}` : baseType === 'triangular' ? `Δ ${lengthX} × ${widthY} × ${heightZ}` : baseType === 'en-l' ? `«L» ${lengthX} × ${widthY} × ${heightZ}` : `${lengthX} × ${widthY} × ${heightZ}`} u)
             </span>
           </h1>
         </div>
@@ -422,30 +621,26 @@ export default function VolumenPrismaView() {
         {/* Selector de Tipo de Base */}
         <div className="flex items-center gap-1 shrink-0">
           <span className={`font-bold text-[11px] mr-0.5 hidden xs:inline ${c.textMuted}`}>Base:</span>
-          <button
-            onClick={() => handleSetBaseType('rectangular')}
-            className={`px-2.5 py-1 rounded-md font-bold text-xs cursor-pointer transition-all ${
-              baseType === 'rectangular'
-                ? 'bg-cyan-500 text-slate-950 shadow-xs'
-                : isDark
-                ? 'bg-white/5 text-white/60 hover:bg-white/10'
-                : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-300'
-            }`}
-          >
-            Rectangular
-          </button>
-          <button
-            onClick={() => handleSetBaseType('cuadrada')}
-            className={`px-2.5 py-1 rounded-md font-bold text-xs cursor-pointer transition-all ${
-              baseType === 'cuadrada'
-                ? 'bg-cyan-500 text-slate-950 shadow-xs'
-                : isDark
-                ? 'bg-white/5 text-white/60 hover:bg-white/10'
-                : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-300'
-            }`}
-          >
-            Cuadrada
-          </button>
+          {([
+            { id: 'rectangular', label: 'Rectangular' },
+            { id: 'cuadrada', label: 'Cuadrada' },
+            { id: 'triangular', label: 'Triangular' },
+            { id: 'en-l', label: 'En «L»' }
+          ] as const).map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleSetBaseType(item.id)}
+              className={`px-2 sm:px-2.5 py-1 rounded-md font-bold text-xs cursor-pointer transition-all ${
+                baseType === item.id
+                  ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                  : isDark
+                  ? 'bg-white/5 text-white/60 hover:bg-white/10'
+                  : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-300'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
         {/* Selector de Modo de Llenado */}
@@ -474,10 +669,10 @@ export default function VolumenPrismaView() {
                 ? 'bg-white/5 text-white/60 hover:bg-white/10'
                 : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-300'
             }`}
-            title="Llenar y contar cubo por cubo"
+            title="Llenar y contar cubo por cubo (enteros y cortados)"
           >
             <Box className="h-3.5 w-3.5" />
-            <span>Cubo a Cubo</span>
+            <span className="hidden xs:inline">Cubo a Cubo</span>
           </button>
         </div>
 
@@ -525,15 +720,25 @@ export default function VolumenPrismaView() {
           <div className="flex flex-col gap-1.5 sm:gap-2 overflow-y-auto">
             {/* Título de sección de dimensiones */}
             <div className="flex items-center justify-between pb-1 border-b border-white/10">
-              <span className="text-xs font-bold text-cyan-400">DIMENSIONES</span>
+              <span className="text-xs font-bold text-cyan-400">
+                {baseType === 'cuadrada'
+                  ? 'BASE CUADRADA'
+                  : baseType === 'triangular'
+                  ? 'BASE TRIANGULAR'
+                  : baseType === 'en-l'
+                  ? 'BASE EN «L»'
+                  : 'BASE RECTANGULAR'}
+              </span>
               <span className="text-xs font-mono font-black text-amber-300">
-                {lengthX} × {widthY} × {heightZ} u
+                {baseType === 'cuadrada'
+                  ? `${lengthX} × ${lengthX} × ${heightZ} u`
+                  : `${lengthX} × ${widthY} × ${heightZ} u`}
               </span>
             </div>
 
             {/* Controles de Dimensiones: L, A, H con botones táctiles grandes de 28px */}
             <div className="grid grid-cols-3 sm:grid-cols-1 gap-1 sm:gap-1.5">
-              {/* Dimensión 1: Largo (L) */}
+              {/* Dimensión 1: Largo / Base (L / b) */}
               <div
                 className={`rounded-lg border p-1.5 transition-all ${
                   isDark ? 'bg-slate-900/60 border-cyan-500/30' : 'bg-slate-50 border-cyan-200 shadow-2xs'
@@ -541,7 +746,13 @@ export default function VolumenPrismaView() {
               >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-cyan-400">
-                    {baseType === 'cuadrada' ? 'Lado (L):' : 'Largo (L):'}
+                    {baseType === 'cuadrada'
+                      ? 'Lado (L):'
+                      : baseType === 'triangular'
+                      ? 'Base triáng. (b):'
+                      : baseType === 'en-l'
+                      ? 'Brazo X (L):'
+                      : 'Largo (L):'}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
@@ -571,7 +782,7 @@ export default function VolumenPrismaView() {
                 </div>
               </div>
 
-              {/* Dimensión 2: Ancho (A) */}
+              {/* Dimensión 2: Ancho / Altura de base (A / h_b) */}
               <div
                 className={`rounded-lg border p-1.5 transition-all ${
                   baseType === 'cuadrada' ? 'opacity-50' : ''
@@ -581,7 +792,13 @@ export default function VolumenPrismaView() {
               >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-emerald-400">
-                    {baseType === 'cuadrada' ? 'Ancho (=L):' : 'Ancho (A):'}
+                    {baseType === 'cuadrada'
+                      ? 'Ancho (=L):'
+                      : baseType === 'triangular'
+                      ? 'Alt. base (h):'
+                      : baseType === 'en-l'
+                      ? 'Brazo Y (A):'
+                      : 'Ancho (A):'}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
@@ -613,7 +830,7 @@ export default function VolumenPrismaView() {
                 </div>
               </div>
 
-              {/* Dimensión 3: Altura total (H) */}
+              {/* Dimensión 3: Altura total del prisma (H) */}
               <div
                 className={`rounded-lg border p-1.5 transition-all ${
                   isDark ? 'bg-slate-900/60 border-purple-500/30' : 'bg-slate-50 border-purple-200 shadow-2xs'
@@ -663,13 +880,22 @@ export default function VolumenPrismaView() {
                 <div className="flex justify-between items-center">
                   <span className={c.textMuted}>Área base:</span>
                   <span className="font-mono font-bold text-cyan-400">
-                    {lengthX} × {widthY} = {baseArea} cubos
+                    {baseType === 'cuadrada'
+                      ? `${lengthX}² = ${baseArea} u²`
+                      : baseType === 'triangular'
+                      ? `(${lengthX}×${widthY})÷2 = ${baseArea} u²`
+                      : baseType === 'en-l'
+                      ? `${lengthX}+${widthY}-1 = ${baseArea} u²`
+                      : `${lengthX} × ${widthY} = ${baseArea} cubos`}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className={c.textMuted}>Capas:</span>
                   <span className="font-mono font-bold text-purple-400">
-                    {fillMode === 'layers' ? filledLayers : (filledCubes / baseArea).toFixed(1)} de {heightZ}
+                    {fillMode === 'layers' || baseType === 'triangular'
+                      ? filledLayers
+                      : (visibleCubesCount / baseArea).toFixed(1)}{' '}
+                    de {heightZ}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-white/10">
@@ -759,7 +985,9 @@ export default function VolumenPrismaView() {
               <span className="font-bold text-cyan-400">Prisma Tridimensional</span>
               {hoveredCube && (
                 <span className="font-mono text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">
-                  Cubo #{hoveredCube.index} en Capa {hoveredCube.layer}
+                  {hoveredCube.isCut
+                    ? `Cubo cortado #${hoveredCube.index} (${hoveredCube.volume} u³) en Capa ${hoveredCube.layer}`
+                    : `Cubo #${hoveredCube.index} (1 u³) en Capa ${hoveredCube.layer}`}
                 </span>
               )}
             </div>
@@ -795,7 +1023,13 @@ export default function VolumenPrismaView() {
                 {/* Sombra base poligonal vectorial 100% sólida para GPU móvil */}
                 {visibleCubesCount > 0 && (
                   <polygon
-                    points={`${ghostCorners.c000.x + 8},${ghostCorners.c000.y + 8} ${ghostCorners.c100.x + 8},${ghostCorners.c100.y + 8} ${ghostCorners.c110.x + 8},${ghostCorners.c110.y + 8} ${ghostCorners.c010.x + 8},${ghostCorners.c010.y + 8}`}
+                    points={
+                      baseType === 'triangular' && triCorners
+                        ? `${triCorners.b0.x + 8},${triCorners.b0.y + 8} ${triCorners.b1.x + 8},${triCorners.b1.y + 8} ${triCorners.b2.x + 8},${triCorners.b2.y + 8}`
+                        : baseType === 'en-l' && lCorners
+                        ? `${lCorners.b0.x + 8},${lCorners.b0.y + 8} ${lCorners.b1.x + 8},${lCorners.b1.y + 8} ${lCorners.b2.x + 8},${lCorners.b2.y + 8} ${lCorners.b3.x + 8},${lCorners.b3.y + 8} ${lCorners.b4.x + 8},${lCorners.b4.y + 8} ${lCorners.b5.x + 8},${lCorners.b5.y + 8}`
+                        : `${ghostCorners.c000.x + 8},${ghostCorners.c000.y + 8} ${ghostCorners.c100.x + 8},${ghostCorners.c100.y + 8} ${ghostCorners.c110.x + 8},${ghostCorners.c110.y + 8} ${ghostCorners.c010.x + 8},${ghostCorners.c010.y + 8}`
+                    }
                     fill={c.shadowBase}
                   />
                 )}
@@ -805,84 +1039,305 @@ export default function VolumenPrismaView() {
                   <g>
                     {/* Piso base sólido */}
                     <polygon
-                      points={`${ghostCorners.c000.x},${ghostCorners.c000.y} ${ghostCorners.c100.x},${ghostCorners.c100.y} ${ghostCorners.c110.x},${ghostCorners.c110.y} ${ghostCorners.c010.x},${ghostCorners.c010.y}`}
+                      points={
+                        baseType === 'triangular' && triCorners
+                          ? `${triCorners.b0.x},${triCorners.b0.y} ${triCorners.b1.x},${triCorners.b1.y} ${triCorners.b2.x},${triCorners.b2.y}`
+                          : baseType === 'en-l' && lCorners
+                          ? `${lCorners.b0.x},${lCorners.b0.y} ${lCorners.b1.x},${lCorners.b1.y} ${lCorners.b2.x},${lCorners.b2.y} ${lCorners.b3.x},${lCorners.b3.y} ${lCorners.b4.x},${lCorners.b4.y} ${lCorners.b5.x},${lCorners.b5.y}`
+                          : `${ghostCorners.c000.x},${ghostCorners.c000.y} ${ghostCorners.c100.x},${ghostCorners.c100.y} ${ghostCorners.c110.x},${ghostCorners.c110.y} ${ghostCorners.c010.x},${ghostCorners.c010.y}`
+                      }
                       fill={c.gridFloor}
                       stroke={c.gridFloorLine}
                       strokeWidth="1.5"
                     />
+
                     {/* Líneas internas de la cuadrícula del piso */}
-                    {Array.from({ length: lengthX - 1 }, (_, i) => i + 1).map(x => {
-                      const pA = project(x, 0, 0)
-                      const pB = project(x, widthY, 0)
-                      return (
-                        <line
-                          key={`grid-x-${x}`}
-                          x1={pA.x}
-                          y1={pA.y}
-                          x2={pB.x}
-                          y2={pB.y}
-                          stroke={c.gridFloorLine}
-                          strokeWidth="1"
-                        />
-                      )
-                    })}
-                    {Array.from({ length: widthY - 1 }, (_, i) => i + 1).map(y => {
-                      const pA = project(0, y, 0)
-                      const pB = project(lengthX, y, 0)
-                      return (
-                        <line
-                          key={`grid-y-${y}`}
-                          x1={pA.x}
-                          y1={pA.y}
-                          x2={pB.x}
-                          y2={pB.y}
-                          stroke={c.gridFloorLine}
-                          strokeWidth="1"
-                        />
-                      )
-                    })}
+                    {baseType === 'triangular' ? (
+                      <>
+                        {Array.from({ length: lengthX - 1 }, (_, i) => i + 1).map(x => {
+                          const pA = project(x, 0, 0)
+                          const pB = project(x, widthY * (1 - x / lengthX), 0)
+                          return (
+                            <line
+                              key={`tri-grid-x-${x}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                        {Array.from({ length: widthY - 1 }, (_, i) => i + 1).map(y => {
+                          const pA = project(0, y, 0)
+                          const pB = project(lengthX * (1 - y / widthY), y, 0)
+                          return (
+                            <line
+                              key={`tri-grid-y-${y}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                      </>
+                    ) : baseType === 'en-l' ? (
+                      <>
+                        {Array.from({ length: lengthX - 1 }, (_, i) => i + 1).map(x => {
+                          const pA = project(x, 0, 0)
+                          const pB = project(x, 1, 0)
+                          return (
+                            <line
+                              key={`l-grid-x-${x}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                        {Array.from({ length: widthY - 1 }, (_, i) => i + 1).map(y => {
+                          const pA = project(0, y, 0)
+                          const pB = project(1, y, 0)
+                          return (
+                            <line
+                              key={`l-grid-y-${y}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        {Array.from({ length: lengthX - 1 }, (_, i) => i + 1).map(x => {
+                          const pA = project(x, 0, 0)
+                          const pB = project(x, widthY, 0)
+                          return (
+                            <line
+                              key={`grid-x-${x}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                        {Array.from({ length: widthY - 1 }, (_, i) => i + 1).map(y => {
+                          const pA = project(0, y, 0)
+                          const pB = project(lengthX, y, 0)
+                          return (
+                            <line
+                              key={`grid-y-${y}`}
+                              x1={pA.x}
+                              y1={pA.y}
+                              x2={pB.x}
+                              y2={pB.y}
+                              stroke={c.gridFloorLine}
+                              strokeWidth="1"
+                            />
+                          )
+                        })}
+                      </>
+                    )}
                   </g>
                 )}
 
                 {/* Aristas traseras de la caja envolvente (Líneas sólidas sin dash) */}
-                {showGhostBox && visibleCubesCount < totalVolume && (
+                {showGhostBox && !isComplete && (
                   <g>
-                    <line
-                      x1={ghostCorners.c000.x}
-                      y1={ghostCorners.c000.y}
-                      x2={ghostCorners.c001.x}
-                      y2={ghostCorners.c001.y}
-                      stroke={c.ghostLineBack}
-                      strokeWidth="1.5"
-                    />
-                    <line
-                      x1={ghostCorners.c000.x}
-                      y1={ghostCorners.c000.y}
-                      x2={ghostCorners.c100.x}
-                      y2={ghostCorners.c100.y}
-                      stroke={c.ghostLineBack}
-                      strokeWidth="1.5"
-                    />
-                    <line
-                      x1={ghostCorners.c000.x}
-                      y1={ghostCorners.c000.y}
-                      x2={ghostCorners.c010.x}
-                      y2={ghostCorners.c010.y}
-                      stroke={c.ghostLineBack}
-                      strokeWidth="1.5"
-                    />
+                    {baseType === 'triangular' && triCorners ? (
+                      <>
+                        <line
+                          x1={triCorners.b0.x}
+                          y1={triCorners.b0.y}
+                          x2={triCorners.t0.x}
+                          y2={triCorners.t0.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={triCorners.b0.x}
+                          y1={triCorners.b0.y}
+                          x2={triCorners.b1.x}
+                          y2={triCorners.b1.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={triCorners.b0.x}
+                          y1={triCorners.b0.y}
+                          x2={triCorners.b2.x}
+                          y2={triCorners.b2.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                      </>
+                    ) : baseType === 'en-l' && lCorners ? (
+                      <>
+                        <line
+                          x1={lCorners.b0.x}
+                          y1={lCorners.b0.y}
+                          x2={lCorners.t0.x}
+                          y2={lCorners.t0.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={lCorners.b0.x}
+                          y1={lCorners.b0.y}
+                          x2={lCorners.b1.x}
+                          y2={lCorners.b1.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={lCorners.b0.x}
+                          y1={lCorners.b0.y}
+                          x2={lCorners.b5.x}
+                          y2={lCorners.b5.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <line
+                          x1={ghostCorners.c000.x}
+                          y1={ghostCorners.c000.y}
+                          x2={ghostCorners.c001.x}
+                          y2={ghostCorners.c001.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={ghostCorners.c000.x}
+                          y1={ghostCorners.c000.y}
+                          x2={ghostCorners.c100.x}
+                          y2={ghostCorners.c100.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                        <line
+                          x1={ghostCorners.c000.x}
+                          y1={ghostCorners.c000.y}
+                          x2={ghostCorners.c010.x}
+                          y2={ghostCorners.c010.y}
+                          stroke={c.ghostLineBack}
+                          strokeWidth="1.5"
+                        />
+                      </>
+                    )}
                   </g>
                 )}
 
-                {/* Renderizado de Cubos Visibles en Orden del Pintor (Vectorial puro) */}
+                {/* Renderizado de Cubos Visibles en Orden del Pintor (Bases Rectangular, Cuadrada, Triangular y En L) */}
                 <g>
                   {sortedVisibleCubes.map(cube => {
-                    const { x, y, z, layer, index } = cube
+                    const { x, y, z, layer, index, isCut, polygon, volume } = cube
                     const isHovered = hoveredCube?.index === index
                     const palette = colorByLayer
                       ? LAYER_PALETTES[(layer - 1) % LAYER_PALETTES.length]
                       : UNIFORM_PALETTE
 
+                    if (isCut && polygon && polygon.length >= 3) {
+                      // ── Renderizado de Cubo Cortado por la Hipotenusa ──
+                      const topPts = polygon.map(p => project(p.x, p.y, z + 1))
+                      const bottomPts = polygon.map(p => project(p.x, p.y, z))
+
+                      // Caras laterales visibles: cara es visible si pB.x < pA.x - 0.05
+                      const sideFaces = []
+                      for (let i = 0; i < polygon.length; i++) {
+                        const nextI = (i + 1) % polygon.length
+                        const pA = topPts[i]
+                        const pB = topPts[nextI]
+                        const pB0 = bottomPts[nextI]
+                        const pA0 = bottomPts[i]
+
+                        // Prueba de visibilidad frontal en proyección isométrica
+                        if (pB.x < pA.x - 0.05) {
+                          const dx = polygon[nextI].x - polygon[i].x
+                          const dy = polygon[nextI].y - polygon[i].y
+                          const isSlantedFace = Math.abs(dx) > 0.05 && Math.abs(dy) > 0.05
+                          const sideFill = isHovered
+                            ? '#0284c7'
+                            : isSlantedFace
+                            ? palette.right
+                            : Math.abs(dx) > Math.abs(dy)
+                            ? palette.left
+                            : palette.right
+
+                          sideFaces.push(
+                            <polygon
+                              key={`cut-side-${i}`}
+                              points={`${pA.x},${pA.y} ${pB.x},${pB.y} ${pB0.x},${pB0.y} ${pA0.x},${pA0.y}`}
+                              fill={sideFill}
+                              stroke={isHovered ? '#ffffff' : palette.border}
+                              strokeWidth={isHovered ? 2 : 1.2}
+                              strokeLinejoin="round"
+                            />
+                          )
+                        }
+                      }
+
+                      const topPointsStr = topPts.map(p => `${p.x},${p.y}`).join(' ')
+                      const textCenterX = topPts.reduce((sum, p) => sum + p.x, 0) / topPts.length
+                      const textCenterY = topPts.reduce((sum, p) => sum + p.y, 0) / topPts.length
+
+                      return (
+                        <g
+                          key={`cut-cube-${x}-${y}-${z}`}
+                          onPointerEnter={() => setHoveredCube(cube)}
+                          onPointerLeave={() => setHoveredCube(null)}
+                          className="cursor-pointer"
+                        >
+                          {/* Caras laterales */}
+                          {sideFaces}
+
+                          {/* Cara superior recortada */}
+                          <polygon
+                            points={topPointsStr}
+                            fill={isHovered ? '#38bdf8' : palette.top}
+                            stroke={isHovered ? '#ffffff' : palette.border}
+                            strokeWidth={isHovered ? 2 : 1.2}
+                            strokeLinejoin="round"
+                          />
+
+                          {/* Etiqueta / Número */}
+                          {showCubeNumbers && s >= 24 && (
+                            <text
+                              x={textCenterX}
+                              y={textCenterY + 3.5}
+                              textAnchor="middle"
+                              fontSize={s >= 34 ? '10' : '8.5'}
+                              fontWeight="bold"
+                              fill="#ffffff"
+                              stroke="#0f172a"
+                              strokeWidth="1.5"
+                              paintOrder="stroke fill"
+                              fontFamily="JetBrains Mono, monospace"
+                              pointerEvents="none"
+                            >
+                              {volume === 0.5 ? '½' : volume !== undefined && volume < 0.99 ? volume.toFixed(1) : index}
+                            </text>
+                          )}
+                        </g>
+                      )
+                    }
+
+                    // ── Renderizado de Cubo Estándar (Completo) ──
                     const p0 = project(x, y, z + 1)
                     const p1 = project(x + 1, y, z + 1)
                     const p2 = project(x + 1, y + 1, z + 1)
@@ -948,98 +1403,188 @@ export default function VolumenPrismaView() {
                   })}
                 </g>
 
-                {/* Estructura alámbrica frontal del prisma (Líneas vectoriales 100% sólidas sin polígonos translúcidos ni dash) */}
-                {showGhostBox && visibleCubesCount < totalVolume && (
+                {/* Estructura alámbrica frontal del prisma (Líneas vectoriales 100% sólidas) */}
+                {showGhostBox && !isComplete && (
                   <g pointerEvents="none">
-                    {/* Pilares verticales frontales */}
-                    <line
-                      x1={ghostCorners.c110.x}
-                      y1={ghostCorners.c110.y}
-                      x2={ghostCorners.c111.x}
-                      y2={ghostCorners.c111.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c010.x}
-                      y1={ghostCorners.c010.y}
-                      x2={ghostCorners.c011.x}
-                      y2={ghostCorners.c011.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c100.x}
-                      y1={ghostCorners.c100.y}
-                      x2={ghostCorners.c101.x}
-                      y2={ghostCorners.c101.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
+                    {baseType === 'triangular' && triCorners ? (
+                      <>
+                        {/* Pilares frontales */}
+                        <line
+                          x1={triCorners.b1.x}
+                          y1={triCorners.b1.y}
+                          x2={triCorners.t1.x}
+                          y2={triCorners.t1.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={triCorners.b2.x}
+                          y1={triCorners.b2.y}
+                          x2={triCorners.t2.x}
+                          y2={triCorners.t2.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        {/* Arista inferior frontal */}
+                        <line
+                          x1={triCorners.b1.x}
+                          y1={triCorners.b1.y}
+                          x2={triCorners.b2.x}
+                          y2={triCorners.b2.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        {/* Techo triangular */}
+                        <line
+                          x1={triCorners.t0.x}
+                          y1={triCorners.t0.y}
+                          x2={triCorners.t1.x}
+                          y2={triCorners.t1.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={triCorners.t0.x}
+                          y1={triCorners.t0.y}
+                          x2={triCorners.t2.x}
+                          y2={triCorners.t2.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={triCorners.t1.x}
+                          y1={triCorners.t1.y}
+                          x2={triCorners.t2.x}
+                          y2={triCorners.t2.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                      </>
+                    ) : baseType === 'en-l' && lCorners ? (
+                      <>
+                        {/* Pilares verticales frontales */}
+                        <line x1={lCorners.b1.x} y1={lCorners.b1.y} x2={lCorners.t1.x} y2={lCorners.t1.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b2.x} y1={lCorners.b2.y} x2={lCorners.t2.x} y2={lCorners.t2.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b3.x} y1={lCorners.b3.y} x2={lCorners.t3.x} y2={lCorners.t3.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b4.x} y1={lCorners.b4.y} x2={lCorners.t4.x} y2={lCorners.t4.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b5.x} y1={lCorners.b5.y} x2={lCorners.t5.x} y2={lCorners.t5.y} stroke={c.ghostLine} strokeWidth="2" />
+                        {/* Aristas base frontales */}
+                        <line x1={lCorners.b1.x} y1={lCorners.b1.y} x2={lCorners.b2.x} y2={lCorners.b2.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b2.x} y1={lCorners.b2.y} x2={lCorners.b3.x} y2={lCorners.b3.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b3.x} y1={lCorners.b3.y} x2={lCorners.b4.x} y2={lCorners.b4.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.b4.x} y1={lCorners.b4.y} x2={lCorners.b5.x} y2={lCorners.b5.y} stroke={c.ghostLine} strokeWidth="2" />
+                        {/* Techo contorno en L */}
+                        <line x1={lCorners.t0.x} y1={lCorners.t0.y} x2={lCorners.t1.x} y2={lCorners.t1.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.t1.x} y1={lCorners.t1.y} x2={lCorners.t2.x} y2={lCorners.t2.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.t2.x} y1={lCorners.t2.y} x2={lCorners.t3.x} y2={lCorners.t3.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.t3.x} y1={lCorners.t3.y} x2={lCorners.t4.x} y2={lCorners.t4.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.t4.x} y1={lCorners.t4.y} x2={lCorners.t5.x} y2={lCorners.t5.y} stroke={c.ghostLine} strokeWidth="2" />
+                        <line x1={lCorners.t5.x} y1={lCorners.t5.y} x2={lCorners.t0.x} y2={lCorners.t0.y} stroke={c.ghostLine} strokeWidth="2" />
+                      </>
+                    ) : (
+                      <>
+                        {/* Pilares verticales frontales */}
+                        <line
+                          x1={ghostCorners.c110.x}
+                          y1={ghostCorners.c110.y}
+                          x2={ghostCorners.c111.x}
+                          y2={ghostCorners.c111.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c010.x}
+                          y1={ghostCorners.c010.y}
+                          x2={ghostCorners.c011.x}
+                          y2={ghostCorners.c011.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c100.x}
+                          y1={ghostCorners.c100.y}
+                          x2={ghostCorners.c101.x}
+                          y2={ghostCorners.c101.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
 
-                    {/* Aristas superiores del prisma */}
-                    <line
-                      x1={ghostCorners.c001.x}
-                      y1={ghostCorners.c001.y}
-                      x2={ghostCorners.c101.x}
-                      y2={ghostCorners.c101.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c001.x}
-                      y1={ghostCorners.c001.y}
-                      x2={ghostCorners.c011.x}
-                      y2={ghostCorners.c011.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c101.x}
-                      y1={ghostCorners.c101.y}
-                      x2={ghostCorners.c111.x}
-                      y2={ghostCorners.c111.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c011.x}
-                      y1={ghostCorners.c011.y}
-                      x2={ghostCorners.c111.x}
-                      y2={ghostCorners.c111.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
+                        {/* Aristas superiores del prisma */}
+                        <line
+                          x1={ghostCorners.c001.x}
+                          y1={ghostCorners.c001.y}
+                          x2={ghostCorners.c101.x}
+                          y2={ghostCorners.c101.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c001.x}
+                          y1={ghostCorners.c001.y}
+                          x2={ghostCorners.c011.x}
+                          y2={ghostCorners.c011.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c101.x}
+                          y1={ghostCorners.c101.y}
+                          x2={ghostCorners.c111.x}
+                          y2={ghostCorners.c111.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c011.x}
+                          y1={ghostCorners.c011.y}
+                          x2={ghostCorners.c111.x}
+                          y2={ghostCorners.c111.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
 
-                    {/* Aristas inferiores frontales */}
-                    <line
-                      x1={ghostCorners.c010.x}
-                      y1={ghostCorners.c010.y}
-                      x2={ghostCorners.c110.x}
-                      y2={ghostCorners.c110.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1={ghostCorners.c100.x}
-                      y1={ghostCorners.c100.y}
-                      x2={ghostCorners.c110.x}
-                      y2={ghostCorners.c110.y}
-                      stroke={c.ghostLine}
-                      strokeWidth="2"
-                    />
+                        {/* Aristas inferiores frontales */}
+                        <line
+                          x1={ghostCorners.c010.x}
+                          y1={ghostCorners.c010.y}
+                          x2={ghostCorners.c110.x}
+                          y2={ghostCorners.c110.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                        <line
+                          x1={ghostCorners.c100.x}
+                          y1={ghostCorners.c100.y}
+                          x2={ghostCorners.c110.x}
+                          y2={ghostCorners.c110.y}
+                          stroke={c.ghostLine}
+                          strokeWidth="2"
+                        />
+                      </>
+                    )}
                   </g>
                 )}
 
                 {/* Cotas de medidas L, A, H (Todas exteriores al prisma con colores y líneas 100% sólidas) */}
                 {showDimensions && (
                   <g pointerEvents="none" fontSize="11" fontWeight="bold" fontFamily="Nunito, sans-serif">
-                    {/* Cota Largo (L) - Exterior en arista inferior derecha */}
+                    {/* Cota Largo / Base X */}
                     {(() => {
-                      const p1 = ghostCorners.c110
-                      const p2 = ghostCorners.c100
-                      const midX = (p1.x + p2.x) / 2 + 16
-                      const midY = (p1.y + p2.y) / 2 + 16
+                      const mid =
+                        baseType === 'triangular' || baseType === 'en-l'
+                          ? project(lengthX / 2, 0, 0)
+                          : {
+                              x: (ghostCorners.c110.x + ghostCorners.c100.x) / 2,
+                              y: (ghostCorners.c110.y + ghostCorners.c100.y) / 2
+                            }
+                      const midX = mid.x + 16
+                      const midY = mid.y + 16
+                      const label =
+                        baseType === 'cuadrada'
+                          ? `L = ${lengthX} u`
+                          : baseType === 'triangular'
+                          ? `b = ${lengthX} u`
+                          : `L = ${lengthX} u`
                       return (
                         <g>
                           <rect
@@ -1060,18 +1605,29 @@ export default function VolumenPrismaView() {
                             className="font-mono font-black"
                             fontSize="11"
                           >
-                            L = {lengthX} u
+                            {label}
                           </text>
                         </g>
                       )
                     })()}
 
-                    {/* Cota Ancho (A) - Exterior en arista inferior izquierda */}
+                    {/* Cota Ancho / Altura Base Y */}
                     {(() => {
-                      const p1 = ghostCorners.c010
-                      const p2 = ghostCorners.c110
-                      const midX = (p1.x + p2.x) / 2 - 16
-                      const midY = (p1.y + p2.y) / 2 + 16
+                      const mid =
+                        baseType === 'triangular' || baseType === 'en-l'
+                          ? project(0, widthY / 2, 0)
+                          : {
+                              x: (ghostCorners.c010.x + ghostCorners.c110.x) / 2,
+                              y: (ghostCorners.c010.y + ghostCorners.c110.y) / 2
+                            }
+                      const midX = mid.x - 16
+                      const midY = mid.y + 16
+                      const label =
+                        baseType === 'cuadrada'
+                          ? `A = ${widthY} u`
+                          : baseType === 'triangular'
+                          ? `h_b = ${widthY} u`
+                          : `A = ${widthY} u`
                       return (
                         <g>
                           <rect
@@ -1092,33 +1648,32 @@ export default function VolumenPrismaView() {
                             className="font-mono font-black"
                             fontSize="11"
                           >
-                            A = {widthY} u
+                            {label}
                           </text>
                         </g>
                       )
                     })()}
 
-                    {/* Cota Altura (H) - Arista vertical exterior derecha */}
+                    {/* Cota Altura (H) - Arista vertical exterior */}
                     {(() => {
-                      const xEdge = ghostCorners.c100.x
-                      const yBottom = ghostCorners.c100.y
-                      const yTop = ghostCorners.c101.y
-                      const xLine = xEdge + 16
-                      const midY = (yBottom + yTop) / 2
+                      const pBottom = project(lengthX, 0, 0)
+                      const pTop = project(lengthX, 0, heightZ)
+                      const xLine = pBottom.x + 16
+                      const midY = (pBottom.y + pTop.y) / 2
                       return (
                         <g>
                           {/* Línea guía de cota vertical sólida */}
                           <line
                             x1={xLine}
-                            y1={yBottom}
+                            y1={pBottom.y}
                             x2={xLine}
-                            y2={yTop}
+                            y2={pTop.y}
                             stroke="#c084fc"
                             strokeWidth="1.5"
                           />
                           {/* Ticks en los extremos */}
-                          <line x1={xLine - 4} y1={yBottom} x2={xLine + 6} y2={yBottom} stroke="#c084fc" strokeWidth="1.5" />
-                          <line x1={xLine - 4} y1={yTop} x2={xLine + 6} y2={yTop} stroke="#c084fc" strokeWidth="1.5" />
+                          <line x1={xLine - 4} y1={pBottom.y} x2={xLine + 6} y2={pBottom.y} stroke="#c084fc" strokeWidth="1.5" />
+                          <line x1={xLine - 4} y1={pTop.y} x2={xLine + 6} y2={pTop.y} stroke="#c084fc" strokeWidth="1.5" />
                           {/* Badge de Altura legible y sólido */}
                           <rect
                             x={xLine + 8}
@@ -1259,10 +1814,22 @@ export default function VolumenPrismaView() {
           <div className="flex items-center gap-1 font-mono font-black text-cyan-400 text-xs sm:text-sm">
             <span>V = A_base × h</span>
             <span>=</span>
-            <span>({lengthX} × {widthY}) × {fillMode === 'layers' ? filledLayers : (visibleCubesCount / baseArea).toFixed(1)}</span>
+            <span>
+              {baseType === 'cuadrada'
+                ? `(${lengthX}²)`
+                : baseType === 'triangular'
+                ? `((${lengthX} × ${widthY}) ÷ 2)`
+                : baseType === 'en-l'
+                ? `(${lengthX} + ${widthY} - 1)`
+                : `(${lengthX} × ${widthY})`}{' '}
+              ×{' '}
+              {fillMode === 'layers'
+                ? filledLayers
+                : (visibleVolume / baseArea).toFixed(1)}
+            </span>
             <span>=</span>
             <span className="text-amber-300 text-sm sm:text-base font-black px-1.5 py-0.2 rounded bg-amber-500/20">
-              {visibleCubesCount} u³
+              {visibleVolume} u³
             </span>
           </div>
 
@@ -1270,21 +1837,30 @@ export default function VolumenPrismaView() {
 
           {/* Explicación pedagógica guiada */}
           <span className={`hidden md:inline text-xs font-medium truncate ${c.textMuted}`}>
-            {visibleCubesCount === 0
+            {visibleVolume === 0
               ? 'Mueve el deslizador vertical hacia arriba para colocar la primera capa de cubos.'
-              : visibleCubesCount < totalVolume
-              ? `Cada capa tiene ${baseArea} cubos (${lengthX}×${widthY}). Van ${visibleCubesCount} cubos en total.`
-              : `¡Prisma completo! Se llenaron las ${heightZ} capas. El volumen total es ${totalVolume} cubos (${totalVolume} u³).`}
+              : visibleVolume < totalVolume
+              ? baseType === 'triangular'
+                ? `Cada capa tiene cubos enteros y cubos cortados que suman ${baseArea} u³. Van ${visibleVolume} u³ en total.`
+                : baseType === 'en-l'
+                ? `Cada capa en «L» tiene ${baseArea} cubos (${lengthX}+${widthY}-1). Van ${visibleVolume} cubos en total.`
+                : baseType === 'cuadrada'
+                ? `Cada capa cuadrada tiene ${baseArea} cubos (${lengthX}²). Van ${visibleVolume} cubos en total.`
+                : `Cada capa tiene ${baseArea} cubos (${lengthX}×${widthY}). Van ${visibleVolume} cubos en total.`
+              : `¡Prisma completo! Se llenaron las ${heightZ} capas. El volumen total es ${totalVolume} u³.`}
           </span>
         </div>
 
         {/* Contador de estado */}
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="flex items-center gap-1 font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
-            <span className="text-white/60">Cubos:</span>
-            <span className="text-cyan-300 font-bold">{visibleCubesCount}</span>
+            <span className="text-white/60">
+              {baseType === 'triangular' ? 'Volumen:' : 'Cubos:'}
+            </span>
+            <span className="text-cyan-300 font-bold">{visibleVolume}</span>
             <span className="text-white/40">/</span>
             <span className="text-amber-300 font-bold">{totalVolume}</span>
+            {baseType === 'triangular' && <span className="text-amber-300 text-[10px]">u³</span>}
           </div>
         </div>
       </footer>
@@ -1293,7 +1869,7 @@ export default function VolumenPrismaView() {
       <ModalHelp
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        title="Guía: Volumen de Prismas Rectangulares y Cuadrangulares"
+        title="Guía: Volumen de Prismas y Principio de Cavalieri"
         bgColor={isDark ? '#0a1020' : '#ffffff'}
         titleColor={isDark ? '#ffffff' : '#0f172a'}
         maxWidth="max-w-md"
@@ -1304,10 +1880,13 @@ export default function VolumenPrismaView() {
             <h4 className={`font-bold text-sm flex items-center gap-1 ${
               isDark ? 'text-cyan-300' : 'text-cyan-700'
             }`}>
-              1. ¿Qué es el volumen?
+              1. Fórmula Universal del Volumen
             </h4>
             <p>
-              El <strong>volumen</strong> es la cantidad de espacio tridimensional que ocupa un cuerpo. Se mide contando cuántos <strong>cubos unidad</strong> (1 u³) caben exactamente en su interior.
+              Para cualquier prisma recto, el <strong>volumen</strong> siempre es el producto del área de su base por la altura:
+            </p>
+            <p className="font-mono font-bold text-amber-400 bg-amber-500/10 p-1.5 rounded border border-amber-500/20 text-center">
+              Volumen = Área de la Base (A_b) × Altura (H)
             </p>
           </section>
 
@@ -1315,14 +1894,21 @@ export default function VolumenPrismaView() {
             <h4 className={`font-bold text-sm flex items-center gap-1 ${
               isDark ? 'text-emerald-300' : 'text-emerald-700'
             }`}>
-              2. La Base: Cubos en el primer piso
+              2. Tipos de Bases Disponibles
             </h4>
-            <p>
-              Para llenar el prisma, primero colocamos una capa que cubra toda la base:
-            </p>
-            <ul className="list-disc list-inside space-y-0.5 text-xs pl-2">
-              <li><strong>Área de la base (A_b)</strong> = Largo × Ancho.</li>
-              <li>Si el largo es {lengthX} y el ancho es {widthY}, en el piso caben <strong>{baseArea} cubos</strong>.</li>
+            <ul className="list-disc list-inside space-y-1 text-xs pl-1">
+              <li>
+                <strong>Rectangular:</strong> A_b = Largo × Ancho = {lengthX} × {widthY} = {lengthX * widthY} u².
+              </li>
+              <li>
+                <strong>Cuadrada:</strong> A_b = Lado² = {lengthX}² = {lengthX * lengthX} u².
+              </li>
+              <li>
+                <strong>Triangular:</strong> A_b = (Base × Altura) ÷ 2 = ({lengthX} × {widthY}) ÷ 2 u².
+              </li>
+              <li>
+                <strong>En «L» (Polígono compuesto):</strong> A_b = Brazo_X + Brazo_Y - 1 cubos.
+              </li>
             </ul>
           </section>
 
@@ -1330,13 +1916,10 @@ export default function VolumenPrismaView() {
             <h4 className={`font-bold text-sm flex items-center gap-1 ${
               isDark ? 'text-purple-300' : 'text-purple-700'
             }`}>
-              3. La Altura: Apilar capas iguales
+              3. Apilar Capas Iguales
             </h4>
             <p>
-              Cada piso adicional tiene exactamente la misma cantidad de cubos. Por eso multiplicamos el área de la base por la altura:
-            </p>
-            <p className="mt-1 font-bold text-amber-400">
-              Volumen = Área de la Base × Altura = (Largo × Ancho) × Altura
+              Cada capa vertical tiene exactamente la misma sección transversal. Al subir el deslizador vertical, se añaden capas idénticas de abajo hacia arriba.
             </p>
           </section>
 
@@ -1344,10 +1927,10 @@ export default function VolumenPrismaView() {
             <h4 className={`font-bold text-sm flex items-center gap-1 ${
               isDark ? 'text-amber-300' : 'text-amber-700'
             }`}>
-              4. Cómo usar el deslizador
+              4. Controles y Modos
             </h4>
             <p>
-              Arrastra el <strong>deslizador vertical</strong> de la derecha hacia arriba. Observa cómo se van colocando los cubos piso por piso y cómo aumenta el volumen total.
+              Usa los botones <strong>+</strong> y <strong>-</strong> para cambiar dimensiones. Puedes alternar entre llenado <em>Por Capas</em> y <em>Cubo a Cubo</em> (en prismas rectos ortogonales).
             </p>
           </section>
         </div>
