@@ -72,7 +72,7 @@ src/
     ├── DescubrirFuncionView.tsx   # Máquina de funciones: descubre la regla, tabla y plano interactivo
     ├── FraccionesView.tsx     # 🚧 Placeholder
     ├── DecimalesView.tsx      # 🚧 Placeholder
-    └── PorcentajesView.tsx    # 🚧 Placeholder
+    ├── PorcentajesView.tsx    # Porcentajes: cuadrícula 100, triple equivalencia, doble barra proporcional y retos cotidianos
 
 AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
@@ -392,7 +392,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/grafica-cuadratica` | `GraficaCuadraticaView` | Gráfica cuadrática: parábola interactiva y = ax² + bx + c con vértice, raíces y deslizadores |
 | `/fracciones` | `FraccionesView` | 🚧 Próximamente |
 | `/decimales` | `DecimalesView` | 🚧 Próximamente |
-| `/porcentajes` | `PorcentajesView` | 🚧 Próximamente |
+| `/porcentajes` | `PorcentajesView` | Porcentajes: cuadrícula de 100, equivalencias triple (%/fracción/decimal), doble barra proporcional, casos de la vida real (descuentos, IGV) y retos (pantalla completa) |
 
 Todas las rutas están envueltas en el componente `Layout` que proporciona la estructura base de la aplicación.
 

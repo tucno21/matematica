@@ -182,6 +182,7 @@ export const topics: Topic[] = [
     { id: 'multiplicar-fracciones', competency: 'cantidad', path: '/multiplicar-fracciones', title: 'Multiplicar Fracciones', description: 'Multiplicación visual de fracciones', available: true },
     { id: 'division-fracciones', competency: 'cantidad', path: '/division-fracciones', title: 'Dividir Fracciones', description: 'División visual de fracciones', available: true },
     { id: 'fraccion-conjunto', competency: 'cantidad', path: '/fraccion-conjunto', title: 'Fracción de un Conjunto', description: 'Parte de un grupo de objetos', available: true },
+    { id: 'porcentajes', competency: 'cantidad', path: '/porcentajes', title: 'Porcentajes', description: 'Descubre qué significa «por ciento» con la cuadrícula de 100, la triple equivalencia y aplicaciones reales', available: true },
 
     // ── Forma, movimiento y localización ─────────────────────────────────────
     { id: 'angulos', competency: 'forma', path: '/angulos', title: 'Ángulos', description: 'Mide y gira ángulos', available: true },

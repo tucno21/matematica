@@ -36,6 +36,7 @@ import GraficaCuadraticaView from '../views/GraficaCuadraticaView'
 import VolumenPrismaView from '../views/VolumenPrismaView'
 import AreaPerimetroView from '../views/AreaPerimetroView'
 import AreaTrianguloView from '../views/AreaTrianguloView'
+import PorcentajesView from '../views/PorcentajesView'
 
 const router = createBrowserRouter([
     {
@@ -185,6 +186,10 @@ const router = createBrowserRouter([
     {
         path: '/area-triangulo',
         element: <AreaTrianguloView />
+    },
+    {
+        path: '/porcentajes',
+        element: <PorcentajesView />
     }
 ])
 
