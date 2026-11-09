@@ -38,6 +38,7 @@ import AreaPerimetroView from '../views/AreaPerimetroView'
 import AreaTrianguloView from '../views/AreaTrianguloView'
 import PorcentajesView from '../views/PorcentajesView'
 import TablaFrecuenciasView from '../views/TablaFrecuenciasView'
+import DatosAgrupadosView from '../views/DatosAgrupadosView'
 
 const router = createBrowserRouter([
     {
@@ -195,6 +196,10 @@ const router = createBrowserRouter([
     {
         path: '/tabla-frecuencias',
         element: <TablaFrecuenciasView />
+    },
+    {
+        path: '/datos-agrupados',
+        element: <DatosAgrupadosView />
     }
 ])
 
