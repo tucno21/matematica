@@ -75,6 +75,7 @@ src/
     ├── PorcentajesView.tsx    # Porcentajes: cuadrícula 100, triple equivalencia, doble barra proporcional y retos cotidianos
     ├── TablaFrecuenciasView.tsx # Tablas de frecuencias: datos no agrupados, conteo con palotes, fi, hi, hi% y gráfico dinámico
     ├── DatosAgrupadosView.tsx # Tablas de frecuencias para datos agrupados: rango R, intervalos k, amplitud A, marca de clase Xi e histograma con polígono
+    ├── GraficosEstadisticosView.tsx # Gráficos estadísticos interactivos: barras, circular, histograma, polígono y líneas con diagnóstico de tipo de variable y modo reto
 
 AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
@@ -397,6 +398,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/porcentajes` | `PorcentajesView` | Porcentajes: cuadrícula de 100, equivalencias triple (%/fracción/decimal), doble barra proporcional, casos de la vida real (descuentos, IGV) y retos (pantalla completa) |
 | `/tabla-frecuencias` | `TablaFrecuenciasView` | Tablas de Frecuencias: datos desorganizados, conteo con palotes, frecuencias fi, hi, hi%, gráfico de barras dinámico y moda para variables cualitativas y cuantitativas (pantalla completa) |
 | `/datos-agrupados` | `DatosAgrupadosView` | Tablas de Frecuencias para Datos Agrupados: parámetros R, k, A, construcción de intervalos [Li - Ls), marcas de clase Xi, frecuencias Fi, hi, hi% e histograma con polígono de frecuencias (pantalla completa) |
+| `/graficos-estadisticos` | `GraficosEstadisticosView` | Gráficos Estadísticos: tabla de frecuencias interactiva y gráficos dinámicos (barras, circular, histograma, polígono, líneas) con diagnóstico de pertinencia según tipo de variable y modo reto (pantalla completa) |
 
 Todas las rutas están envueltas en el componente `Layout` que proporciona la estructura base de la aplicación.
 
