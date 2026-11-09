@@ -12,7 +12,6 @@ import {
   Sparkles,
   Trophy,
   CheckCircle2,
-  Table as TableIcon,
   Calculator,
   Crown
 } from 'lucide-react'
@@ -21,7 +20,6 @@ import ModalHelp from '../components/ModalHelp'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type VariableType = 'cualitativa' | 'cuantitativa'
-type ViewMode = 'split' | 'conteo' | 'tabla' | 'grafico'
 type ExerciseMode = 'explorar' | 'reto'
 type TableStage = 'conteo' | 'calcular_hi' | 'calcular_hipct'
 
@@ -314,7 +312,6 @@ export default function TablaFrecuenciasView() {
   // Estado general
   const [activeVarType, setActiveVarType] = useState<VariableType>('cualitativa')
   const [datasetId, setDatasetId] = useState<string>('deportes')
-  const [viewMode, setViewMode] = useState<ViewMode>('split')
   const [exerciseMode, setExerciseMode] = useState<ExerciseMode>('explorar')
   const [showHelp, setShowHelp] = useState<boolean>(false)
   const [showCumulative, setShowCumulative] = useState<boolean>(false)
@@ -936,38 +933,6 @@ export default function TablaFrecuenciasView() {
 
         {/* Acciones de la Muestra */}
         <div className="flex items-center gap-1 shrink-0 ml-auto">
-          {/* Alternador de Vista (Solo en pantallas chicas/móvil o para cambiar enfoque) */}
-          <div className={`flex items-center rounded-md border p-0.5 gap-0.5 lg:hidden ${isDark ? 'border-white/10 bg-slate-900/40' : 'border-slate-300 bg-slate-100'}`}>
-            <button
-              onClick={() => setViewMode('split')}
-              className={`px-1 py-0.5 rounded text-[9px] ${viewMode === 'split' ? 'bg-sky-500 text-slate-950 font-bold' : isDark ? 'text-white/60' : 'text-slate-600'}`}
-              title="Vista dual combinada"
-            >
-              Dual
-            </button>
-            <button
-              onClick={() => setViewMode('conteo')}
-              className={`px-1 py-0.5 rounded text-[9px] ${viewMode === 'conteo' ? 'bg-sky-500 text-slate-950 font-bold' : isDark ? 'text-white/60' : 'text-slate-600'}`}
-              title="Ver solo datos desorganizados y conteo"
-            >
-              Datos
-            </button>
-            <button
-              onClick={() => setViewMode('tabla')}
-              className={`p-0.5 rounded ${viewMode === 'tabla' ? 'bg-sky-500 text-slate-950 font-bold' : isDark ? 'text-white/60' : 'text-slate-600'}`}
-              title="Ver tabla de frecuencias"
-            >
-              <TableIcon className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => setViewMode('grafico')}
-              className={`p-0.5 rounded ${viewMode === 'grafico' ? 'bg-sky-500 text-slate-950 font-bold' : isDark ? 'text-white/60' : 'text-slate-600'}`}
-              title="Ver gráfico de barras"
-            >
-              <BarChart3 className="h-3 w-3" />
-            </button>
-          </div>
-
           {/* Toggle Frecuencia Acumulada para cuantitativa */}
           {activeVarType === 'cuantitativa' && (
             <button
@@ -1042,8 +1007,6 @@ export default function TablaFrecuenciasView() {
           ════════════════════════════════════════════════════════════════════ */}
           <section
             className={`flex-1 min-w-0 min-h-0 rounded-xl border flex flex-col overflow-hidden transition-all ${
-              viewMode === 'tabla' || viewMode === 'grafico' ? 'hidden md:flex' : 'flex'
-            } ${
               isDark ? 'bg-[#0f172a] border-white/10' : 'bg-white border-slate-200 shadow-sm'
             }`}
           >
@@ -1865,8 +1828,6 @@ export default function TablaFrecuenciasView() {
           ════════════════════════════════════════════════════════════════════ */}
           <section
             className={`flex-1 min-w-0 min-h-0 rounded-xl border flex flex-col overflow-hidden transition-all ${
-              viewMode === 'conteo' ? 'hidden md:flex' : 'flex'
-            } ${
               isDark ? 'bg-[#0f172a] border-white/10' : 'bg-white border-slate-200 shadow-sm'
             }`}
           >
