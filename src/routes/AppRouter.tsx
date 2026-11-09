@@ -37,6 +37,7 @@ import VolumenPrismaView from '../views/VolumenPrismaView'
 import AreaPerimetroView from '../views/AreaPerimetroView'
 import AreaTrianguloView from '../views/AreaTrianguloView'
 import PorcentajesView from '../views/PorcentajesView'
+import TablaFrecuenciasView from '../views/TablaFrecuenciasView'
 
 const router = createBrowserRouter([
     {
@@ -73,7 +74,7 @@ const router = createBrowserRouter([
     },
     {
         path: '/tres-jarras',
-        element: <Layout><TresJarrasView /></Layout>
+        element: <TresJarrasView />
     },
     {
         path: '/tres-pescados',
@@ -190,6 +191,10 @@ const router = createBrowserRouter([
     {
         path: '/porcentajes',
         element: <PorcentajesView />
+    },
+    {
+        path: '/tabla-frecuencias',
+        element: <TablaFrecuenciasView />
     }
 ])
 

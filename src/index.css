@@ -1,4 +1,19 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Cuadrícula de Tablas Estadísticas (Estilo Excel) ─────────────────── */
+.excel-table {
+    border-collapse: collapse !important;
+    width: 100%;
+}
+.excel-table th,
+.excel-table td {
+    border: 1px solid #94a3b8 !important; /* Slate-400: Líneas nítidas y visibles en modo claro */
+}
+html.dark .excel-table th,
+html.dark .excel-table td {
+    border: 1px solid rgba(255, 255, 255, 0.22) !important; /* Líneas luminosas en modo oscuro */
+}
 
 @keyframes flyPortion {
     0% {
@@ -600,20 +615,6 @@ html:not(.dark) {
     }
 
     /* 17. Vistas Recreativas con variables CSS nativas (<style>) */
-    /* Tres Jarras */
-    .game-root {
-        --navy-900: #e2e8f0 !important;
-        --navy-800: #f1f5f9 !important;
-        --navy-700: #cbd5e1 !important;
-        --navy-600: #94a3b8 !important;
-        --navy-500: #64748b !important;
-        background: linear-gradient(165deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%) !important;
-        color: #0f172a !important;
-    }
-    .game-root * {
-        --text-white: #0f172a;
-    }
-
     /* Tres Pescados */
     .game-root {
         --bg-900: #fef3c7 !important;
@@ -752,4 +753,13 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(45, 212, 191, 0.45) transparent;
+}
+
+/* Ocultar scrollbar preservando la capacidad de scroll */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

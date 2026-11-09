@@ -205,6 +205,9 @@ export const topics: Topic[] = [
     { id: 'grafica-lineal', competency: 'regularidad', path: '/grafica-lineal', title: 'Gráfica Lineal', description: 'Explora la función y = 5x + 7 y modifica la pendiente y el intercepto con deslizadores', available: true },
     { id: 'grafica-cuadratica', competency: 'regularidad', path: '/grafica-cuadratica', title: 'Gráfica Cuadrática', description: 'Explora la parábola y = ax² + bx + c, su vértice y raíces con deslizadores dinámicos', available: true },
 
+    // ── Gestión de datos e incertidumbre ─────────────────────────────────────
+    { id: 'tabla-frecuencias', competency: 'datos', path: '/tabla-frecuencias', title: 'Tablas de Frecuencias', description: 'Organiza datos no agrupados, realiza el conteo con palotes y calcula frecuencias absolutas, relativas y porcentuales', available: true },
+
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
     { id: 'tres-pescados', competency: 'recreativa', path: '/tres-pescados', title: 'Los Tres Pescados', description: 'Pensamiento lógico', available: true },

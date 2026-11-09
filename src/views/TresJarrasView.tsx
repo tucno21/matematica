@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useThemeStore } from '../store/useThemeStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Jarra {
@@ -42,20 +43,20 @@ const JUG_CONFIG: Record<number, {
 }> = {
     8: {
         w: 130, h: 224,
-        bx: 18, by: 22, bw: 92, bh: 162, br: 8,
-        handle: 'M110 54 C132 54 136 78 136 100 C136 122 132 150 110 150',
+        bx: 28, by: 22, bw: 92, bh: 162, br: 8,
+        handle: 'M28 54 C6 54 2 78 2 100 C2 122 6 150 28 150',
         rimW: 98, capY: 212
     },
     5: {
         w: 110, h: 194,
-        bx: 15, by: 19, bw: 76, bh: 132, br: 7,
-        handle: 'M91 44 C110 44 114 64 114 83 C114 102 110 126 91 126',
+        bx: 25, by: 19, bw: 76, bh: 132, br: 7,
+        handle: 'M25 44 C6 44 2 64 2 83 C2 102 6 126 25 126',
         rimW: 82, capY: 184
     },
     3: {
-        w: 90, h: 166,
-        bx: 12, by: 16, bw: 62, bh: 108, br: 6,
-        handle: 'M74 36 C92 36 96 52 96 68 C96 84 92 104 74 104',
+        w: 92, h: 166,
+        bx: 23, by: 16, bw: 62, bh: 108, br: 6,
+        handle: 'M23 36 C5 36 1 52 1 68 C1 84 5 104 23 104',
         rimW: 68, capY: 156
     }
 }
@@ -68,8 +69,11 @@ function JarraSVG({
     dragging,
     dropTarget,
     isValidTarget,
+    isSelected,
     isWinner,
     idx,
+    isDark,
+    onClick,
     onDragStart,
     onDragOver,
     onDragLeave,
@@ -84,8 +88,11 @@ function JarraSVG({
     dragging: boolean
     dropTarget: boolean
     isValidTarget: boolean
+    isSelected: boolean
     isWinner: boolean
     idx: number
+    isDark: boolean
+    onClick: () => void
     onDragStart: () => void
     onDragOver: (e: React.DragEvent) => void
     onDragLeave: () => void
@@ -103,6 +110,11 @@ function JarraSVG({
     const rimX = c.bx + (c.bw - c.rimW) / 2
     const rimY = c.by - 5
 
+    const strokeColor = isWinner ? (isDark ? '#fbbf24' : '#d97706') : (isDark ? '#3b82f6' : '#0284c7')
+    const markStroke = isWinner ? (isDark ? '#fbbf24' : '#d97706') : (isDark ? '#3b82f6' : '#0284c7')
+    const markText = isWinner ? (isDark ? '#fbbf24' : '#b45309') : (isDark ? '#60a5fa' : '#0369a1')
+    const labelColor = isWinner ? (isDark ? '#fbbf24' : '#b45309') : (isDark ? '#60a5fa' : '#0369a1')
+
     // Wave path calculation
     const waveAmp = actual > 0 ? 3 : 0
     const waveY = waterY
@@ -119,8 +131,9 @@ function JarraSVG({
 
     return (
         <div
-            className={`jug-wrapper ${dragging ? 'is-dragging' : ''} ${dropTarget ? 'is-drop-target' : ''} ${isValidTarget && !dropTarget && !dragging ? 'is-valid-target' : ''} ${isWinner ? 'is-winner' : ''}`}
+            className={`jug-wrapper ${dragging ? 'is-dragging' : ''} ${isSelected ? 'is-selected' : ''} ${dropTarget ? 'is-drop-target' : ''} ${isValidTarget && !dropTarget && !dragging && !isSelected ? 'is-valid-target' : ''} ${isWinner ? 'is-winner' : ''}`}
             data-idx={idx}
+            onClick={onClick}
             draggable
             onDragStart={() => onDragStart()}
             onDragOver={(e) => onDragOver(e)}
@@ -131,11 +144,12 @@ function JarraSVG({
             onTouchEnd={(e) => onTouchEnd(e)}
             style={{ touchAction: 'none' }}
         >
-            {/* Drag labels */}
+            {/* Drag / Select labels */}
             {dragging && <div className="jug-badge badge-origin">ORIGEN</div>}
+            {isSelected && !dragging && <div className="jug-badge badge-origin">SELECCIONADA</div>}
             {dropTarget && <div className="jug-badge badge-destiny">DESTINO</div>}
-            {isValidTarget && !dropTarget && !dragging && (
-                <div className="jug-badge badge-hint">SOLTAR AQUÍ</div>
+            {isValidTarget && !dropTarget && !dragging && !isSelected && (
+                <div className="jug-badge badge-hint">TOCA O SUELTA</div>
             )}
 
             {/* Jug name */}
@@ -161,23 +175,23 @@ function JarraSVG({
 
                         {/* Water gradient */}
                         <linearGradient id={`wg-${capacidad}-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#67e8f9" />
-                            <stop offset="40%" stopColor="#22d3ee" />
-                            <stop offset="100%" stopColor="#0e7490" />
+                            <stop offset="0%" stopColor={isDark ? "#67e8f9" : "#38bdf8"} />
+                            <stop offset="40%" stopColor={isDark ? "#22d3ee" : "#0284c7"} />
+                            <stop offset="100%" stopColor={isDark ? "#0e7490" : "#0369a1"} />
                         </linearGradient>
 
                         {/* Water shimmer */}
                         <linearGradient id={`ws-${capacidad}-${idx}`} x1="0" y1="0" x2="1" y2="0">
                             <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-                            <stop offset="50%" stopColor="rgba(255,255,255,0.12)" />
+                            <stop offset="50%" stopColor={isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.35)"} />
                             <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                         </linearGradient>
 
                         {/* Body gradient */}
                         <linearGradient id={`bg-${capacidad}-${idx}`} x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="rgba(30,58,95,0.6)" />
-                            <stop offset="50%" stopColor="rgba(20,40,70,0.3)" />
-                            <stop offset="100%" stopColor="rgba(30,58,95,0.6)" />
+                            <stop offset="0%" stopColor={isDark ? "rgba(30,58,95,0.6)" : "rgba(224,242,254,0.75)"} />
+                            <stop offset="50%" stopColor={isDark ? "rgba(20,40,70,0.3)" : "rgba(240,249,255,0.4)"} />
+                            <stop offset="100%" stopColor={isDark ? "rgba(30,58,95,0.6)" : "rgba(224,242,254,0.75)"} />
                         </linearGradient>
 
                         {/* Winner glow */}
@@ -217,7 +231,7 @@ function JarraSVG({
                                 <path
                                     d={waveD1}
                                     fill="none"
-                                    stroke="rgba(103, 232, 249, 0.5)"
+                                    stroke={isDark ? "rgba(103, 232, 249, 0.5)" : "rgba(255, 255, 255, 0.9)"}
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                 >
@@ -238,7 +252,7 @@ function JarraSVG({
                         width={c.bw} height={c.bh}
                         rx={c.br}
                         fill={`url(#bg-${capacidad}-${idx})`}
-                        stroke={isWinner ? '#fbbf24' : '#3b82f6'}
+                        stroke={strokeColor}
                         strokeWidth={isWinner ? 2.5 : 2}
                         className="jug-body-outline"
                         filter={isWinner ? `url(#glow-${idx})` : undefined}
@@ -249,51 +263,54 @@ function JarraSVG({
                         x={rimX} y={rimY}
                         width={c.rimW} height={7}
                         rx={3.5}
-                        fill={isWinner ? '#fbbf24' : '#3b82f6'}
-                        opacity="0.9"
+                        fill={strokeColor}
+                        opacity={isDark ? 0.9 : 1}
                     />
 
-                    {/* Handle */}
+                    {/* Handle (Left side) */}
                     <path
                         d={c.handle}
                         fill="none"
-                        stroke={isWinner ? '#fbbf24' : '#3b82f6'}
-                        strokeWidth="3"
+                        stroke={strokeColor}
+                        strokeWidth="3.2"
                         strokeLinecap="round"
                     />
 
-                    {/* Capacity marks */}
-                    {[...Array(capacidad + 1)].map((_, i) => {
-                        const markY = c.by + (c.bh / capacidad) * i
-                        const isMajor = i === 0 || i === capacidad || i === Math.floor(capacidad / 2)
+                    {/* Capacity marks (Right side) - All measurement levels */}
+                    {[...Array(capacidad)].map((_, idxFrom0) => {
+                        const v = idxFrom0 + 1 // 1, 2, ..., capacidad
+                        const markY = c.by + c.bh - (c.bh / capacidad) * v
+                        const isMajor = v === capacidad || v === 4 || v === Math.round(capacidad / 2)
+                        const tickLen = isMajor ? 13 : 8
+                        const xRight = c.bx + c.bw
                         return (
-                            <g key={i}>
+                            <g key={v}>
                                 <line
-                                    x1={c.bx + 1}
+                                    x1={xRight - 1}
                                     y1={markY}
-                                    x2={c.bx + (isMajor ? 16 : 10)}
+                                    x2={xRight - tickLen}
                                     y2={markY}
-                                    stroke={isWinner ? '#fbbf24' : '#3b82f6'}
-                                    strokeWidth={isMajor ? 1.5 : 0.8}
-                                    opacity={isMajor ? 0.7 : 0.35}
+                                    stroke={markStroke}
+                                    strokeWidth={isMajor ? 1.5 : 0.9}
+                                    opacity={isDark ? (isMajor ? 0.9 : 0.6) : (isMajor ? 1 : 0.85)}
                                 />
-                                {isMajor && i > 0 && i < capacidad && (
-                                    <text
-                                        x={c.bx + 20}
-                                        y={markY + 3.5}
-                                        fill={isWinner ? '#fbbf24' : '#60a5fa'}
-                                        fontSize="8"
-                                        fontFamily="Inter, sans-serif"
-                                        opacity="0.6"
-                                    >
-                                        {capacidad - i}
-                                    </text>
-                                )}
+                                <text
+                                    x={xRight - tickLen - 3}
+                                    y={markY + 3.5}
+                                    textAnchor="end"
+                                    fill={v === 4 && (isWinner || actual === 4) ? (isDark ? '#fbbf24' : '#b45309') : markText}
+                                    fontSize={isMajor ? "9.5" : "8.5"}
+                                    fontWeight={isMajor ? "800" : "700"}
+                                    fontFamily="Inter, sans-serif"
+                                    opacity={isDark ? (isMajor ? 0.95 : 0.8) : 1}
+                                >
+                                    {v}
+                                </text>
                             </g>
                         )
                     })}
 
-                    {/* Glass reflection */}
+                    {/* Glass reflection (Left side) */}
                     <rect
                         x={c.bx + 5}
                         y={c.by + 6}
@@ -301,19 +318,19 @@ function JarraSVG({
                         height={c.bh * 0.45}
                         rx={4}
                         fill="white"
-                        opacity="0.06"
+                        opacity={isDark ? 0.06 : 0.25}
                     />
 
                     {/* Capacity label */}
                     <text
-                        x={c.w / 2}
+                        x={c.bx + c.bw / 2}
                         y={c.capY}
                         textAnchor="middle"
-                        fill={isWinner ? '#fbbf24' : '#60a5fa'}
+                        fill={labelColor}
                         fontSize="11"
-                        fontWeight="600"
+                        fontWeight="700"
                         fontFamily="Inter, sans-serif"
-                        opacity="0.8"
+                        opacity={isDark ? 0.85 : 1}
                     >
                         {capacidad}L
                     </text>
@@ -369,15 +386,18 @@ function StepCard({ paso, isInitial, isLast }: {
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function TresJarrasView() {
     const navigate = useNavigate()
+    const isDark = useThemeStore((s) => s.theme === 'dark')
 
     const [jarras, setJarras] = useState<Jarra[]>(JARRAS_INICIALES)
     const [draggingJarra, setDraggingJarra] = useState<number | null>(null)
     const [dragOverJarra, setDragOverJarra] = useState<number | null>(null)
+    const [selectedJarra, setSelectedJarra] = useState<number | null>(null)
+    const [activeTab, setActiveTab] = useState<'pasos' | 'solucion'>('pasos')
+    const [showHelpModal, setShowHelpModal] = useState(false)
     const [movimientos, setMovimientos] = useState(0)
     const [registro, setRegistro] = useState<RegistroPaso[]>([
         { paso: 0, accion: 'Estado inicial', jarraA: 8, jarraB: 0, jarraC: 0 }
     ])
-    const [solucionVisible, setSolucionVisible] = useState(false)
     const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'exito' | 'info' } | null>(null)
 
     const registroRef = useRef<HTMLDivElement>(null)
@@ -385,11 +405,28 @@ export default function TresJarrasView() {
 
     // Derived state
     const isWon = jarras[0].actual === 4 && jarras[1].actual === 4
+    const activeOrigin = draggingJarra !== null ? draggingJarra : selectedJarra
     const isValidTarget = (idx: number) => {
-        if (draggingJarra === null || draggingJarra === idx) return false
-        const from = jarras[draggingJarra]
+        if (activeOrigin === null || activeOrigin === idx) return false
+        const from = jarras[activeOrigin]
         const to = jarras[idx]
         return from.actual > 0 && to.actual < to.capacidad
+    }
+
+    const handleJugClick = (idx: number) => {
+        if (selectedJarra === null) {
+            if (jarras[idx].actual > 0) {
+                setSelectedJarra(idx)
+            } else {
+                setMensaje({ texto: `La Jarra ${jarras[idx].nombre} está vacía.`, tipo: 'info' })
+                setTimeout(() => setMensaje(null), 2000)
+            }
+        } else if (selectedJarra === idx) {
+            setSelectedJarra(null)
+        } else {
+            trasvasar(selectedJarra, idx)
+            setSelectedJarra(null)
+        }
     }
 
     // ── Core Actions ──────────────────────────────────────────────────────────
@@ -436,6 +473,7 @@ export default function TresJarrasView() {
         setJarras(newJarras)
         setDraggingJarra(null)
         setDragOverJarra(null)
+        setSelectedJarra(null)
 
         const newMovimientos = movimientos + 1
         setMovimientos(newMovimientos)
@@ -534,20 +572,21 @@ export default function TresJarrasView() {
         setJarras(JARRAS_INICIALES)
         setDraggingJarra(null)
         setDragOverJarra(null)
+        setSelectedJarra(null)
         setMovimientos(0)
         setRegistro([{ paso: 0, accion: 'Estado inicial', jarraA: 8, jarraB: 0, jarraC: 0 }])
-        setSolucionVisible(false)
+        setActiveTab('pasos')
         setMensaje(null)
         touchStartJarra.current = null
     }
 
     const toggleSolucion = () => {
-        setSolucionVisible(!solucionVisible)
+        setActiveTab(prev => prev === 'solucion' ? 'pasos' : 'solucion')
     }
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className="game-root">
+        <div className="game-root tres-jarras-root">
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap');
 
@@ -570,240 +609,545 @@ export default function TresJarrasView() {
                     --red-400: #f87171;
                 }
 
-                .game-root {
-                    min-height: 100dvh;
-                    background: linear-gradient(165deg, var(--navy-900) 0%, var(--navy-800) 40%, #0c1a30 100%);
-                    color: white;
+                .tres-jarras-root {
+                    --tj-bg: linear-gradient(165deg, #070d1a 0%, #0a1628 40%, #0c1a30 100%);
+                    --tj-text: #ffffff;
+                    --tj-text-muted: rgba(255, 255, 255, 0.7);
+                    --tj-text-dim: rgba(255, 255, 255, 0.45);
+                    --tj-grid: rgba(59, 130, 246, 0.03);
+                    --tj-card-bg: rgba(255, 255, 255, 0.03);
+                    --tj-card-border: rgba(255, 255, 255, 0.08);
+                    --tj-banner-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.09), rgba(245, 158, 11, 0.04));
+                    --tj-banner-border: rgba(245, 158, 11, 0.2);
+                    --tj-banner-text: rgba(255, 255, 255, 0.85);
+                    --tj-banner-strong: var(--amber-400);
+                    --tj-btn-back-bg: rgba(255, 255, 255, 0.04);
+                    --tj-btn-back-border: rgba(255, 255, 255, 0.08);
+                    --tj-btn-back-text: rgba(255, 255, 255, 0.7);
+                    --tj-btn-back-hover: #ffffff;
+                    --tj-moves-bg: linear-gradient(135deg, var(--navy-600), var(--navy-700));
+                    --tj-moves-border: rgba(96, 165, 250, 0.15);
+                    --tj-moves-text: var(--blue-400);
+                    --tj-moves-num: #ffffff;
+                    --tj-jug-name: var(--blue-400);
+                    --tj-jug-amount: var(--cyan-400);
+                    --tj-jug-amount-empty: rgba(255, 255, 255, 0.25);
+                    --tj-jug-track: rgba(255, 255, 255, 0.08);
+                    --tj-btn-reset-bg: var(--navy-600);
+                    --tj-btn-reset-text: var(--blue-400);
+                    --tj-btn-reset-border: rgba(96, 165, 250, 0.2);
+                    --tj-btn-reset-hover: var(--navy-500);
+                    --tj-btn-sol-bg: linear-gradient(135deg, var(--amber-500), #d97706);
+                    --tj-btn-sol-text: #1a0e00;
+                    --tj-tab-active-bg: rgba(255, 255, 255, 0.1);
+                    --tj-tab-active-text: #ffffff;
+                    --tj-card-header: var(--amber-400);
+                    --tj-step-num: var(--blue-400);
+                    --tj-step-action: var(--cyan-300);
+                    --tj-step-line: rgba(59, 130, 246, 0.15);
+                    --tj-chip-a-bg: rgba(59, 130, 246, 0.12);
+                    --tj-chip-a-text: var(--blue-400);
+                    --tj-chip-a-border: rgba(59, 130, 246, 0.2);
+                    --tj-chip-b-bg: rgba(6, 182, 212, 0.12);
+                    --tj-chip-b-text: var(--cyan-400);
+                    --tj-chip-b-border: rgba(6, 182, 212, 0.2);
+                    --tj-chip-c-bg: rgba(245, 158, 11, 0.1);
+                    --tj-chip-c-text: var(--amber-400);
+                    --tj-chip-c-border: rgba(245, 158, 11, 0.15);
+                    --tj-solution-header: var(--emerald-400);
+                    --tj-solution-text: rgba(255, 255, 255, 0.7);
+                    --tj-solution-state-bg: rgba(255, 255, 255, 0.04);
+                    --tj-solution-state-text: rgba(255, 255, 255, 0.4);
+                    --tj-solution-state-border: transparent;
+                    --tj-solution-num-bg: rgba(16, 185, 129, 0.15);
+                    --tj-solution-num-text: var(--emerald-400);
+                    --tj-solution-succ-bg: rgba(16, 185, 129, 0.08);
+                    --tj-solution-succ-border: rgba(16, 185, 129, 0.2);
+                    --tj-solution-succ-text: var(--emerald-400);
+                    --tj-scroll-thumb: rgba(255, 255, 255, 0.12);
+                    --tj-win-card-bg: linear-gradient(145deg, var(--navy-700), var(--navy-800));
+                    --tj-win-card-border: rgba(251, 191, 36, 0.25);
+                    --tj-win-title: var(--amber-400);
+                    --tj-win-text: rgba(255, 255, 255, 0.7);
+                    --tj-win-moves-bg: rgba(251, 191, 36, 0.1);
+                    --tj-win-moves-border: rgba(251, 191, 36, 0.2);
+                    --tj-win-moves-num: var(--amber-400);
+                    --tj-win-moves-label: rgba(255, 255, 255, 0.45);
+                    --tj-progress-track: rgba(255, 255, 255, 0.08);
+                    --tj-progress-label: rgba(255, 255, 255, 0.5);
+                    --tj-progress-val: var(--cyan-400);
+                    --tj-modal-bg: #0f1f38;
+                    --tj-modal-border: rgba(255, 255, 255, 0.15);
+                }
+
+                html:not(.dark) .tres-jarras-root {
+                    --tj-bg: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 40%, #e2e8f0 100%);
+                    --tj-text: #0f172a;
+                    --tj-text-muted: #334155;
+                    --tj-text-dim: #64748b;
+                    --tj-grid: rgba(2, 132, 199, 0.04);
+                    --tj-card-bg: #ffffff;
+                    --tj-card-border: #cbd5e1;
+                    --tj-banner-bg: linear-gradient(135deg, #fef9c3, #fef08a);
+                    --tj-banner-border: #facc15;
+                    --tj-banner-text: #713f12;
+                    --tj-banner-strong: #854d0e;
+                    --tj-btn-back-bg: #ffffff;
+                    --tj-btn-back-border: #cbd5e1;
+                    --tj-btn-back-text: #334155;
+                    --tj-btn-back-hover: #0f172a;
+                    --tj-moves-bg: #ffffff;
+                    --tj-moves-border: #93c5fd;
+                    --tj-moves-text: #0284c7;
+                    --tj-moves-num: #0f172a;
+                    --tj-jug-name: #0369a1;
+                    --tj-jug-amount: #0284c7;
+                    --tj-jug-amount-empty: #94a3b8;
+                    --tj-jug-track: #e2e8f0;
+                    --tj-btn-reset-bg: #ffffff;
+                    --tj-btn-reset-text: #0284c7;
+                    --tj-btn-reset-border: #cbd5e1;
+                    --tj-btn-reset-hover: #f1f5f9;
+                    --tj-btn-sol-bg: linear-gradient(135deg, #f59e0b, #d97706);
+                    --tj-btn-sol-text: #ffffff;
+                    --tj-tab-active-bg: #0284c7;
+                    --tj-tab-active-text: #ffffff;
+                    --tj-card-header: #b45309;
+                    --tj-step-num: #0369a1;
+                    --tj-step-action: #0f172a;
+                    --tj-step-line: #cbd5e1;
+                    --tj-chip-a-bg: #e0f2fe;
+                    --tj-chip-a-text: #0369a1;
+                    --tj-chip-a-border: #bae6fd;
+                    --tj-chip-b-bg: #ecfeff;
+                    --tj-chip-b-text: #0e7490;
+                    --tj-chip-b-border: #a5f3fc;
+                    --tj-chip-c-bg: #fef3c7;
+                    --tj-chip-c-text: #b45309;
+                    --tj-chip-c-border: #fde68a;
+                    --tj-solution-header: #047857;
+                    --tj-solution-text: #1e293b;
+                    --tj-solution-state-bg: #f8fafc;
+                    --tj-solution-state-text: #475569;
+                    --tj-solution-state-border: #e2e8f0;
+                    --tj-solution-num-bg: #dcfce7;
+                    --tj-solution-num-text: #15803d;
+                    --tj-solution-succ-bg: #dcfce7;
+                    --tj-solution-succ-border: #86efac;
+                    --tj-solution-succ-text: #166534;
+                    --tj-scroll-thumb: #cbd5e1;
+                    --tj-win-card-bg: #ffffff;
+                    --tj-win-card-border: #f59e0b;
+                    --tj-win-title: #b45309;
+                    --tj-win-text: #334155;
+                    --tj-win-moves-bg: #fef3c7;
+                    --tj-win-moves-border: #fde68a;
+                    --tj-win-moves-num: #b45309;
+                    --tj-win-moves-label: #78350f;
+                    --tj-progress-track: #e2e8f0;
+                    --tj-progress-label: #475569;
+                    --tj-progress-val: #0284c7;
+                    --tj-modal-bg: #ffffff;
+                    --tj-modal-border: #cbd5e1;
+                }
+
+                .tres-jarras-root {
+                    height: 100dvh;
+                    max-height: 100dvh;
+                    overflow: hidden;
+                    background: var(--tj-bg);
+                    color: var(--tj-text);
                     display: flex;
                     flex-direction: column;
-                    padding: 16px;
                     font-family: 'Inter', system-ui, sans-serif;
                     position: relative;
-                    overflow-x: hidden;
+                    user-select: none;
+                    -webkit-user-select: none;
                 }
 
                 /* Subtle background grid */
-                .game-root::before {
+                .tres-jarras-root::before {
                     content: '';
                     position: fixed;
                     inset: 0;
                     background-image:
-                        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+                        linear-gradient(var(--tj-grid) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--tj-grid) 1px, transparent 1px);
                     background-size: 48px 48px;
                     pointer-events: none;
                     z-index: 0;
                 }
 
-                .game-root > * {
+                .tres-jarras-root > * {
                     position: relative;
                     z-index: 1;
                 }
 
-                /* ─── Header ────────────────────────────── */
-                .game-header {
+                /* ─── Header (36-42px) ──────────────────── */
+                .tres-jarras-root .game-header {
+                    height: 38px;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    margin-bottom: 16px;
+                    justify-content: space-between;
+                    gap: 8px;
+                    padding: 0 10px;
+                    border-bottom: 1px solid var(--tj-card-border);
+                    flex-shrink: 0;
+                }
+                @media (min-width: 1024px) {
+                    .tres-jarras-root .game-header {
+                        height: 44px;
+                        padding: 0 16px;
+                    }
                 }
 
-                .btn-back {
+                .tres-jarras-root .btn-back {
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    color: rgba(255,255,255,0.5);
-                    background: rgba(255,255,255,0.04);
-                    border: 1px solid rgba(255,255,255,0.08);
-                    border-radius: 12px;
-                    padding: 8px 14px;
-                    font-size: 13px;
+                    gap: 5px;
+                    color: var(--tj-btn-back-text);
+                    background: var(--tj-btn-back-bg);
+                    border: 1px solid var(--tj-btn-back-border);
+                    border-radius: 8px;
+                    padding: 4px 10px;
+                    font-size: 11px;
                     font-weight: 600;
                     cursor: pointer;
                     transition: all 0.2s;
                     flex-shrink: 0;
+                    height: 28px;
                 }
-                .btn-back:hover {
-                    color: white;
-                    background: rgba(255,255,255,0.08);
-                    border-color: rgba(255,255,255,0.15);
+                .tres-jarras-root .btn-back:hover {
+                    color: var(--tj-btn-back-hover);
+                    filter: brightness(0.95);
                 }
-                .btn-back:active { transform: scale(0.96); }
+                .tres-jarras-root .btn-back:active { transform: scale(0.96); }
 
-                .game-title {
+                .tres-jarras-root .game-title {
                     font-family: 'Playfair Display', serif;
-                    font-size: 1.35rem;
+                    font-size: 1rem;
                     font-weight: 800;
                     letter-spacing: -0.02em;
-                    flex: 1;
+                    color: var(--tj-text);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                @media (min-width: 1024px) {
+                    .tres-jarras-root .game-title {
+                        font-size: 1.25rem;
+                    }
                 }
 
-                .moves-pill {
-                    background: linear-gradient(135deg, var(--navy-600), var(--navy-700));
-                    border: 1px solid rgba(96,165,250,0.15);
+                .tres-jarras-root .header-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-shrink: 0;
+                }
+
+                .tres-jarras-root .btn-help-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    background: var(--tj-banner-bg);
+                    border: 1px solid var(--tj-banner-border);
+                    color: var(--tj-banner-strong);
+                    border-radius: 8px;
+                    padding: 3px 8px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    height: 28px;
+                    transition: all 0.2s;
+                }
+                .tres-jarras-root .btn-help-header:hover {
+                    filter: brightness(1.05);
+                }
+
+                .tres-jarras-root .moves-pill {
+                    background: var(--tj-moves-bg);
+                    border: 1px solid var(--tj-moves-border);
                     border-radius: 100px;
-                    padding: 6px 16px;
-                    font-size: 13px;
-                    color: var(--blue-400);
+                    padding: 3px 10px;
+                    font-size: 11px;
+                    color: var(--tj-moves-text);
                     font-weight: 600;
                     white-space: nowrap;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: 4px;
+                    height: 28px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
                 }
-                .moves-pill strong {
-                    color: white;
-                    font-size: 15px;
-                }
-
-                /* ─── Objective Banner ───────────────────── */
-                .objective-banner {
-                    background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03));
-                    border: 1px solid rgba(245,158,11,0.15);
-                    border-left: 3px solid var(--amber-500);
-                    border-radius: 12px;
-                    padding: 12px 16px;
-                    margin-bottom: 16px;
-                }
-                .objective-banner p {
-                    color: rgba(255,255,255,0.65);
+                .tres-jarras-root .moves-pill strong {
+                    color: var(--tj-moves-num);
                     font-size: 13px;
-                    line-height: 1.6;
-                    margin: 0;
-                }
-                .objective-banner strong {
-                    color: var(--amber-400);
-                    font-weight: 700;
                 }
 
-                /* ─── Message ────────────────────────────── */
-                .game-message {
-                    max-width: 640px;
-                    width: 100%;
-                    margin: 0 auto 16px;
-                    padding: 14px 20px;
-                    border-radius: 14px;
-                    font-size: 14px;
+                /* ─── Subheader / Objective Bar (28-32px) ── */
+                .tres-jarras-root .objective-bar {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    padding: 4px 10px;
+                    background: var(--tj-banner-bg);
+                    border-bottom: 1px solid var(--tj-banner-border);
+                    flex-shrink: 0;
+                    font-size: 11px;
+                }
+                @media (min-width: 1024px) {
+                    .tres-jarras-root .objective-bar {
+                        padding: 6px 16px;
+                        font-size: 12px;
+                    }
+                }
+                .tres-jarras-root .objective-target {
+                    font-weight: 800;
+                    color: var(--tj-banner-strong);
+                }
+                .tres-jarras-root .objective-hint {
+                    color: var(--tj-text-muted);
+                    font-size: 11px;
+                }
+                .tres-jarras-root .progress-pill {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-weight: 700;
+                    color: var(--tj-text-muted);
+                    font-size: 11px;
+                    white-space: nowrap;
+                }
+                .tres-jarras-root .progress-mini-bar {
+                    width: 55px;
+                    height: 6px;
+                    background: var(--tj-progress-track);
+                    border-radius: 100px;
+                    overflow: hidden;
+                }
+                .tres-jarras-root .progress-mini-fill {
+                    height: 100%;
+                    border-radius: 100px;
+                    background: linear-gradient(90deg, #10b981, #34d399);
+                    transition: width 0.4s ease;
+                }
+
+                /* ─── Message Alert ──────────────────────── */
+                .tres-jarras-root .game-message {
+                    max-width: 480px;
+                    width: 95%;
+                    margin: 4px auto;
+                    padding: 6px 14px;
+                    border-radius: 10px;
+                    font-size: 12px;
                     font-weight: 600;
                     text-align: center;
-                    animation: msgIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+                    animation: msgIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+                    z-index: 10;
                 }
-                .game-message.msg-success {
+                .tres-jarras-root .game-message.msg-success {
                     background: rgba(16,185,129,0.12);
                     border: 1px solid rgba(16,185,129,0.3);
                     color: var(--emerald-400);
                 }
-                .game-message.msg-info {
+                .tres-jarras-root .game-message.msg-info {
                     background: rgba(6,182,212,0.1);
                     border: 1px solid rgba(6,182,212,0.25);
                     color: var(--cyan-300);
                 }
+                html:not(.dark) .tres-jarras-root .game-message.msg-info {
+                    background: #e0f2fe;
+                    border: 1px solid #7dd3fc;
+                    color: #0369a1;
+                }
+                html:not(.dark) .tres-jarras-root .game-message.msg-success {
+                    background: #dcfce7;
+                    border: 1px solid #86efac;
+                    color: #15803d;
+                }
 
                 @keyframes msgIn {
-                    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+                    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
                     to { opacity: 1; transform: translateY(0) scale(1); }
                 }
 
-                /* ─── Main Layout ────────────────────────── */
-                .game-layout {
+                /* ─── Workspace Layout ───────────────────── */
+                .tres-jarras-root .game-layout {
                     flex: 1;
+                    min-height: 0;
                     display: flex;
                     flex-direction: column;
-                    gap: 24px;
+                    gap: 6px;
+                    padding: 6px 8px;
+                    overflow: hidden;
                 }
 
-                @media (min-width: 1024px) {
-                    .game-layout {
+                /* Tablet landscape (809x506) & Laptop (>=1024) */
+                @media (min-width: 680px) and (orientation: landscape), (min-width: 900px) {
+                    .tres-jarras-root .game-layout {
                         flex-direction: row;
-                        gap: 32px;
+                        gap: 12px;
+                        padding: 8px 12px;
                     }
-                    .game-left { width: 58%; }
-                    .game-right { width: 42%; }
+                    .tres-jarras-root .game-left {
+                        flex: 1;
+                        min-width: 0;
+                        height: 100%;
+                    }
+                    .tres-jarras-root .game-right {
+                        width: 285px;
+                        flex-shrink: 0;
+                        height: 100%;
+                    }
+                }
+                @media (min-width: 1200px) {
+                    .tres-jarras-root .game-right {
+                        width: 325px;
+                    }
                 }
 
-                /* ─── Jugs Section ───────────────────────── */
-                .jugs-section {
+                /* ─── Jugs Section (Left) ────────────────── */
+                .tres-jarras-root .jugs-section {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                }
-
-                .jugs-instruction {
-                    text-align: center;
-                    margin-bottom: 24px;
-                    font-size: 12px;
-                    color: rgba(255,255,255,0.4);
-                    line-height: 1.5;
-                }
-                .jugs-instruction .highlight {
-                    color: var(--amber-400);
-                    font-weight: 700;
-                }
-
-                .jugs-row {
-                    display: flex;
-                    gap: 16px;
                     justify-content: center;
-                    align-items: flex-end;
-                    margin-bottom: 20px;
-                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                    position: relative;
                 }
 
-                @media (min-width: 640px) {
-                    .jugs-row { gap: 28px; }
+                .tres-jarras-root .jugs-instruction {
+                    text-align: center;
+                    font-size: 11px;
+                    color: var(--tj-text-dim);
+                    line-height: 1.4;
+                    padding: 3px 10px;
+                    border-radius: 8px;
+                    background: rgba(255,255,255,0.02);
+                    flex-shrink: 0;
+                    margin-bottom: 6px;
+                }
+                html:not(.dark) .tres-jarras-root .jugs-instruction {
+                    background: rgba(15,23,42,0.03);
+                    color: #475569;
                 }
                 @media (min-width: 1024px) {
-                    .jugs-row { gap: 36px; }
+                    .tres-jarras-root .jugs-instruction {
+                        font-size: 13px;
+                        padding: 5px 14px;
+                        margin-bottom: 12px;
+                    }
+                }
+
+                .tres-jarras-root .jugs-stage {
+                    flex: 1;
+                    min-height: 0;
+                    width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
+                }
+
+                .tres-jarras-root .jugs-row {
+                    display: flex;
+                    gap: 12px;
+                    justify-content: center;
+                    align-items: flex-end;
+                    width: 100%;
+                    position: relative;
+                }
+                @media (min-width: 640px) {
+                    .tres-jarras-root .jugs-row { gap: 20px; }
+                }
+                @media (min-width: 1024px) {
+                    .tres-jarras-root .jugs-row { gap: 36px; }
+                    .tres-jarras-root .jug-wrapper {
+                        transform: scale(1.15);
+                        transform-origin: center center;
+                    }
+                }
+                @media (min-width: 1366px) {
+                    .tres-jarras-root .jugs-row { gap: 48px; }
+                    .tres-jarras-root .jug-wrapper {
+                        transform: scale(1.25);
+                        transform-origin: center center;
+                    }
+                }
+                @media (min-width: 1600px) {
+                    .tres-jarras-root .jugs-row { gap: 60px; }
+                    .tres-jarras-root .jug-wrapper {
+                        transform: scale(1.35);
+                        transform-origin: center center;
+                    }
                 }
 
                 /* ─── Jug Wrapper ────────────────────────── */
-                .jug-wrapper {
+                .tres-jarras-root .jug-wrapper {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 6px;
+                    gap: 4px;
                     position: relative;
-                    border-radius: 16px;
-                    padding: 12px 8px 10px;
-                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-                    cursor: grab;
+                    border-radius: 14px;
+                    padding: 8px 4px 6px;
+                    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+                    cursor: pointer;
                     user-select: none;
                     background: transparent;
                 }
 
-                .jug-wrapper:active { cursor: grabbing; }
+                .tres-jarras-root .jug-wrapper:active { cursor: grabbing; }
 
-                .jug-wrapper.is-dragging {
-                    transform: scale(1.06) translateY(-4px);
-                    background: rgba(245,158,11,0.06);
+                .tres-jarras-root .jug-wrapper.is-dragging,
+                .tres-jarras-root .jug-wrapper.is-selected {
+                    transform: scale(1.05) translateY(-3px);
+                    background: rgba(245,158,11,0.08);
                     box-shadow:
                         0 0 0 2px var(--amber-500),
-                        0 0 30px rgba(245,158,11,0.15),
-                        0 20px 50px rgba(0,0,0,0.4);
-                    z-index: 100;
+                        0 0 24px rgba(245,158,11,0.2);
+                    z-index: 50;
                 }
 
-                .jug-wrapper.is-drop-target {
-                    background: rgba(6,182,212,0.08);
+                .tres-jarras-root .jug-wrapper.is-drop-target {
+                    background: rgba(6,182,212,0.1);
                     box-shadow:
                         0 0 0 2px var(--cyan-500),
-                        0 0 25px rgba(6,182,212,0.2);
+                        0 0 20px rgba(6,182,212,0.25);
                     transform: scale(1.03);
                 }
 
-                .jug-wrapper.is-valid-target {
+                .tres-jarras-root .jug-wrapper.is-valid-target {
                     background: rgba(6,182,212,0.04);
-                    box-shadow: 0 0 0 1px rgba(6,182,212,0.2);
+                    box-shadow: 0 0 0 1px rgba(6,182,212,0.3);
                     animation: targetPulse 1.5s ease-in-out infinite;
                 }
 
-                .jug-wrapper.is-winner {
+                .tres-jarras-root .jug-wrapper.is-winner {
                     animation: winnerGlow 1.2s ease-in-out infinite alternate;
                 }
 
+                html:not(.dark) .tres-jarras-root .jug-wrapper.is-dragging,
+                html:not(.dark) .tres-jarras-root .jug-wrapper.is-selected {
+                    background: #fef3c7;
+                    box-shadow: 0 0 0 2px #f59e0b, 0 8px 20px rgba(245,158,11,0.2);
+                }
+                html:not(.dark) .tres-jarras-root .jug-wrapper.is-drop-target {
+                    background: #e0f2fe;
+                    box-shadow: 0 0 0 2px #0284c7, 0 8px 20px rgba(2,132,199,0.2);
+                }
+                html:not(.dark) .tres-jarras-root .jug-wrapper.is-valid-target {
+                    background: #f0fdf4;
+                    box-shadow: 0 0 0 1px rgba(2,132,199,0.35);
+                }
+
                 @keyframes targetPulse {
-                    0%, 100% { box-shadow: 0 0 0 1px rgba(6,182,212,0.15); }
-                    50% { box-shadow: 0 0 0 2px rgba(6,182,212,0.35), 0 0 15px rgba(6,182,212,0.1); }
+                    0%, 100% { box-shadow: 0 0 0 1px rgba(6,182,212,0.2); }
+                    50% { box-shadow: 0 0 0 2px rgba(6,182,212,0.4), 0 0 12px rgba(6,182,212,0.15); }
                 }
 
                 @keyframes winnerGlow {
@@ -812,335 +1156,394 @@ export default function TresJarrasView() {
                 }
 
                 /* ─── Jug Labels ─────────────────────────── */
-                .jug-badge {
+                .tres-jarras-root .jug-badge {
                     position: absolute;
-                    top: -10px;
+                    top: -8px;
                     left: 50%;
                     transform: translateX(-50%);
-                    font-size: 10px;
+                    font-size: 9px;
                     font-weight: 800;
-                    padding: 3px 12px;
+                    padding: 2px 8px;
                     border-radius: 100px;
                     white-space: nowrap;
-                    letter-spacing: 0.5px;
-                    animation: badgePop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+                    letter-spacing: 0.4px;
+                    animation: badgePop 0.2s cubic-bezier(0.34,1.56,0.64,1);
                     z-index: 10;
                 }
-                .badge-origin {
+                .tres-jarras-root .badge-origin {
                     background: var(--amber-500);
                     color: #1a0e00;
                 }
-                .badge-destiny {
+                .tres-jarras-root .badge-destiny {
                     background: var(--cyan-500);
                     color: #001a20;
                 }
-                .badge-hint {
+                .tres-jarras-root .badge-hint {
                     background: rgba(6,182,212,0.2);
                     color: var(--cyan-300);
                     border: 1px solid rgba(6,182,212,0.3);
-                    font-weight: 600;
-                    font-size: 9px;
+                    font-weight: 700;
+                    font-size: 8.5px;
+                }
+                html:not(.dark) .tres-jarras-root .badge-destiny {
+                    background: #0284c7;
+                    color: #ffffff;
+                }
+                html:not(.dark) .tres-jarras-root .badge-hint {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    border-color: #7dd3fc;
                 }
 
                 @keyframes badgePop {
-                    from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.8); }
+                    from { opacity: 0; transform: translateX(-50%) translateY(3px) scale(0.85); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
                 }
 
-                .jug-name {
+                .tres-jarras-root .jug-name {
                     font-family: 'Playfair Display', serif;
-                    font-size: 14px;
+                    font-size: 13px;
                     font-weight: 700;
-                    color: var(--blue-400);
-                    letter-spacing: 1.5px;
+                    color: var(--tj-jug-name);
+                    letter-spacing: 1.2px;
                     text-transform: uppercase;
                 }
 
-                .jug-svg-container {
-                    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
-                    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+                .tres-jarras-root .jug-svg-container {
+                    filter: drop-shadow(0 6px 18px rgba(0,0,0,0.3));
+                    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
                 }
-                .jug-wrapper:hover .jug-svg-container {
-                    transform: translateY(-3px);
+                html:not(.dark) .tres-jarras-root .jug-svg-container {
+                    filter: drop-shadow(0 4px 12px rgba(15,23,42,0.12));
                 }
-                .jug-wrapper.is-dragging .jug-svg-container {
-                    transform: translateY(-6px);
-                }
-
-                .water-body {
-                    transition: y 0.5s cubic-bezier(0.4,0,0.2,1), height 0.5s cubic-bezier(0.4,0,0.2,1);
-                }
-                .water-shimmer {
-                    transition: y 0.5s cubic-bezier(0.4,0,0.2,1), height 0.5s cubic-bezier(0.4,0,0.2,1);
+                .tres-jarras-root .jug-wrapper:hover .jug-svg-container {
+                    transform: translateY(-2px);
                 }
 
-                .jug-amount {
+                .tres-jarras-root .water-body {
+                    transition: y 0.45s cubic-bezier(0.4,0,0.2,1), height 0.45s cubic-bezier(0.4,0,0.2,1);
+                }
+                .tres-jarras-root .water-shimmer {
+                    transition: y 0.45s cubic-bezier(0.4,0,0.2,1), height 0.45s cubic-bezier(0.4,0,0.2,1);
+                }
+
+                .tres-jarras-root .jug-amount {
                     display: flex;
                     align-items: baseline;
-                    gap: 4px;
-                    margin-top: 2px;
+                    gap: 3px;
+                    margin-top: 1px;
                 }
-                .jug-amount-number {
+                .tres-jarras-root .jug-amount-number {
                     font-family: 'Playfair Display', serif;
-                    font-size: 26px;
+                    font-size: 24px;
                     font-weight: 900;
-                    color: var(--cyan-400);
+                    color: var(--tj-jug-amount);
                     line-height: 1;
                     transition: color 0.3s;
                 }
-                .jug-amount.is-full .jug-amount-number {
-                    color: var(--amber-400);
+                .tres-jarras-root .jug-amount.is-full .jug-amount-number {
+                    color: var(--amber-500);
                 }
-                .jug-amount.is-empty .jug-amount-number {
-                    color: rgba(255,255,255,0.25);
+                .tres-jarras-root .jug-amount.is-empty .jug-amount-number {
+                    color: var(--tj-jug-amount-empty);
                 }
-                .jug-amount-unit {
-                    font-size: 11px;
-                    color: rgba(255,255,255,0.35);
-                    font-weight: 400;
+                .tres-jarras-root .jug-amount-unit {
+                    font-size: 10px;
+                    color: var(--tj-text-dim);
+                    font-weight: 500;
                 }
 
-                .jug-fill-bar {
-                    width: 60%;
+                .tres-jarras-root .jug-fill-bar {
+                    width: 55%;
                     height: 3px;
-                    background: rgba(255,255,255,0.06);
+                    background: var(--tj-jug-track);
                     border-radius: 100px;
                     overflow: hidden;
-                    margin-top: 2px;
+                    margin-top: 1px;
                 }
-                .jug-fill-track {
+                .tres-jarras-root .jug-fill-track {
                     height: 100%;
                     background: linear-gradient(90deg, var(--cyan-500), var(--cyan-300));
                     border-radius: 100px;
-                    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+                    transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
                 }
-                .jug-amount.is-full + .jug-fill-bar .jug-fill-track {
+                html:not(.dark) .tres-jarras-root .jug-fill-track {
+                    background: linear-gradient(90deg, #0284c7, #38bdf8);
+                }
+                .tres-jarras-root .jug-amount.is-full + .jug-fill-bar .jug-fill-track {
                     background: linear-gradient(90deg, var(--amber-500), var(--amber-400));
                 }
 
-                /* ─── Sidebar ────────────────────────────── */
-                .game-right {
+                /* Responsive scale down for short viewports (tablets landscape & mobile) */
+                @media (max-height: 520px) {
+                    .tres-jarras-root .jug-wrapper {
+                        transform: scale(0.92);
+                        transform-origin: bottom center;
+                    }
+                }
+                @media (max-height: 440px) {
+                    .tres-jarras-root .jug-wrapper {
+                        transform: scale(0.82);
+                        transform-origin: bottom center;
+                    }
+                }
+
+                /* ─── Right Panel (Controls + Card) ──────── */
+                .tres-jarras-root .game-right {
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
+                    gap: 6px;
                 }
 
-                .controls-row {
+                .tres-jarras-root .controls-row {
                     display: flex;
-                    gap: 10px;
-                    justify-content: center;
-                }
-                @media (min-width: 1024px) {
-                    .controls-row { justify-content: flex-end; }
+                    gap: 6px;
+                    justify-content: stretch;
                 }
 
-                .btn {
+                .tres-jarras-root .btn {
+                    flex: 1;
                     display: inline-flex;
                     align-items: center;
-                    gap: 6px;
-                    padding: 10px 20px;
-                    border-radius: 12px;
-                    font-size: 13px;
+                    justify-content: center;
+                    gap: 4px;
+                    padding: 6px 12px;
+                    border-radius: 10px;
+                    font-size: 12px;
                     font-weight: 700;
                     cursor: pointer;
                     transition: all 0.2s;
                     border: none;
                     white-space: nowrap;
+                    height: 32px;
                 }
-                .btn:active { transform: scale(0.96); }
+                .tres-jarras-root .btn:active { transform: scale(0.96); }
 
-                .btn-reset {
-                    background: var(--navy-600);
-                    color: var(--blue-400);
-                    border: 1px solid rgba(96,165,250,0.2);
+                .tres-jarras-root .btn-reset {
+                    background: var(--tj-btn-reset-bg);
+                    color: var(--tj-btn-reset-text);
+                    border: 1px solid var(--tj-btn-reset-border);
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
                 }
-                .btn-reset:hover {
-                    background: var(--navy-500);
-                    color: white;
-                    border-color: rgba(96,165,250,0.35);
+                .tres-jarras-root .btn-reset:hover {
+                    background: var(--tj-btn-reset-hover);
+                    filter: brightness(1.05);
                 }
 
-                .btn-solution {
-                    background: linear-gradient(135deg, var(--amber-500), #d97706);
-                    color: #1a0e00;
-                    box-shadow: 0 2px 12px rgba(245,158,11,0.2);
+                .tres-jarras-root .btn-solution {
+                    background: var(--tj-btn-sol-bg);
+                    color: var(--tj-btn-sol-text);
+                    box-shadow: 0 2px 10px rgba(245,158,11,0.2);
                 }
-                .btn-solution:hover {
+                .tres-jarras-root .btn-solution:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+                    box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+                }
+                .tres-jarras-root .btn-active-sol {
+                    background: #10b981;
+                    color: #ffffff;
                 }
 
-                /* ─── Glass Card ─────────────────────────── */
-                .glass-card {
-                    background: rgba(255,255,255,0.025);
-                    border: 1px solid rgba(255,255,255,0.06);
-                    border-radius: 16px;
-                    padding: 16px;
+                /* ─── Integrated Glass Card with Tabs ────── */
+                .tres-jarras-root .panel-card {
+                    flex: 1;
+                    min-height: 0;
+                    display: flex;
+                    flex-direction: column;
+                    background: var(--tj-card-bg);
+                    border: 1px solid var(--tj-card-border);
+                    border-radius: 14px;
+                    padding: 8px;
                     backdrop-filter: blur(8px);
                     -webkit-backdrop-filter: blur(8px);
+                    box-shadow: 0 4px 16px -2px rgba(0,0,0,0.06);
+                    overflow: hidden;
                 }
 
-                .card-header {
-                    font-family: 'Playfair Display', serif;
-                    font-size: 15px;
-                    font-weight: 700;
-                    margin-bottom: 12px;
+                .tres-jarras-root .tabs-header {
                     display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    position: sticky;
-                    top: 0;
-                    padding-bottom: 8px;
-                    z-index: 2;
+                    gap: 4px;
+                    background: rgba(0,0,0,0.1);
+                    padding: 3px;
+                    border-radius: 9px;
+                    margin-bottom: 8px;
+                    flex-shrink: 0;
+                }
+                html:not(.dark) .tres-jarras-root .tabs-header {
+                    background: #f1f5f9;
+                }
+
+                .tres-jarras-root .tab-btn {
+                    flex: 1;
+                    padding: 5px 8px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    border-radius: 7px;
+                    cursor: pointer;
+                    border: none;
+                    transition: all 0.2s;
+                    text-align: center;
+                    white-space: nowrap;
+                    background: transparent;
+                    color: var(--tj-text-dim);
+                }
+                .tres-jarras-root .tab-btn.is-active {
+                    background: var(--tj-tab-active-bg);
+                    color: var(--tj-tab-active-text);
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
                 }
 
                 /* ─── Steps Timeline ─────────────────────── */
-                .steps-scroll {
-                    max-height: 360px;
+                .tres-jarras-root .steps-scroll {
+                    flex: 1;
+                    min-height: 0;
                     overflow-y: auto;
                     padding-right: 4px;
                     scroll-behavior: smooth;
                 }
-                .steps-scroll::-webkit-scrollbar {
+                .tres-jarras-root .steps-scroll::-webkit-scrollbar {
                     width: 4px;
                 }
-                .steps-scroll::-webkit-scrollbar-track {
+                .tres-jarras-root .steps-scroll::-webkit-scrollbar-track {
                     background: transparent;
                 }
-                .steps-scroll::-webkit-scrollbar-thumb {
-                    background: rgba(255,255,255,0.1);
+                .tres-jarras-root .steps-scroll::-webkit-scrollbar-thumb {
+                    background: var(--tj-scroll-thumb);
                     border-radius: 100px;
                 }
 
-                .step-card {
+                .tres-jarras-root .step-card {
                     display: flex;
-                    gap: 12px;
-                    animation: stepIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+                    gap: 10px;
+                    animation: stepIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
                 }
 
                 @keyframes stepIn {
-                    from { opacity: 0; transform: translateX(-10px); }
+                    from { opacity: 0; transform: translateX(-8px); }
                     to { opacity: 1; transform: translateX(0); }
                 }
 
-                .step-indicator {
+                .tres-jarras-root .step-indicator {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     flex-shrink: 0;
-                    width: 16px;
+                    width: 14px;
                 }
-                .step-dot {
-                    width: 10px;
-                    height: 10px;
+                .tres-jarras-root .step-dot {
+                    width: 8px;
+                    height: 8px;
                     border-radius: 50%;
-                    background: var(--blue-500);
-                    border: 2px solid var(--navy-700);
+                    background: var(--tj-step-num);
+                    border: 2px solid var(--tj-card-bg);
                     flex-shrink: 0;
                     margin-top: 4px;
                 }
-                .step-initial .step-dot {
+                .tres-jarras-root .step-initial .step-dot {
                     background: var(--cyan-500);
                 }
-                .step-latest .step-dot {
+                .tres-jarras-root .step-latest .step-dot {
                     background: var(--amber-400);
-                    box-shadow: 0 0 8px rgba(251,191,36,0.4);
+                    box-shadow: 0 0 6px rgba(251,191,36,0.4);
                 }
-                .step-line {
+                .tres-jarras-root .step-line {
                     width: 2px;
                     flex: 1;
-                    min-height: 24px;
-                    background: rgba(59,130,246,0.15);
+                    min-height: 20px;
+                    background: var(--tj-step-line);
                     margin: 2px 0;
                 }
 
-                .step-content {
+                .tres-jarras-root .step-content {
                     flex: 1;
-                    padding-bottom: 14px;
+                    padding-bottom: 10px;
                     min-width: 0;
                 }
 
-                .step-header {
-                    margin-bottom: 2px;
+                .tres-jarras-root .step-header {
+                    margin-bottom: 1px;
                 }
-                .step-number {
-                    font-size: 11px;
+                .tres-jarras-root .step-number {
+                    font-size: 10px;
                     font-weight: 700;
-                    color: var(--blue-400);
+                    color: var(--tj-step-num);
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
-                .step-initial .step-number {
-                    color: var(--cyan-400);
+                .tres-jarras-root .step-initial .step-number {
+                    color: var(--cyan-500);
                 }
-                .step-latest .step-number {
-                    color: var(--amber-400);
-                }
-
-                .step-action {
-                    font-size: 13px;
-                    color: var(--cyan-300);
-                    font-weight: 500;
-                    margin-bottom: 6px;
-                    line-height: 1.4;
+                .tres-jarras-root .step-latest .step-number {
+                    color: var(--amber-500);
                 }
 
-                .step-state {
+                .tres-jarras-root .step-action {
+                    font-size: 12px;
+                    color: var(--tj-step-action);
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                    line-height: 1.35;
+                }
+
+                .tres-jarras-root .step-state {
                     display: flex;
-                    gap: 6px;
+                    gap: 4px;
                     flex-wrap: wrap;
                 }
 
-                .state-chip {
-                    font-size: 11px;
+                .tres-jarras-root .state-chip {
+                    font-size: 10px;
                     font-weight: 700;
-                    padding: 2px 8px;
-                    border-radius: 6px;
+                    padding: 1px 6px;
+                    border-radius: 5px;
                     font-family: 'Inter', monospace;
                     letter-spacing: 0.3px;
                 }
-                .chip-a {
-                    background: rgba(59,130,246,0.12);
-                    color: var(--blue-400);
-                    border: 1px solid rgba(59,130,246,0.2);
+                .tres-jarras-root .chip-a {
+                    background: var(--tj-chip-a-bg);
+                    color: var(--tj-chip-a-text);
+                    border: 1px solid var(--tj-chip-a-border);
                 }
-                .chip-b {
-                    background: rgba(6,182,212,0.12);
-                    color: var(--cyan-400);
-                    border: 1px solid rgba(6,182,212,0.2);
+                .tres-jarras-root .chip-b {
+                    background: var(--tj-chip-b-bg);
+                    color: var(--tj-chip-b-text);
+                    border: 1px solid var(--tj-chip-b-border);
                 }
-                .chip-c {
-                    background: rgba(245,158,11,0.1);
-                    color: var(--amber-400);
-                    border: 1px solid rgba(245,158,11,0.15);
-                }
-
-                /* ─── Solution Panel ─────────────────────── */
-                .solution-panel {
-                    animation: solutionIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+                .tres-jarras-root .chip-c {
+                    background: var(--tj-chip-c-bg);
+                    color: var(--tj-chip-c-text);
+                    border: 1px solid var(--tj-chip-c-border);
                 }
 
-                @keyframes solutionIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                .solution-step {
+                /* ─── Solution Panel inside Tab ──────────── */
+                .tres-jarras-root .solution-scroll {
                     display: flex;
-                    gap: 12px;
-                    align-items: flex-start;
-                    padding: 8px 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.04);
+                    flex-direction: column;
+                    gap: 6px;
                 }
-                .solution-step:last-child { border-bottom: none; }
+                .tres-jarras-root .solution-intro {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: var(--tj-solution-header);
+                    margin-bottom: 4px;
+                }
 
-                .solution-step-num {
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 8px;
-                    background: rgba(16,185,129,0.15);
-                    color: var(--emerald-400);
-                    font-size: 12px;
+                .tres-jarras-root .solution-step {
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                    padding: 5px 0;
+                    border-bottom: 1px solid var(--tj-card-border);
+                }
+                .tres-jarras-root .solution-step:last-child { border-bottom: none; }
+
+                .tres-jarras-root .solution-step-num {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 6px;
+                    background: var(--tj-solution-num-bg);
+                    color: var(--tj-solution-num-text);
+                    font-size: 11px;
                     font-weight: 800;
                     display: flex;
                     align-items: center;
@@ -1148,69 +1551,167 @@ export default function TresJarrasView() {
                     flex-shrink: 0;
                 }
 
-                .solution-step-text {
+                .tres-jarras-root .solution-step-text {
                     flex: 1;
-                    font-size: 13px;
-                    color: rgba(255,255,255,0.7);
-                    line-height: 1.5;
+                    font-size: 11.5px;
+                    color: var(--tj-solution-text);
+                    line-height: 1.35;
                 }
-                .solution-step-state {
-                    font-size: 11px;
+                .tres-jarras-root .solution-step-state {
+                    font-size: 10px;
                     font-family: 'Inter', monospace;
-                    color: rgba(255,255,255,0.35);
-                    background: rgba(255,255,255,0.04);
-                    padding: 3px 8px;
-                    border-radius: 6px;
+                    color: var(--tj-solution-state-text);
+                    background: var(--tj-solution-state-bg);
+                    border: 1px solid var(--tj-solution-state-border);
+                    padding: 2px 6px;
+                    border-radius: 5px;
                     white-space: nowrap;
                     flex-shrink: 0;
-                }
-
-                .solution-success {
-                    margin-top: 12px;
-                    padding: 12px;
-                    background: rgba(16,185,129,0.08);
-                    border: 1px solid rgba(16,185,129,0.2);
-                    border-radius: 12px;
-                    text-align: center;
-                    font-size: 13px;
-                    color: var(--emerald-400);
                     font-weight: 600;
                 }
 
-                /* ─── Progress Indicator ─────────────────── */
-                .progress-section {
-                    margin-bottom: 8px;
-                }
-                .progress-label {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
+                .tres-jarras-root .solution-success {
+                    margin-top: 6px;
+                    padding: 8px;
+                    background: var(--tj-solution-succ-bg);
+                    border: 1px solid var(--tj-solution-succ-border);
+                    border-radius: 10px;
+                    text-align: center;
                     font-size: 11px;
-                    color: rgba(255,255,255,0.35);
-                    margin-bottom: 6px;
-                    font-weight: 500;
+                    color: var(--tj-solution-succ-text);
+                    font-weight: 600;
                 }
-                .progress-label span:last-child {
-                    color: var(--cyan-400);
+
+                /* ─── Modal / Dialog Styles ──────────────── */
+                .tres-jarras-root .modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.6);
+                    backdrop-filter: blur(4px);
+                    -webkit-backdrop-filter: blur(4px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    animation: overlayIn 0.25s ease;
+                    padding: 16px;
+                }
+
+                .tres-jarras-root .modal-card {
+                    background: var(--tj-modal-bg);
+                    border: 1px solid var(--tj-modal-border);
+                    border-radius: 20px;
+                    padding: 20px;
+                    max-width: 440px;
+                    width: 100%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+                    animation: winCardIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .tres-jarras-root .modal-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border-bottom: 1px solid var(--tj-card-border);
+                    padding-bottom: 10px;
+                }
+                .tres-jarras-root .modal-title {
+                    font-family: 'Playfair Display', serif;
+                    font-size: 17px;
+                    font-weight: 800;
+                    color: var(--tj-banner-strong);
+                    margin: 0;
+                }
+                .tres-jarras-root .modal-close-btn {
+                    background: transparent;
+                    border: none;
+                    color: var(--tj-text-dim);
+                    font-size: 18px;
+                    cursor: pointer;
+                    padding: 2px 6px;
+                    border-radius: 6px;
+                }
+                .tres-jarras-root .modal-close-btn:hover {
+                    color: var(--tj-text);
+                }
+
+                .tres-jarras-root .modal-body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                }
+                .tres-jarras-root .modal-desc {
+                    margin: 0;
+                    color: var(--tj-text-muted);
+                }
+
+                .tres-jarras-root .modal-chips {
+                    display: flex;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+                .tres-jarras-root .modal-chip {
+                    background: var(--tj-banner-bg);
+                    border: 1px solid var(--tj-banner-border);
+                    padding: 4px 10px;
+                    border-radius: 8px;
+                    font-size: 11px;
+                    color: var(--tj-banner-strong);
+                }
+
+                .tres-jarras-root .modal-rules {
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid var(--tj-card-border);
+                    border-radius: 12px;
+                    padding: 10px;
+                }
+                html:not(.dark) .tres-jarras-root .modal-rules {
+                    background: #f8fafc;
+                }
+                .tres-jarras-root .modal-rule-title {
                     font-weight: 700;
+                    color: var(--amber-500);
+                    margin-bottom: 4px;
                 }
-                .progress-bar {
-                    height: 4px;
-                    background: rgba(255,255,255,0.06);
-                    border-radius: 100px;
-                    overflow: hidden;
+                .tres-jarras-root .modal-rule-list {
+                    margin: 0;
+                    padding-left: 18px;
+                    color: var(--tj-text-muted);
+                    font-size: 12px;
                 }
-                .progress-fill {
-                    height: 100%;
-                    border-radius: 100px;
-                    transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+
+                .tres-jarras-root .modal-target {
+                    background: rgba(16,185,129,0.1);
+                    border: 1px solid rgba(16,185,129,0.25);
+                    border-radius: 10px;
+                    padding: 8px 12px;
+                    color: var(--emerald-400);
+                    font-size: 12px;
+                }
+                html:not(.dark) .tres-jarras-root .modal-target {
+                    background: #ecfdf5;
+                    border-color: #a7f3d0;
+                    color: #047857;
+                }
+
+                .tres-jarras-root .modal-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    padding-top: 4px;
                 }
 
                 /* ─── Win Overlay ────────────────────────── */
-                .win-overlay {
+                .tres-jarras-root .win-overlay {
                     position: fixed;
                     inset: 0;
-                    background: rgba(0,0,0,0.5);
+                    background: rgba(0,0,0,0.55);
                     backdrop-filter: blur(4px);
                     -webkit-backdrop-filter: blur(4px);
                     display: flex;
@@ -1218,234 +1719,235 @@ export default function TresJarrasView() {
                     justify-content: center;
                     z-index: 1000;
                     animation: overlayIn 0.3s ease;
-                    padding: 20px;
+                    padding: 16px;
                 }
                 @keyframes overlayIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                .win-card {
-                    background: linear-gradient(145deg, var(--navy-700), var(--navy-800));
-                    border: 1px solid rgba(251,191,36,0.2);
-                    border-radius: 24px;
-                    padding: 32px;
+                .tres-jarras-root .win-card {
+                    background: var(--tj-win-card-bg);
+                    border: 1px solid var(--tj-win-card-border);
+                    border-radius: 20px;
+                    padding: 24px;
                     text-align: center;
-                    max-width: 400px;
+                    max-width: 380px;
                     width: 100%;
-                    animation: winCardIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-                    box-shadow: 0 0 60px rgba(251,191,36,0.1), 0 25px 50px rgba(0,0,0,0.5);
+                    animation: winCardIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+                    box-shadow: 0 0 50px rgba(251,191,36,0.15), 0 20px 40px rgba(0,0,0,0.3);
                 }
                 @keyframes winCardIn {
-                    from { opacity: 0; transform: scale(0.85) translateY(20px); }
+                    from { opacity: 0; transform: scale(0.88) translateY(16px); }
                     to { opacity: 1; transform: scale(1) translateY(0); }
                 }
-                .win-emoji {
-                    font-size: 48px;
-                    margin-bottom: 12px;
-                    animation: winBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+                .tres-jarras-root .win-emoji {
+                    font-size: 40px;
+                    margin-bottom: 8px;
+                    animation: winBounce 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both;
                 }
                 @keyframes winBounce {
                     from { transform: scale(0); }
                     to { transform: scale(1); }
                 }
-                .win-title {
+                .tres-jarras-root .win-title {
                     font-family: 'Playfair Display', serif;
-                    font-size: 24px;
+                    font-size: 22px;
                     font-weight: 900;
-                    color: var(--amber-400);
-                    margin-bottom: 8px;
+                    color: var(--tj-win-title);
+                    margin-bottom: 6px;
                 }
-                .win-text {
-                    font-size: 14px;
-                    color: rgba(255,255,255,0.6);
-                    line-height: 1.6;
-                    margin-bottom: 20px;
+                .tres-jarras-root .win-text {
+                    font-size: 13px;
+                    color: var(--tj-win-text);
+                    line-height: 1.5;
+                    margin-bottom: 16px;
                 }
-                .win-moves {
+                .tres-jarras-root .win-moves {
                     display: inline-flex;
                     align-items: baseline;
                     gap: 4px;
-                    background: rgba(251,191,36,0.1);
-                    border: 1px solid rgba(251,191,36,0.2);
-                    border-radius: 12px;
-                    padding: 8px 20px;
-                    margin-bottom: 20px;
+                    background: var(--tj-win-moves-bg);
+                    border: 1px solid var(--tj-win-moves-border);
+                    border-radius: 10px;
+                    padding: 6px 16px;
+                    margin-bottom: 16px;
                 }
-                .win-moves-num {
+                .tres-jarras-root .win-moves-num {
                     font-family: 'Playfair Display', serif;
-                    font-size: 28px;
+                    font-size: 24px;
                     font-weight: 900;
-                    color: var(--amber-400);
+                    color: var(--tj-win-moves-num);
                 }
-                .win-moves-label {
-                    font-size: 12px;
-                    color: rgba(255,255,255,0.4);
+                .tres-jarras-root .win-moves-label {
+                    font-size: 11px;
+                    color: var(--tj-win-moves-label);
                     font-weight: 500;
                 }
-                .win-btn {
+                .tres-jarras-root .win-btn {
                     background: linear-gradient(135deg, var(--amber-500), #d97706);
                     color: #1a0e00;
                     border: none;
-                    border-radius: 14px;
-                    padding: 12px 32px;
-                    font-size: 14px;
+                    border-radius: 12px;
+                    padding: 10px 24px;
+                    font-size: 13px;
                     font-weight: 800;
                     cursor: pointer;
                     transition: all 0.2s;
                 }
-                .win-btn:hover {
+                .tres-jarras-root .win-btn:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 24px rgba(245,158,11,0.3);
+                    box-shadow: 0 4px 18px rgba(245,158,11,0.3);
                 }
-                .win-btn:active { transform: scale(0.97); }
-
-                /* ─── Mobile spacing fix ─────────────────── */
-                @media (max-width: 639px) {
-                    .game-root { padding: 12px; }
-                    .game-title { font-size: 1.1rem; }
-                    .moves-pill { padding: 5px 12px; font-size: 12px; }
-                    .moves-pill strong { font-size: 13px; }
-                    .jug-wrapper { padding: 10px 4px 8px; }
-                    .jug-amount-number { font-size: 22px; }
-                    .jug-name { font-size: 12px; }
-                    .objective-banner { padding: 10px 14px; }
-                    .objective-banner p { font-size: 12px; }
-                }
-
-                @media (min-width: 640px) and (max-width: 1023px) {
-                    .game-root { padding: 20px; }
-                }
+                .tres-jarras-root .win-btn:active { transform: scale(0.97); }
             `}</style>
 
-            {/* Header */}
+            {/* 1. Header (38px) */}
             <header className="game-header">
                 <button
                     onClick={() => navigate(-1)}
                     className="btn-back"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
-                    <span className="hidden sm:inline">Volver</span>
+                    <span>Volver</span>
                 </button>
 
                 <h1 className="game-title">🫙 Las Tres Jarras</h1>
 
-                <div className="moves-pill">
-                    Mov. <strong>{movimientos}</strong>
+                <div className="header-actions">
+                    <button
+                        onClick={() => setShowHelpModal(true)}
+                        className="btn-help-header"
+                        title="Ver acertijo completo"
+                    >
+                        <span>❓</span>
+                        <span className="hidden sm:inline">Reglas</span>
+                    </button>
+                    <div className="moves-pill">
+                        Mov. <strong>{movimientos}</strong>
+                    </div>
                 </div>
             </header>
 
-            {/* Objective */}
-            <div className="objective-banner">
-                <p>
-                    Se tiene una jarra de <strong>8 litros</strong> (llena),
-                    una de <strong>5 litros</strong> y una de <strong>3 litros</strong>
-                    (ambas vacías). Sin marcas de medida, ¿cuántos pasos necesitas para obtener <strong>4 litros</strong>?
-                </p>
+            {/* 2. Subheader Bar (28-32px) */}
+            <div className="objective-bar">
+                <div className="objective-text">
+                    <span className="objective-target">🎯 Meta: 4L en Jarra A o B</span>
+                    <span className="hidden md:inline text-dim"> · </span>
+                    <span className="objective-hint hidden md:inline">Toca o arrastra una jarra sobre otra</span>
+                </div>
+                <div className="progress-pill">
+                    <span>A={jarras[0].actual}L · B={jarras[1].actual}L</span>
+                    <div className="progress-mini-bar">
+                        <div
+                            className="progress-mini-fill"
+                            style={{
+                                width: `${((jarras[0].actual === 4 ? 50 : 0) + (jarras[1].actual === 4 ? 50 : 0))}%`
+                            }}
+                        />
+                    </div>
+                </div>
             </div>
 
-            {/* Main Layout */}
+            {/* 3. Main Workspace Layout */}
             <div className="game-layout">
-                {/* Left: Game Area */}
+                {/* Left: Jugs Game Area */}
                 <div className="game-left jugs-section">
-                    {/* Message */}
+                    {/* Message alert */}
                     {mensaje && mensaje.tipo === 'info' && (
                         <div className="game-message msg-info">
                             {mensaje.texto}
                         </div>
                     )}
 
-                    {/* Instruction */}
+                    {/* Micro-hint */}
                     <div className="jugs-instruction">
-                        <span className="highlight">Arrastra</span> una jarra sobre otra para trasvasar ·
-                        Funciona con <span className="highlight">tocar y arrastrar</span> en tablets
+                        <span>
+                            {selectedJarra !== null
+                                ? `👉 Seleccionaste Jarra ${jarras[selectedJarra].nombre}: Toca otra jarra para trasvasar`
+                                : `💡 Toca o arrastra una jarra con agua para trasvasar`}
+                        </span>
                     </div>
 
-                    {/* Progress */}
-                    <div className="progress-section" style={{ width: '100%', maxWidth: 420 }}>
-                        <div className="progress-label">
-                            <span>Progreso hacia la meta</span>
-                            <span>
-                                {jarras[0].actual === 4 ? '✓ A=4' : `A=${jarras[0].actual}`}
-                                {' · '}
-                                {jarras[1].actual === 4 ? '✓ B=4' : `B=${jarras[1].actual}`}
-                            </span>
-                        </div>
-                        <div className="progress-bar">
-                            <div
-                                className="progress-fill"
-                                style={{
-                                    width: `${((jarras[0].actual === 4 ? 50 : 0) + (jarras[1].actual === 4 ? 50 : 0))}%`,
-                                    background: isWon
-                                        ? 'linear-gradient(90deg, #10b981, #34d399)'
-                                        : 'linear-gradient(90deg, #0891b2, #22d3ee)'
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Jugs */}
-                    <div className="jugs-row">
-                        {jarras.map((jarra, idx) => (
-                            <JarraSVG
-                                key={idx}
-                                capacidad={jarra.capacidad}
-                                actual={jarra.actual}
-                                nombre={jarra.nombre}
-                                dragging={draggingJarra === idx}
-                                dropTarget={dragOverJarra === idx}
-                                isValidTarget={isValidTarget(idx)}
-                                isWinner={isWon && (idx === 0 || idx === 1)}
-                                idx={idx}
-                                onDragStart={() => handleDragStart(idx)}
-                                onDragOver={(e) => handleDragOver(e, idx)}
-                                onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, idx)}
-                                onTouchStart={() => handleTouchStart(idx)}
-                                onTouchMove={handleTouchMove}
-                                onTouchEnd={handleTouchEnd}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Right: Controls + Log + Solution */}
-                <aside className="game-right">
-                    {/* Controls */}
-                    <div className="controls-row">
-                        <button onClick={resetGame} className="btn btn-reset">
-                            🔄 Reiniciar
-                        </button>
-                        <button onClick={toggleSolucion} className="btn btn-solution">
-                            💡 {solucionVisible ? 'Ocultar' : 'Ver'} solución
-                        </button>
-                    </div>
-
-                    {/* Log */}
-                    <div className="glass-card" style={{ flex: 1 }}>
-                        <div className="card-header" style={{ color: 'var(--amber-400)' }}>
-                            📋 Registro de pasos
-                        </div>
-                        <div className="steps-scroll" ref={registroRef}>
-                            {registro.map((paso, idx) => (
-                                <StepCard
+                    {/* Jugs Row Stage (Vertically centered) */}
+                    <div className="jugs-stage">
+                        <div className="jugs-row">
+                            {jarras.map((jarra, idx) => (
+                                <JarraSVG
                                     key={idx}
-                                    paso={paso}
-                                    isInitial={idx === 0}
-                                    isLast={idx === registro.length - 1}
+                                    capacidad={jarra.capacidad}
+                                    actual={jarra.actual}
+                                    nombre={jarra.nombre}
+                                    dragging={draggingJarra === idx}
+                                    dropTarget={dragOverJarra === idx}
+                                    isValidTarget={isValidTarget(idx)}
+                                    isSelected={selectedJarra === idx}
+                                    isWinner={isWon && (idx === 0 || idx === 1)}
+                                    idx={idx}
+                                    isDark={isDark}
+                                    onClick={() => handleJugClick(idx)}
+                                    onDragStart={() => handleDragStart(idx)}
+                                    onDragOver={(e) => handleDragOver(e, idx)}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={(e) => handleDrop(e, idx)}
+                                    onTouchStart={() => handleTouchStart(idx)}
+                                    onTouchMove={handleTouchMove}
+                                    onTouchEnd={handleTouchEnd}
                                 />
                             ))}
                         </div>
                     </div>
+                </div>
 
-                    {/* Solution */}
-                    {solucionVisible && (
-                        <div className="glass-card solution-panel">
-                            <div className="card-header" style={{ color: 'var(--emerald-400)' }}>
-                                ✅ Solución óptima (7 pasos)
+                {/* Right: Controls + Tabbed Steps/Solution Card */}
+                <aside className="game-right">
+                    {/* Top Controls Row */}
+                    <div className="controls-row">
+                        <button onClick={resetGame} className="btn btn-reset">
+                            🔄 Reiniciar
+                        </button>
+                        <button
+                            onClick={toggleSolucion}
+                            className={`btn ${activeTab === 'solucion' ? 'btn-active-sol' : 'btn-solution'}`}
+                        >
+                            {activeTab === 'solucion' ? '📋 Ver pasos' : '💡 Ver solución'}
+                        </button>
+                    </div>
+
+                    {/* Single Integrated Card with Tabs */}
+                    <div className="glass-card panel-card">
+                        <div className="tabs-header">
+                            <button
+                                className={`tab-btn ${activeTab === 'pasos' ? 'is-active' : ''}`}
+                                onClick={() => setActiveTab('pasos')}
+                            >
+                                📋 Pasos ({registro.length - 1})
+                            </button>
+                            <button
+                                className={`tab-btn ${activeTab === 'solucion' ? 'is-active' : ''}`}
+                                onClick={() => setActiveTab('solucion')}
+                            >
+                                💡 Solución ({SOLUCION.length})
+                            </button>
+                        </div>
+
+                        {activeTab === 'pasos' ? (
+                            <div className="steps-scroll" ref={registroRef}>
+                                {registro.map((paso, idx) => (
+                                    <StepCard
+                                        key={idx}
+                                        paso={paso}
+                                        isInitial={idx === 0}
+                                        isLast={idx === registro.length - 1}
+                                    />
+                                ))}
                             </div>
-                            <div>
+                        ) : (
+                            <div className="steps-scroll solution-scroll">
+                                <div className="solution-intro">
+                                    Secuencia óptima de 7 pasos:
+                                </div>
                                 {SOLUCION.map((paso, idx) => (
                                     <div key={idx} className="solution-step">
                                         <div className="solution-step-num">{paso.paso}</div>
@@ -1455,16 +1957,54 @@ export default function TresJarrasView() {
                                         </div>
                                     </div>
                                 ))}
+                                <div className="solution-success">
+                                    🎉 Meta: Jarra A = <strong>4L</strong> y Jarra B = <strong>4L</strong>.
+                                </div>
                             </div>
-                            <div className="solution-success">
-                                🎉 Jarra A = <strong>4L</strong> y Jarra B = <strong>4L</strong>. ¡Misión cumplida!
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </aside>
             </div>
 
-            {/* Win Overlay */}
+            {/* 4. Help / Rules Modal */}
+            {showHelpModal && (
+                <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
+                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">🫙 El Acertijo de las Tres Jarras</h3>
+                            <button className="modal-close-btn" onClick={() => setShowHelpModal(false)}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <p className="modal-desc">
+                                Tienes tres jarras con distintas capacidades:
+                            </p>
+                            <div className="modal-chips">
+                                <div className="modal-chip">Jarra A: <strong>8 Litros</strong> (Llena)</div>
+                                <div className="modal-chip">Jarra B: <strong>5 Litros</strong> (Vacía)</div>
+                                <div className="modal-chip">Jarra C: <strong>3 Litros</strong> (Vacía)</div>
+                            </div>
+                            <div className="modal-rules">
+                                <div className="modal-rule-title">⚠️ Reglas del juego:</div>
+                                <ul className="modal-rule-list">
+                                    <li>Las jarras <strong>no tienen marcas intermedias</strong> para medir.</li>
+                                    <li>Al trasvasar, debes llenar la jarra de destino o vaciar la jarra de origen.</li>
+                                    <li>No se puede desperdiciar agua ni añadir agua externa.</li>
+                                </ul>
+                            </div>
+                            <div className="modal-target">
+                                🎯 <strong>Objetivo:</strong> Obtén exactamente <strong>4 litros</strong> en la <strong>Jarra A</strong> y <strong>4 litros</strong> en la <strong>Jarra B</strong>.
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="win-btn" onClick={() => setShowHelpModal(false)}>
+                                ¡Entendido, a jugar!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. Win Overlay */}
             {isWon && mensaje?.tipo === 'exito' && (
                 <div className="win-overlay" onClick={() => setMensaje(null)}>
                     <div className="win-card" onClick={(e) => e.stopPropagation()}>
@@ -1484,7 +2024,7 @@ export default function TresJarrasView() {
                             <button
                                 className="btn btn-reset"
                                 onClick={() => setMensaje(null)}
-                                style={{ padding: '12px 24px' }}
+                                style={{ padding: '10px 20px', flex: 'none' }}
                             >
                                 Cerrar
                             </button>
