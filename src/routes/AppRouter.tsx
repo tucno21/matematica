@@ -40,6 +40,7 @@ import PorcentajesView from '../views/PorcentajesView'
 import TablaFrecuenciasView from '../views/TablaFrecuenciasView'
 import DatosAgrupadosView from '../views/DatosAgrupadosView'
 import GraficosEstadisticosView from '../views/GraficosEstadisticosView'
+import MedidasTendenciaCentralView from '../views/MedidasTendenciaCentralView'
 
 const router = createBrowserRouter([
     {
@@ -205,6 +206,10 @@ const router = createBrowserRouter([
     {
         path: '/graficos-estadisticos',
         element: <GraficosEstadisticosView />
+    },
+    {
+        path: '/medidas-tendencia-central',
+        element: <MedidasTendenciaCentralView />
     }
 ])
 

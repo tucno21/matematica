@@ -209,6 +209,7 @@ export const topics: Topic[] = [
     { id: 'tabla-frecuencias', competency: 'datos', path: '/tabla-frecuencias', title: 'Tablas de Frecuencias', description: 'Organiza datos no agrupados, realiza el conteo con palotes y calcula frecuencias absolutas, relativas y porcentuales', available: true },
     { id: 'datos-agrupados', competency: 'datos', path: '/datos-agrupados', title: 'Datos Agrupados (Intervalos)', description: 'Construye tablas con intervalos, determina rango, amplitud y marca de clase paso a paso con histograma dinámico', available: true },
     { id: 'graficos-estadisticos', competency: 'datos', path: '/graficos-estadisticos', title: 'Gráficos Estadísticos', description: 'Explora gráficos de barras, circulares, histogramas, polígonos y líneas, y aprende cuándo usar cada uno según el tipo de variable', available: true },
+    { id: 'medidas-tendencia-central', competency: 'datos', path: '/medidas-tendencia-central', title: 'Medidas de Tendencia Central', description: 'Media, mediana y moda paso a paso: datos sueltos, tabla no agrupada y datos agrupados con demostración interactiva', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
