@@ -78,6 +78,8 @@ src/
     ├── GraficosEstadisticosView.tsx # Gráficos estadísticos interactivos: barras, circular, histograma, polígono y líneas con diagnóstico de tipo de variable y modo reto
     ├── MedidasTendenciaCentralView.tsx # Medidas de tendencia central: media, mediana y moda en datos sueltos, tabla no agrupada y agrupada con demostraciones interactivas
     ├── MedidasTendenciaPersonasView.tsx # Media, Mediana y Moda con personajes reales en plano estadístico, ordenamiento dinámico y línea de media (pantalla completa)
+    ├── MedidasDispersionView.tsx # Medidas de dispersión: rango, desviación media, varianza, desviación estándar y coeficiente de variación con laboratorio interactivo (pantalla completa)
+    ├── MedidasPosicionBoxplotView.tsx # Medidas de posición: cuartiles Q1, Q2, Q3 y diagrama de caja y bigotes (boxplot) con desglose paso a paso y comparativa (pantalla completa)
 
 AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
@@ -403,6 +405,8 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/graficos-estadisticos` | `GraficosEstadisticosView` | Gráficos Estadísticos: tabla de frecuencias interactiva y gráficos dinámicos (barras, circular, histograma, polígono, líneas) con diagnóstico de pertinencia según tipo de variable y modo reto (pantalla completa) |
 | `/medidas-tendencia-central` | `MedidasTendenciaCentralView` | Medidas de Tendencia Central: Media, Mediana y Moda explicadas paso a paso en datos sueltos, tablas no agrupadas y tablas agrupadas en intervalos con simulador de datos atípicos (pantalla completa) |
 | `/tendencia-central-personas` | `MedidasTendenciaPersonasView` | Media, Mediana y Moda ilustrada con personajes en cuadrícula estadística cartesiana: moda resaltada con óvalos y línea, ordenamiento dinámico de personas caminando para la mediana, y línea de equilibrio de la media (pantalla completa) |
+| `/medidas-dispersion` | `MedidasDispersionView` | Medidas de Dispersión: Rango, Desviación Media, Varianza, Desviación Estándar y Coeficiente de Variación con comparativa cara a cara y laboratorio dinámico (pantalla completa) |
+| `/medidas-posicion-boxplot` | `MedidasPosicionBoxplotView` | Medidas de Posición: Cuartiles Q1, Q2, Q3 (los 4 cuartos del 25%) y construcción e interpretación de diagramas de caja y bigotes (boxplot) (pantalla completa) |
 
 Todas las rutas están envueltas en el componente `Layout` que proporciona la estructura base de la aplicación.
 

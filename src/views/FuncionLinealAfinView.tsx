@@ -1945,7 +1945,7 @@ export default function FuncionLinealAfinView() {
         <div className="space-y-4 text-xs lg:text-sm text-slate-300 leading-relaxed">
           <section className="rounded-lg bg-white/5 p-3 border border-white/10">
             <h3 className="font-bold text-cyan-400 text-sm mb-1">
-              1. Diferencia Fundamental (Currículo Nacional MINEDU)
+              1. Diferencia Fundamental (Currículo Nacional)
             </h3>
             <ul className="list-disc list-inside space-y-1.5 text-white/80">
               <li>

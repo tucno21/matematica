@@ -17,7 +17,7 @@ const PATHS: Record<CompetencyId, string> = {
 }
 
 /**
- * Competencias del área de Matemática según el Currículo Nacional (MINEDU),
+ * Competencias del área de Matemática según el Currículo Nacional,
  * más una sección extra de actividades recreativas.
  */
 export const competencies: Competency[] = [
@@ -211,6 +211,8 @@ export const topics: Topic[] = [
     { id: 'graficos-estadisticos', competency: 'datos', path: '/graficos-estadisticos', title: 'Gráficos Estadísticos', description: 'Explora gráficos de barras, circulares, histogramas, polígonos y líneas, y aprende cuándo usar cada uno según el tipo de variable', available: true },
     { id: 'medidas-tendencia-central', competency: 'datos', path: '/medidas-tendencia-central', title: 'Medidas de Tendencia Central', description: 'Media, mediana y moda paso a paso: datos sueltos, tabla no agrupada y datos agrupados con demostración interactiva', available: true },
     { id: 'tendencia-central-personas', competency: 'datos', path: '/tendencia-central-personas', title: 'Media, Mediana y Moda con Personas', description: 'Visualiza con personajes y estaturas cómo se ubica la moda que se repite, el ordenamiento dinámico de la mediana y la línea de equilibrio de la media', available: true },
+    { id: 'medidas-dispersion', competency: 'datos', path: '/medidas-dispersion', title: 'Medidas de Dispersión', description: 'Descubre por qué dos grupos con el mismo promedio pueden ser totalmente distintos calculando Rango, Desviación Media, Varianza y Desviación Estándar', available: true },
+    { id: 'medidas-posicion-boxplot', competency: 'datos', path: '/medidas-posicion-boxplot', title: 'Cuartiles y Diagrama de Caja', description: 'Divide la población en cuatro cuartos (25% cada uno) y construye e interpreta diagramas de caja y bigotes (boxplot) paso a paso', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },

@@ -42,6 +42,8 @@ import DatosAgrupadosView from '../views/DatosAgrupadosView'
 import GraficosEstadisticosView from '../views/GraficosEstadisticosView'
 import MedidasTendenciaCentralView from '../views/MedidasTendenciaCentralView'
 import MedidasTendenciaPersonasView from '../views/MedidasTendenciaPersonasView'
+import MedidasDispersionView from '../views/MedidasDispersionView'
+import MedidasPosicionBoxplotView from '../views/MedidasPosicionBoxplotView'
 
 const router = createBrowserRouter([
     {
@@ -215,6 +217,14 @@ const router = createBrowserRouter([
     {
         path: '/tendencia-central-personas',
         element: <MedidasTendenciaPersonasView />
+    },
+    {
+        path: '/medidas-dispersion',
+        element: <MedidasDispersionView />
+    },
+    {
+        path: '/medidas-posicion-boxplot',
+        element: <MedidasPosicionBoxplotView />
     }
 ])
 

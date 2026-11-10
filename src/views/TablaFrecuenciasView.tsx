@@ -247,7 +247,7 @@ function generateSample(categories: CategoryDef[], size = SAMPLE_SIZE): DataItem
   return items.map((it, idx) => ({ ...it, id: idx }))
 }
 
-// ─── Componente SVG para Palotes (Tally Marks de 5 en 5 estilo MINEDU) ────────
+// ─── Componente SVG para Palotes (Tally Marks de 5 en 5 escolar) ────────
 function TallyMarks({ count, colorHex }: { count: number; colorHex: string }) {
   if (count <= 0) {
     return <span className="text-slate-400 text-xs italic">Sin conteo</span>
