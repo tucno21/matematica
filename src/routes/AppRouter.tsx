@@ -41,6 +41,7 @@ import TablaFrecuenciasView from '../views/TablaFrecuenciasView'
 import DatosAgrupadosView from '../views/DatosAgrupadosView'
 import GraficosEstadisticosView from '../views/GraficosEstadisticosView'
 import MedidasTendenciaCentralView from '../views/MedidasTendenciaCentralView'
+import MedidasTendenciaPersonasView from '../views/MedidasTendenciaPersonasView'
 
 const router = createBrowserRouter([
     {
@@ -210,6 +211,10 @@ const router = createBrowserRouter([
     {
         path: '/medidas-tendencia-central',
         element: <MedidasTendenciaCentralView />
+    },
+    {
+        path: '/tendencia-central-personas',
+        element: <MedidasTendenciaPersonasView />
     }
 ])
 

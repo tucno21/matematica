@@ -77,6 +77,7 @@ src/
     ├── DatosAgrupadosView.tsx # Tablas de frecuencias para datos agrupados: rango R, intervalos k, amplitud A, marca de clase Xi e histograma con polígono
     ├── GraficosEstadisticosView.tsx # Gráficos estadísticos interactivos: barras, circular, histograma, polígono y líneas con diagnóstico de tipo de variable y modo reto
     ├── MedidasTendenciaCentralView.tsx # Medidas de tendencia central: media, mediana y moda en datos sueltos, tabla no agrupada y agrupada con demostraciones interactivas
+    ├── MedidasTendenciaPersonasView.tsx # Media, Mediana y Moda con personajes reales en plano estadístico, ordenamiento dinámico y línea de media (pantalla completa)
 
 AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
@@ -401,6 +402,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/datos-agrupados` | `DatosAgrupadosView` | Tablas de Frecuencias para Datos Agrupados: parámetros R, k, A, construcción de intervalos [Li - Ls), marcas de clase Xi, frecuencias Fi, hi, hi% e histograma con polígono de frecuencias (pantalla completa) |
 | `/graficos-estadisticos` | `GraficosEstadisticosView` | Gráficos Estadísticos: tabla de frecuencias interactiva y gráficos dinámicos (barras, circular, histograma, polígono, líneas) con diagnóstico de pertinencia según tipo de variable y modo reto (pantalla completa) |
 | `/medidas-tendencia-central` | `MedidasTendenciaCentralView` | Medidas de Tendencia Central: Media, Mediana y Moda explicadas paso a paso en datos sueltos, tablas no agrupadas y tablas agrupadas en intervalos con simulador de datos atípicos (pantalla completa) |
+| `/tendencia-central-personas` | `MedidasTendenciaPersonasView` | Media, Mediana y Moda ilustrada con personajes en cuadrícula estadística cartesiana: moda resaltada con óvalos y línea, ordenamiento dinámico de personas caminando para la mediana, y línea de equilibrio de la media (pantalla completa) |
 
 Todas las rutas están envueltas en el componente `Layout` que proporciona la estructura base de la aplicación.
 
