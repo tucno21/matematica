@@ -44,6 +44,7 @@ import MedidasTendenciaCentralView from '../views/MedidasTendenciaCentralView'
 import MedidasTendenciaPersonasView from '../views/MedidasTendenciaPersonasView'
 import MedidasDispersionView from '../views/MedidasDispersionView'
 import MedidasPosicionBoxplotView from '../views/MedidasPosicionBoxplotView'
+import ProbabilidadLaplaceView from '../views/ProbabilidadLaplaceView'
 
 const router = createBrowserRouter([
     {
@@ -225,6 +226,10 @@ const router = createBrowserRouter([
     {
         path: '/medidas-posicion-boxplot',
         element: <MedidasPosicionBoxplotView />
+    },
+    {
+        path: '/probabilidad-laplace',
+        element: <ProbabilidadLaplaceView />
     }
 ])
 

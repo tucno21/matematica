@@ -36,7 +36,7 @@ src/
 ├── components/
 │   └── Layout.tsx             # Layout wrapper (min-h-screen)
 ├── data/
-│   └── curriculum.ts          # Competencias MINEDU + temas (fuente única)
+│   └── curriculum.ts          # Competencias del Currículo Nacional + temas (fuente única)
 ├── routes/
 │   └── AppRouter.tsx          # Definición de rutas (createBrowserRouter)
 ├── store/
@@ -80,6 +80,7 @@ src/
     ├── MedidasTendenciaPersonasView.tsx # Media, Mediana y Moda con personajes reales en plano estadístico, ordenamiento dinámico y línea de media (pantalla completa)
     ├── MedidasDispersionView.tsx # Medidas de dispersión: rango, desviación media, varianza, desviación estándar y coeficiente de variación con laboratorio interactivo (pantalla completa)
     ├── MedidasPosicionBoxplotView.tsx # Medidas de posición: cuartiles Q1, Q2, Q3 y diagrama de caja y bigotes (boxplot) con desglose paso a paso y comparativa (pantalla completa)
+    ├── ProbabilidadLaplaceView.tsx # Probabilidad Clásica y Regla de Laplace: descubrimiento guiado del espacio muestral, cálculo formal P(A)=Favorables/Posibles y escala de probabilidad (pantalla completa)
 
 AddView.md                  # Guía para agregar nuevas vistas (para IAs)
 
@@ -109,7 +110,7 @@ public/
 ## 📚 Módulos Implementados
 
 ### 1. 🏠 Página Principal (`HomeView`) y Competencias (`CompetenciaView`)
-- **HomeView**: 4 tarjetas de competencias del Currículo Nacional (MINEDU) + 1 tarjeta de actividad recreativa
+- **HomeView**: 4 tarjetas de competencias del Currículo Nacional + 1 tarjeta de actividad recreativa
   - Diseño compacto pensado para tablets: todo cabe en una sola pantalla (sin scroll)
   - Cada tarjeta muestra icono, nombre corto, una línea descriptiva y número de temas
   - Botón de actualización de la app (limpia caché y service worker)
@@ -407,6 +408,7 @@ La aplicación usa **React Router DOM v7** con `createBrowserRouter`:
 | `/tendencia-central-personas` | `MedidasTendenciaPersonasView` | Media, Mediana y Moda ilustrada con personajes en cuadrícula estadística cartesiana: moda resaltada con óvalos y línea, ordenamiento dinámico de personas caminando para la mediana, y línea de equilibrio de la media (pantalla completa) |
 | `/medidas-dispersion` | `MedidasDispersionView` | Medidas de Dispersión: Rango, Desviación Media, Varianza, Desviación Estándar y Coeficiente de Variación con comparativa cara a cara y laboratorio dinámico (pantalla completa) |
 | `/medidas-posicion-boxplot` | `MedidasPosicionBoxplotView` | Medidas de Posición: Cuartiles Q1, Q2, Q3 (los 4 cuartos del 25%) y construcción e interpretación de diagramas de caja y bigotes (boxplot) (pantalla completa) |
+| `/probabilidad-laplace` | `ProbabilidadLaplaceView` | Probabilidad Clásica y Regla de Laplace: descubrimiento guiado del espacio muestral con dados, monedas, ruleta y urna, cálculo formal P(A)=Casos Favorables/Total y escala de probabilidad (pantalla completa) |
 
 Todas las rutas están envueltas en el componente `Layout` que proporciona la estructura base de la aplicación.
 

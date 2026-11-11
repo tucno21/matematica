@@ -213,6 +213,7 @@ export const topics: Topic[] = [
     { id: 'tendencia-central-personas', competency: 'datos', path: '/tendencia-central-personas', title: 'Media, Mediana y Moda con Personas', description: 'Visualiza con personajes y estaturas cómo se ubica la moda que se repite, el ordenamiento dinámico de la mediana y la línea de equilibrio de la media', available: true },
     { id: 'medidas-dispersion', competency: 'datos', path: '/medidas-dispersion', title: 'Medidas de Dispersión', description: 'Descubre por qué dos grupos con el mismo promedio pueden ser totalmente distintos calculando Rango, Desviación Media, Varianza y Desviación Estándar', available: true },
     { id: 'medidas-posicion-boxplot', competency: 'datos', path: '/medidas-posicion-boxplot', title: 'Cuartiles y Diagrama de Caja', description: 'Divide la población en cuatro cuartos (25% cada uno) y construye e interpreta diagramas de caja y bigotes (boxplot) paso a paso', available: true },
+    { id: 'probabilidad-laplace', competency: 'datos', path: '/probabilidad-laplace', title: 'Probabilidad y Regla de Laplace', description: 'Descubre el espacio muestral con dados, monedas, ruleta y urnas, y calcula probabilidades con la Regla de Laplace paso a paso', available: true },
 
     // ── Recreativa ───────────────────────────────────────────────────────────
     { id: 'tres-jarras', competency: 'recreativa', path: '/tres-jarras', title: 'Las Tres Jarras', description: 'Pensamiento lógico', available: true },
