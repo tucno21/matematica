@@ -5,23 +5,35 @@ import App from './App.tsx'
 // Inicializar tema temprano antes del primer render
 import './store/useThemeStore.ts'
 
-// El Service Worker cachea index.html y los assets: en desarrollo eso provoca
-// que se sigan viendo versiones antiguas de la app, así que solo se registra
-// en producción.
+// Registro confiable del Service Worker y persistencia de almacenamiento PWA
 if ('serviceWorker' in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+    const registerSW = () => {
+      navigator.serviceWorker
+        .register('/sw.js', { updateViaCache: 'none' })
         .then((registration) => {
-          console.log('Service Worker registrado:', registration.scope)
+          console.log('[PWA] Service Worker registrado con alcance:', registration.scope)
+
+          // Solicitar persistencia de almacenamiento para evitar que el navegador
+          // o el sistema operativo eliminen el caché tras varias horas de inactividad
+          if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then((isPersisted) => {
+              console.log('[PWA] Persistencia de almacenamiento:', isPersisted ? 'Concedida' : 'Por defecto')
+            }).catch(() => {})
+          }
         })
         .catch((error) => {
-          console.error('Error al registrar Service Worker:', error)
+          console.error('[PWA] Error al registrar Service Worker:', error)
         })
-    })
+    }
+
+    if (document.readyState === 'complete') {
+      registerSW()
+    } else {
+      window.addEventListener('load', registerSW)
+    }
   } else {
-    // En dev limpiamos cualquier Service Worker/caché que haya quedado de una
-    // visita anterior (por ejemplo, al abrir el build de producción).
+    // En desarrollo limpiamos cualquier Service Worker o caché residual
     navigator.serviceWorker.getRegistrations()
       .then((registrations) => Promise.all(registrations.map((reg) => reg.unregister())))
       .catch(() => { })
